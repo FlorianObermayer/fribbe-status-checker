@@ -2,6 +2,7 @@
     "cSpell.words": [
         "adduser",
         "appuser",
+        "chromecast",
         "fastapi",
         "gecos",
         "huawei",
@@ -12,6 +13,7 @@
         "openssl",
         "PYTHONDONTWRITEBYTECODE",
         "PYTHONUNBUFFERED",
+        "raspberrypi",
         "uvicorn",
         "wlan"
     ],

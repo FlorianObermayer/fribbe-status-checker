@@ -20,19 +20,34 @@ class StatusCheckerService:
         self._interval_thread = None
         self._stop_event = threading.Event()
 
+        self._devices_to_ignore = {
+            "2C:CF:67:DD:46:23",  # raspberrypi
+            "54:60:09:EE:19:28",  # chromecast-audio
+        }
+
     def get_status(self):
         return self._status
 
     async def _run_status_check(self, router_ip:str, username:str, password:str):
         try:
             logger.info(f"Refresh Status...")
-            with Connection(f"http://{username}:{password}@{router_ip}") as connection:
+            with Connection(
+                f"http://{username}:{password}@{router_ip}", login_on_demand=True
+            ) as connection:
                 client = Client(connection)
-                active_devices_ct = len(client.wlan.host_list())
-                logger.debug(f"active devices: {active_devices_ct}", exc_info=True)
-                if active_devices_ct == 0:
+                active_member_devices_ct = len(
+                    [
+                        device
+                        for device in client.wlan.host_list()["Hosts"]["Host"]
+                        if device["MacAddress"] not in self._devices_to_ignore
+                    ]
+                )
+                logger.debug(
+                    f"active member devices: {active_member_devices_ct}", exc_info=True
+                )
+                if active_member_devices_ct == 0:
                     self._status = Status.Empty
-                elif active_devices_ct <= 2:
+                elif active_member_devices_ct <= 2:
                     self._status = Status.Few
                 else:
                     self._status = Status.Many
