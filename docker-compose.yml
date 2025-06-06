@@ -12,7 +12,7 @@ services:
     build:
       context: .
     ports:
-      - 8007:8000
+      - 8007:80
     environment:
       - ROUTER_USERNAME=${ROUTER_USERNAME}
       - ROUTER_PASSWORD=${ROUTER_PASSWORD}

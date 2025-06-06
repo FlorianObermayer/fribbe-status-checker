@@ -12,7 +12,7 @@ service.start_status_check(os.environ["ROUTER_IP"], os.environ["ROUTER_USERNAME"
 # create a html_templates dict which holds the html values for every Status
 html_templates = {}
 for status in Status:
-    with open(f"html_templates/{status.value}.html", "r") as file:
+    with open(f"../html_templates/{status.value}.html", "r") as file:
         html_templates[status.value] = file.read()
 
 @app.get("/json")
