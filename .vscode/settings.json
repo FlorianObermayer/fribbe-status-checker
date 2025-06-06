@@ -1,8 +1,19 @@
 {
     "cSpell.words": [
+        "adduser",
+        "appuser",
+        "fastapi",
+        "gecos",
         "huawei",
         "lightgreen",
+        "lightred",
         "lightyellow",
+        "nologin",
+        "openssl",
+        "PYTHONDONTWRITEBYTECODE",
+        "PYTHONUNBUFFERED",
+        "uvicorn",
         "wlan"
-    ]
+    ],
+    "python.analysis.typeCheckingMode": "strict"
 }
