@@ -30,9 +30,6 @@ RUN adduser \
     --uid "${UID}" \
     appuser
 
-RUN apk update \
-    && apk add gcc musl-dev libffi-dev openssl-dev
-
 # Download dependencies as a separate step to take advantage of Docker's caching.
 # Leverage a cache mount to /root/.cache/pip to speed up subsequent builds.
 # Leverage a bind mount to requirements.txt to avoid having to copy them into
@@ -51,4 +48,4 @@ COPY . .
 EXPOSE 8000
 
 # Run the application.
-CMD python3 -m uvicorn app:app --host=0.0.0.0 --port=8000
+CMD ["python3", "-m", "uvicorn", "app:app", "--host=0.0.0.0", "--port=8000"]
