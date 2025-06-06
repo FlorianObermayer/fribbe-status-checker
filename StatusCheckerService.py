@@ -10,13 +10,13 @@ import logging
 logger = logging.getLogger('uvicorn.error')
 
 class Status(str,Enum):
-    NoOne = 'NoOne'
-    AFew = 'AFew'
-    Many = 'Many'
-    
+    Empty = "empty"
+    Few = "few"
+    Many = "many"
+
 class StatusCheckerService:
     def __init__(self):
-        self._status = Status.NoOne
+        self._status = Status.Empty
         self._interval_thread = None
         self._stop_event = threading.Event()
 
@@ -31,15 +31,15 @@ class StatusCheckerService:
                 active_devices_ct = len(client.wlan.host_list())
                 logger.debug(f"active devices: {active_devices_ct}", exc_info=True)
                 if active_devices_ct == 0:
-                    self._status = Status.NoOne
+                    self._status = Status.Empty
                 elif active_devices_ct <= 2:
-                    self._status = Status.AFew
+                    self._status = Status.Few
                 else:
                     self._status = Status.Many
             logger.info(f"Refresh Status... DONE")
         except Exception as e:
             logger.error(f"Error during status check: {e}", exc_info=True)
-            self._status = Status.NoOne
+            self._status = Status.Empty
 
     def _status_check_loop(self, interval: int, router_ip: str, username:str, password:str):
         loop = asyncio.new_event_loop()
