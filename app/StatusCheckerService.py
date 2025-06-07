@@ -32,7 +32,7 @@ class StatusCheckerService:
         try:
             logger.info(f"Refresh Status...")
             with Connection(
-                f"http://{username}:{password}@{router_ip}", login_on_demand=True
+                f"http://{router_ip}", username, password, login_on_demand=True
             ) as connection:
                 client = Client(connection)
                 active_member_devices_ct = len(
@@ -51,7 +51,7 @@ class StatusCheckerService:
                     self._status = Status.Few
                 else:
                     self._status = Status.Many
-            logger.info(f"Refresh Status... DONE")
+            logger.info(f"Refresh Status... DONE ({self._status})")
         except Exception as e:
             logger.error(f"Error during status check: {e}", exc_info=True)
             self._status = Status.Empty
