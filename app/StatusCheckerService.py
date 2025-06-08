@@ -47,7 +47,7 @@ class StatusCheckerService:
                 )
                 if active_member_devices_ct == 0:
                     self._status = Status.Empty
-                elif active_member_devices_ct <= 2:
+                elif active_member_devices_ct <= 5:
                     self._status = Status.Few
                 else:
                     self._status = Status.Many

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 
 from app.StatusCheckerService import StatusCheckerService, Status
 
@@ -25,3 +25,8 @@ async def json():
 async def root():
     status = service.get_status()
     return HTMLResponse(html_templates[status])
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return FileResponse("app/assets/favicon.ico")
