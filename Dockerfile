@@ -41,7 +41,7 @@ USER appuser
 COPY ./app /code/app
 
 # Expose the port that the application listens on.
-EXPOSE 8000
+EXPOSE 80
 
 # Run the application.
 CMD ["fastapi", "run", "app/main.py", "--port", "80"]
