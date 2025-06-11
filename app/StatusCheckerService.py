@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 import asyncio
+from datetime import datetime
 from enum import Enum
 import threading
+from zoneinfo import ZoneInfo
 from huawei_lte_api.Client import Client
 from huawei_lte_api.Connection import Connection
 import time
@@ -10,13 +12,13 @@ import logging
 logger = logging.getLogger('uvicorn.error')
 
 class Status(str,Enum):
-    Empty = "empty"
-    Few = "few"
-    Many = "many"
+    EMPTY = "empty"
+    FEW = "few"
+    MANY = "many"
 
 class StatusCheckerService:
     def __init__(self):
-        self._status = Status.Empty
+        self._last_updated = datetime.now(tz=ZoneInfo("Europe/Berlin"))
         self._interval_thread = None
         self._stop_event = threading.Event()
 
@@ -27,6 +29,9 @@ class StatusCheckerService:
 
     def get_status(self):
         return self._status
+
+    def get_last_updated(self):
+        return self._last_updated
 
     async def _run_status_check(self, router_ip:str, username:str, password:str):
         try:
@@ -46,15 +51,17 @@ class StatusCheckerService:
                     f"active member devices: {active_member_devices_ct}", exc_info=True
                 )
                 if active_member_devices_ct == 0:
-                    self._status = Status.Empty
+                    self._status = Status.EMPTY
                 elif active_member_devices_ct <= 5:
-                    self._status = Status.Few
+                    self._status = Status.FEW
                 else:
-                    self._status = Status.Many
+                    self._status = Status.MANY
+
+                self._last_updated = datetime.now(tz=ZoneInfo("Europe/Berlin"))
             logger.info(f"Refresh Status... DONE ({self._status})")
         except Exception as e:
             logger.error(f"Error during status check: {e}", exc_info=True)
-            self._status = Status.Empty
+            self._status = Status.EMPTY
 
     def _status_check_loop(self, interval: int, router_ip: str, username:str, password:str):
         loop = asyncio.new_event_loop()

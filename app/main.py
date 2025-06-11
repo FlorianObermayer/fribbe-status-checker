@@ -1,32 +1,50 @@
 #!/usr/bin/env python3
 import os
+from datetime import datetime
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
-from app.StatusCheckerService import StatusCheckerService, Status
+from app.MessageService import MessageService
+from app.StatusCheckerService import Status, StatusCheckerService
 
 app = FastAPI()
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
-service =  StatusCheckerService()
-service.start_status_check(os.environ["ROUTER_IP"], os.environ["ROUTER_USERNAME"], os.environ["ROUTER_PASSWORD"])
+status_service = StatusCheckerService()
+status_service.start_status_check(
+    os.environ["ROUTER_IP"],
+    os.environ["ROUTER_USERNAME"],
+    os.environ["ROUTER_PASSWORD"],
+)
+message_service = MessageService()
 
-# create a html_templates dict which holds the html values for every Status
-html_templates = {}
-for status in Status:
-    with open(f"app/html_templates/{status.value}.html", "r") as file:
-        html_templates[status.value] = file.read()
 
-@app.get("/json")
-async def json():
-    status = service.get_status()
-    return JSONResponse({"status": status})
+class StatusResponse(BaseModel):
+    status: Status
+    last_updated: datetime
+    message: str
 
-@app.get("/")
-async def root():
-    status = service.get_status()
-    return HTMLResponse(html_templates[status])
+
+@app.get("/api/status", response_model=StatusResponse)
+async def get_status():
+
+    current_status = status_service.get_status()
+    last_updated = status_service.get_last_updated()
+    message = message_service.get_message(current_status, last_updated)
+
+    return StatusResponse(
+        status=current_status, last_updated=last_updated, message=message
+    )
+
+
+@app.get("/", response_class=HTMLResponse)
+async def get_html():
+    with open("app/static/index.html") as f:
+        return HTMLResponse(f.read())
 
 
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
-    return FileResponse("app/assets/favicon.ico")
+    return FileResponse("app/static/images/favicon.ico")
