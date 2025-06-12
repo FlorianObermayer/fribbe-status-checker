@@ -23,6 +23,11 @@ async function updateStatus() {
         // Setze Statusnachricht
         document.getElementById('status-message').textContent = data.message;
         
+        document.querySelectorAll('.explanation-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        document.querySelector(`.explanation-item[data-status="${data.status}"]`).classList.add('active');
+
         // Formatieren des Datums
         const lastUpdated = new Date(data.last_updated);
         const options = { 
