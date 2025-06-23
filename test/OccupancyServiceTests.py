@@ -45,7 +45,7 @@ def test_get_todays_week_occupancy_with_occupancy():
     occ[0].end = occ[0].begin + timedelta(hours=4)
     s._week_occupancy = occ  # type: ignore
     msg, occupancy, last_updated, last_error = s.get_todays_occupancy()
-    assert "Belegung heute" or "keine Feldbelegungen" in msg
+    assert "Belegung heute" in msg
     assert isinstance(occupancy, OccupancyType)
     assert isinstance(last_updated, datetime)
     assert last_error is None
@@ -62,7 +62,6 @@ def test_get_todays_calendar_occupancy_with_occupancy():
     assert isinstance(occupancy, OccupancyType)
     assert isinstance(last_updated, datetime)
     assert last_error is None
-    raise NotImplemented
 
 
 def test_start_and_stop_status_check():

@@ -11,7 +11,6 @@ from app.services.occupancy.Occupancy import Occupancy
 from app.services.occupancy.OccupancyParser import (
     parse_event_calendar,
     parse_weekly_plan,
-    verify_table_headers,
 )
 from app.services.occupancy.OccupancyType import OccupancyType
 
@@ -26,7 +25,7 @@ class OccupancyService:
         self._week_occupancy: List[Occupancy] = []
         self._event_occupancy: List[Occupancy] = []
         self._last_updated = datetime.now(tz=ZoneInfo("Europe/Berlin"))
-        self._interval_thread : threading.Thread | None = None
+        self._interval_thread: threading.Thread | None = None
         self._stop_event = threading.Event()
         self._last_error: Exception | None = None
 
@@ -51,10 +50,8 @@ class OccupancyService:
         today = datetime.now(tz=ZoneInfo("Europe/Berlin")).date()
         todays_occupancies = [
             occ
-            for occ in getattr(self, "_week_occupancy", [])
-            if hasattr(occ, "start_time")
-            and occ.start_time
-            and occ.start_time.date() == today
+            for occ in self._week_occupancy + self._event_occupancy
+            if occ.begin.date() == today
         ]
 
         if not todays_occupancies:
@@ -68,12 +65,17 @@ class OccupancyService:
         lines: List[str] = []
         occupancy: OccupancyType = OccupancyType.PARTIALLY
         for occ in todays_occupancies:
-            start = occ.start_time.strftime("%H:%M") if occ.start_time else occ.time
-            end = occ.end_time.strftime("%H:%M") if occ.end_time else ""
-            ort = occ.location_field
+            begin = occ.begin.strftime("%H:%M")
+            end = (
+                occ.end.strftime("%H:%M")
+                if occ.end
+                else occ.begin.replace(hour=23, minute=59, second=59).strftime("%H:%M")
+            )
+            location = occ.occupied_str
 
-            lines.append(f"{start} - {end}: {occ.event} ({ort})")
-            if getattr(occ, "fully_blocked", True):
+            lines.append(f"{begin} - {end}: {occ.event_name} ({location})")
+
+            if occ.occupancy_type == OccupancyType.FULLY:
                 occupancy = OccupancyType.FULLY
 
         # TODO: Also figure out if each occupation potentially overlaps with other resulting in a fully blocked scenario
@@ -95,9 +97,7 @@ class OccupancyService:
         if len(tables) != 1:
             raise Exception("Expected exactly one table on the page.")
 
-        table: Tag = tables[0]
-
-        return table
+        return tables[0]  # type: ignore
 
     async def _run_get_latest_occupancy(self):
         try:
@@ -105,14 +105,10 @@ class OccupancyService:
             weekly_table = await OccupancyService._get_occupancy_data(
                 self.weekly_plan_url
             )
-            verify_table_headers(weekly_table, "Veranstaltung", "Zeit", "Ort / Felder")
             self._week_occupancy = parse_weekly_plan(weekly_table)
 
             event_table = await OccupancyService._get_occupancy_data(
                 self.event_calendar_url
-            )
-            verify_table_headers(
-                event_table, "Datum", "Veranstaltung", "Zeit", "Ort / Felder"
             )
 
             self._event_occupancy = parse_event_calendar(event_table)
