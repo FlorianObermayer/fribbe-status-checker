@@ -6,8 +6,8 @@ from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from app.MessageService import MessageService
-from app.StatusCheckerService import Status, StatusCheckerService
+from app.services.MessageService import MessageService
+from app.services.StatusCheckerService import Status, StatusCheckerService
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="app/static"), name="static")

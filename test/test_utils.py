@@ -1,14 +1,25 @@
 import os
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
-def get_mock_table_str() -> str:
+
+def read_testdata_from_fs(relative_path: str) -> str:
     with open(
-        os.path.join(os.path.dirname(__file__), "occupancy_test_data.html"),
+        os.path.join(os.path.dirname(__file__), relative_path),
         "r",
         encoding="utf-8",
     ) as f:
         return f.read()
 
-def get_mock_table():
-    soup = BeautifulSoup(get_mock_table_str(), "html.parser")
-    return soup.find("table")
+
+def get_weekly_mock_table() -> Tag:
+    soup = BeautifulSoup(
+        read_testdata_from_fs("occupancy_weekly_test_data.html"), "html.parser"
+    )
+    return soup.find("table")  # type: ignore
+
+
+def get_calendar_mock_table() -> Tag:
+    soup = BeautifulSoup(
+        read_testdata_from_fs("occupancy_calendar_test_data.html"), "html.parser"
+    )
+    return soup.find("table")  # type: ignore

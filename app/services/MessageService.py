@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from datetime import datetime
 import random
-from app.StatusCheckerService import Status
+from app.services.StatusCheckerService import Status
 
 
 class MessageService:
