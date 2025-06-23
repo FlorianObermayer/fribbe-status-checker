@@ -1,4 +1,3 @@
-
 import os
 from time import sleep
 
@@ -10,7 +9,9 @@ def test_occupation_service():
     service = OccupancyService(weekly_plan_url, event_calendar_url)
     service.start_status_check(2)
     sleep(7)
-    (message, type, last_updated, last_error) = service.get_todays_occupancy()
+    (message, type, source, last_updated, last_error) = service.get_todays_occupancy()
 
-    print(f"message: {message}, type: {type}, last_updated: {last_updated}")
+    print(
+        f"message: {message}, type: {type}, source: {source}, last_updated: {last_updated}"
+    )
     assert last_error is None

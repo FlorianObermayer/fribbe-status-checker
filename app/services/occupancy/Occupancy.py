@@ -1,3 +1,4 @@
+from app.services.occupancy.OccupancySource import OccupancySource
 from app.services.occupancy.OccupancyType import OccupancyType
 
 
@@ -11,4 +12,5 @@ class Occupancy:
     end: datetime | None
     event_name: str
     occupancy_type: OccupancyType
+    occupancy_source: OccupancySource
     occupied_str: str

@@ -12,6 +12,7 @@ from app.services.occupancy.OccupancyParser import (
     parse_event_calendar,
     parse_weekly_plan,
 )
+from app.services.occupancy.OccupancySource import OccupancySource
 from app.services.occupancy.OccupancyType import OccupancyType
 
 
@@ -31,21 +32,17 @@ class OccupancyService:
 
     def get_todays_occupancy(
         self,
-    ) -> Tuple[str, OccupancyType, datetime, Exception | None]:
+    ) -> Tuple[str, OccupancyType, OccupancySource, datetime, Exception | None]:
         """
         Retrieves today's occupancy information.
 
-        This method filters the week's occupancy data to find all occupancy entries for the current day
-        (using the "Europe/Berlin" timezone). It then constructs a summary message listing all today's
-        occupancies, their start and end times, event names, and locations. The overall occupancy type
-        is set to `OccupancyType.FULLY` if any of today's occupancies are fully blocked; otherwise,
-        it defaults to `OccupancyType.NONE`.
-
         Returns:
-            Tuple[str, OccupancyType, datetime]:
+            Tuple[str, OccupancyType, OccupancySource, datetime, Exception | None]:
                 - A message summarizing today's occupancies, or a message indicating no occupancies.
                 - The overall occupancy type for today.
+                - The source of the occupancy (event calendar or weekly plan)
                 - The timestamp of the last update.
+                - the last parsing error if there was any
         """
         today = datetime.now(tz=ZoneInfo("Europe/Berlin")).date()
         todays_occupancies = [
@@ -56,20 +53,23 @@ class OccupancyService:
 
         if not todays_occupancies:
             return (
-                "Heute gibt es keine Feldbelegungen.",
+                "",
                 OccupancyType.NONE,
+                OccupancySource.WEEKLY_PLAN,
                 self._last_updated,
                 self._last_error,
             )
 
         lines: List[str] = []
         occupancy: OccupancyType = OccupancyType.PARTIALLY
+        source: OccupancySource = OccupancySource.WEEKLY_PLAN
+
         for occ in todays_occupancies:
             begin = occ.begin.strftime("%H:%M")
             end = (
                 occ.end.strftime("%H:%M")
                 if occ.end
-                else occ.begin.replace(hour=23, minute=59, second=59).strftime("%H:%M")
+                else occ.begin.replace(hour=23, minute=59).strftime("%H:%M")
             )
             location = occ.occupied_str
 
@@ -78,10 +78,18 @@ class OccupancyService:
             if occ.occupancy_type == OccupancyType.FULLY:
                 occupancy = OccupancyType.FULLY
 
+            if occ.occupancy_source == OccupancySource.EVENT_CALENDAR:
+                source = OccupancySource.EVENT_CALENDAR
+
         # TODO: Also figure out if each occupation potentially overlaps with other resulting in a fully blocked scenario
 
-        message = "Belegung heute:\n" + "\n".join(lines)
-        return (message, occupancy, self._last_updated, self._last_error)
+        return (
+            "\n".join(lines),
+            occupancy,
+            source,
+            self._last_updated,
+            self._last_error,
+        )
 
     @staticmethod
     async def _get_occupancy_data(source_url: str) -> Tag:

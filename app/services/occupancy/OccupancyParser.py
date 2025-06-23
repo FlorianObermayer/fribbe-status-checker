@@ -3,13 +3,12 @@ from typing import List
 from bs4 import Tag
 
 from app.services.occupancy.Occupancy import Occupancy
+from app.services.occupancy.OccupancySource import OccupancySource
 from app.services.occupancy.OccupancyType import OccupancyType
 
 
 def _verify_table_headers(table: Tag, *headers: str):
-    actual_headers = [
-        th.get_text(strip=True) for th in table.find("tr").find_all("th")
-    ]
+    actual_headers = [th.get_text(strip=True) for th in table.find("tr").find_all("th")]
     if list(headers) != actual_headers:
         raise Exception(
             f"Table headers do not match expected.\nexpected: {list(headers)}\nactual: {actual_headers}"
@@ -88,7 +87,14 @@ def _parse_weekly_plan_data(
         start_time = datetime.strptime(f"{event_date} 00:00", "%Y-%m-%d %H:%M")
         end_time = datetime.strptime(f"{event_date} 23:59", "%Y-%m-%d %H:%M")
 
-    return Occupancy(start_time, end_time, event_name, occupancy_type, location_field)
+    return Occupancy(
+        start_time,
+        end_time,
+        event_name,
+        occupancy_type,
+        OccupancySource.WEEKLY_PLAN,
+        location_field,
+    )
 
 
 def parse_event_calendar(event_calendar_table: Tag) -> List[Occupancy]:
@@ -172,6 +178,13 @@ def parse_event_calendar(event_calendar_table: Tag) -> List[Occupancy]:
             end_time = datetime.strptime(f"{event_date} 23:59", "%Y-%m-%d %H:%M")
 
         occupancies.append(
-            Occupancy(start_time, end_time, event_name, occupancy_type, location_field)
+            Occupancy(
+                start_time,
+                end_time,
+                event_name,
+                occupancy_type,
+                OccupancySource.EVENT_CALENDAR,
+                location_field,
+            )
         )
     return occupancies

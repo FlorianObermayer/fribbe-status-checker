@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 import zoneinfo
 
 from app.services.occupancy.OccupancyService import OccupancyService
+from app.services.occupancy.OccupancySource import OccupancySource
 from app.services.occupancy.OccupancyType import OccupancyType
 from app.services.occupancy.OccupancyParser import (
     parse_event_calendar,
@@ -31,8 +32,8 @@ async def test_run_get_latest_occupancy_sets_week_occupancy(
 
 def test_get_todays_occupancy_no_occupancy():
     s = service()
-    msg, occupation, last_updated, last_error = s.get_todays_occupancy()
-    assert "keine Feldbelegungen" in msg
+    msg, occupation, _, last_updated, last_error = s.get_todays_occupancy()
+    assert "" in msg
     assert occupation is OccupancyType.NONE
     assert isinstance(last_updated, datetime)
     assert last_error is None
@@ -44,9 +45,10 @@ def test_get_todays_week_occupancy_with_occupancy():
     occ[0].begin = datetime.now(zoneinfo.ZoneInfo("Europe/Berlin"))
     occ[0].end = occ[0].begin + timedelta(hours=4)
     s._week_occupancy = occ  # type: ignore
-    msg, occupancy, last_updated, last_error = s.get_todays_occupancy()
-    assert "Belegung heute" in msg
-    assert isinstance(occupancy, OccupancyType)
+    msg, occupancy, source, last_updated, last_error = s.get_todays_occupancy()
+    assert len(msg) > 0
+    assert occupancy is OccupancyType.PARTIALLY
+    assert source is OccupancySource.WEEKLY_PLAN
     assert isinstance(last_updated, datetime)
     assert last_error is None
 
@@ -57,9 +59,10 @@ def test_get_todays_calendar_occupancy_with_occupancy():
     occ[0].begin = datetime.now(zoneinfo.ZoneInfo("Europe/Berlin"))
     occ[0].end = occ[0].begin + timedelta(hours=4)
     s._event_occupancy = occ  # type: ignore
-    msg, occupancy, last_updated, last_error = s.get_todays_occupancy()
-    assert "Belegung heute" in msg
-    assert isinstance(occupancy, OccupancyType)
+    msg, occupancy, source, last_updated, last_error = s.get_todays_occupancy()
+    assert len(msg) > 0
+    assert occupancy is OccupancyType.FULLY
+    assert source is OccupancySource.EVENT_CALENDAR
     assert isinstance(last_updated, datetime)
     assert last_error is None
 
