@@ -2,7 +2,9 @@
     "cSpell.words": [
         "adduser",
         "appuser",
+        "asyncio",
         "Beachfeld",
+        "beautifulsoup",
         "Chillen",
         "Chillrunde",
         "chromecast",
@@ -18,6 +20,7 @@
         "nologin",
         "openssl",
         "Osterspecial",
+        "pytest",
         "PYTHONDONTWRITEBYTECODE",
         "PYTHONUNBUFFERED",
         "raspberrypi",
@@ -29,5 +32,10 @@
         "Volleyballpartner",
         "wlan"
     ],
-    "python.analysis.typeCheckingMode": "strict"
+    "python.analysis.typeCheckingMode": "strict",
+    "python.testing.pytestArgs": [
+        "test"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
 }
