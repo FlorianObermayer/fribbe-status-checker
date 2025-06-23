@@ -134,7 +134,7 @@ class OccupancyService:
             loop.run_until_complete(self._run_get_latest_occupancy())
             time.sleep(interval)
 
-    def start_status_check(self, interval: int = 360):
+    def start_polling(self, interval: int = 360):
         if self._interval_thread is None or not self._interval_thread.is_alive():
             self._stop_event.clear()
             self._interval_thread = threading.Thread(
@@ -144,7 +144,7 @@ class OccupancyService:
             )
             self._interval_thread.start()
 
-    def stop_status_check(self):
+    def stop_polling(self):
         if self._interval_thread and self._interval_thread.is_alive():
             self._stop_event.set()
             self._interval_thread.join()

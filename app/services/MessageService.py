@@ -1,64 +1,64 @@
 #!/usr/bin/env python3
 from datetime import datetime
 import random
-from app.services.StatusCheckerService import Status
+from app.services.PresenceLevelService import PresenceLevel
 
 
 class MessageService:
     def __init__(self):
         self.seasonal_messages = {
             "spring": {
-                Status.EMPTY: [
+                PresenceLevel.EMPTY: [
                     "Frühlingserwachen! Der erste warme Tag - wer spielt mit? 🌸",
                     "Die Saison beginnt! Sei dabei beim ersten Spiel im Frühling!",
                 ],
-                Status.FEW: [
+                PresenceLevel.FEW: [
                     "Frühlingsgefühle am Beachfeld! Komm zur kleinen Runde!",
                     "Die ersten Sonnenstrahlen locken Spieler raus - sei dabei!",
                 ],
-                Status.MANY: [
+                PresenceLevel.MANY: [
                     "Frühlingsfieber! Das Feld ist voller Energie!",
                     "Osterspecial: Volleyball-Marathon im Gange! 🐰",
                 ],
             },
             "summer": {
-                Status.EMPTY: [
+                PresenceLevel.EMPTY: [
                     "Perfekter Badetag! Erst Volleyball, dann in den Kaufbach springen! 💦",
                     "Sommerhitze? Abkühlung mit Beachvolleyball und kühlen Getränken! 🍹",
                 ],
-                Status.FEW: [
+                PresenceLevel.FEW: [
                     "Sommerliche Chillrunde - wer macht mit? ☀️",
                     "Kleine Gruppe genießt die Abendsonne - komm dazu!",
                 ],
-                Status.MANY: [
+                PresenceLevel.MANY: [
                     "Sommerparty! Volleyball bis die Sonne untergeht! 🌅",
                     "Volles Haus! Sideout-Turnier mit Grill-Special! 🍖",
                 ],
             },
             "autumn": {
-                Status.EMPTY: [
+                PresenceLevel.EMPTY: [
                     "Herbststille? Mach das Feld wieder lebendig! 🍂",
                     "Goldener Oktober - perfekt für eine entspannte Runde!",
                 ],
-                Status.FEW: [
+                PresenceLevel.FEW: [
                     "Gemütliche Herbstrunde mit Lagerfeueratmosphäre! 🔥",
                     "Die Blätter fallen, wir spielen weiter - komm vorbei!",
                 ],
-                Status.MANY: [
+                PresenceLevel.MANY: [
                     "Herbstfest-Stimmung! Volleyball und heiße Getränke! 🍁",
                     "Volles Haus trotz kühlerer Temperaturen - Respekt!",
                 ],
             },
             "winter": {
-                Status.EMPTY: [
+                PresenceLevel.EMPTY: [
                     "Winter-Challenge: Wer traut sich bei der Kälte? ❄️",
                     "Einsamer Schneemann sucht Volleyballpartner! ⛄",
                 ],
-                Status.FEW: [
+                PresenceLevel.FEW: [
                     "Hartgesottene Winter-Spieler am Start! 🔥",
                     "Kleine Runde trotz Kälte - echtes Commitment!",
                 ],
-                Status.MANY: [
+                PresenceLevel.MANY: [
                     "Winter-Wunder! So viele hartgesottene Spieler!",
                     "Volles Haus und warme Stimmung trotz Frost! ☕",
                 ],
@@ -67,57 +67,57 @@ class MessageService:
 
         self.time_messages = {
             "morning": {
-                Status.EMPTY: [
+                PresenceLevel.EMPTY: [
                     "Frühaufsteher gesucht für die erste Morgenrunde! 🌄",
                     "Morgenstund hat Gold im Mund - und freie Plätze!",
                 ],
-                Status.FEW: [
+                PresenceLevel.FEW: [
                     "Early Birds am Ball - wer macht das Match komplett?",
                     "Morgenfrische und ein paar motivierte Spieler - perfekt!",
                 ],
-                Status.MANY: [
+                PresenceLevel.MANY: [
                     "Volles Haus am Morgen - Energie pur! ⚡",
                     "Frühsport mit Volleyball - beeindruckende Beteiligung!",
                 ],
             },
             "day": {
-                Status.EMPTY: [
+                PresenceLevel.EMPTY: [
                     "Mittagspause? Perfekt für eine schnelle Runde!",
                     "Freie Plätze in der Tagessonne - schnapp dir einen!",
                 ],
-                Status.FEW: [
+                PresenceLevel.FEW: [
                     "Gemütliche Tagessession - ideal für Neueinsteiger!",
                     "Kleine Gruppe beim Lunchtime-Volleyball",
                 ],
-                Status.MANY: [
+                PresenceLevel.MANY: [
                     "Tagestrubel am Beachfeld - volle Action!",
                     "Nachmittags-Marathon mit vielen Spielern im Wechsel!",
                 ],
             },
             "evening": {
-                Status.EMPTY: [
+                PresenceLevel.EMPTY: [
                     "Abendstille? Bring Leben ins Spiel! 🌆",
                     "Perfekter Zeitpunkt für ein entspanntes Abendspiel",
                 ],
-                Status.FEW: [
+                PresenceLevel.FEW: [
                     "Abendliche Chill-Session mit Lagerfeuer 🔥",
                     "Sunset-Volleyball mit kleiner Gruppe - magisch!",
                 ],
-                Status.MANY: [
+                PresenceLevel.MANY: [
                     "Grillabend mit Volleyball - perfekter Feierabend! 🍢",
                     "Volles Haus bei Abenddämmerung - Party-Stimmung!",
                 ],
             },
             "night": {
-                Status.EMPTY: [
+                PresenceLevel.EMPTY: [
                     "Nachtruhe? Nicht mit uns! Lagerfeuer gefällig? 🌕",
                     "Einsame Nachteule sucht Mitternachts-Mitspieler!",
                 ],
-                Status.FEW: [
+                PresenceLevel.FEW: [
                     "Spätnachts-Special mit paar Nachtschwärmern! 🌙",
                     "Under the Lights: Kleine aber feines Beisammen sitzen",
                 ],
-                Status.MANY: [
+                PresenceLevel.MANY: [
                     "Party am Laufen - komm ran! 🔥",
                     "Volles Haus bis spät in die Nacht - Legenden!",
                 ],
@@ -125,7 +125,7 @@ class MessageService:
         }
 
         self.base_messages = {
-            Status.EMPTY: [
+            PresenceLevel.EMPTY: [
                 "Leeres Feld = Deine Chance! Eröffne die Spielsession!",
                 "Keine Warteschlange - sofort losspielen! 🏐",
                 "Die Netze warten auf dich!",
@@ -133,7 +133,7 @@ class MessageService:
                 "Alle Plätze frei - dein Spiel, deine Regeln!",
                 "Perfekter Moment für ein Privattraining!",
             ],
-            Status.FEW: [
+            PresenceLevel.FEW: [
                 "Kleine Runde am Start - perfekt für schnelle Spiele!",
                 "Ideal um neue Spielpartner kennenzulernen!",
                 "Ein paar Spieler unterwegs - mach das Match komplett!",
@@ -141,7 +141,7 @@ class MessageService:
                 "Kleine Gruppe sucht Verstärkung!",
                 "Genug für ein Spiel, aber noch Platz für dich!",
             ],
-            Status.MANY: [
+            PresenceLevel.MANY: [
                 "Volles Haus! Sideout-Turnier oder Party? 🎉",
                 "Action pur zwischen Spielen und Grillen!",
                 "Der Sand brodelt vor Energie!",
@@ -183,7 +183,7 @@ class MessageService:
         else:
             return "night"
 
-    def get_message(self, status: Status, last_updated: datetime) -> str:
+    def get_message(self, status: PresenceLevel, last_updated: datetime) -> str:
         # 20% Chance für einen Kombi-Spruch
         if random.random() < 0.2:
             return random.choice(self.combo_messages)

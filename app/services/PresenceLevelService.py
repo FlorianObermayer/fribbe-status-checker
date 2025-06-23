@@ -11,12 +11,13 @@ import logging
 
 logger = logging.getLogger('uvicorn.error')
 
-class Status(str,Enum):
+class PresenceLevel(str,Enum):
     EMPTY = "empty"
     FEW = "few"
     MANY = "many"
 
-class StatusCheckerService:
+
+class PresenceLevelService:
     def __init__(self):
         self._last_updated = datetime.now(tz=ZoneInfo("Europe/Berlin"))
         self._interval_thread = None
@@ -27,15 +28,15 @@ class StatusCheckerService:
             "54:60:09:EE:19:28",  # chromecast-audio
         }
 
-    def get_status(self):
-        return self._status
+    def get_level(self):
+        return self._presence_level
 
     def get_last_updated(self):
         return self._last_updated
 
-    async def _run_status_check(self, router_ip:str, username:str, password:str):
+    async def _run_presence_detection(self, router_ip:str, username:str, password:str):
         try:
-            logger.info(f"Refresh Status...")
+            logger.info(f"Refresh Presence Level...")
             with Connection(
                 f"http://{router_ip}", username, password, login_on_demand=True
             ) as connection:
@@ -51,38 +52,40 @@ class StatusCheckerService:
                     f"active member devices: {active_member_devices_ct}", exc_info=True
                 )
                 if active_member_devices_ct == 0:
-                    self._status = Status.EMPTY
+                    self._presence_level = PresenceLevel.EMPTY
                 elif active_member_devices_ct <= 5:
-                    self._status = Status.FEW
+                    self._presence_level = PresenceLevel.FEW
                 else:
-                    self._status = Status.MANY
+                    self._presence_level = PresenceLevel.MANY
 
                 self._last_updated = datetime.now(tz=ZoneInfo("Europe/Berlin"))
-            logger.info(f"Refresh Status... DONE ({self._status})")
+            logger.info(f"Refresh Presence Level... DONE ({self._presence_level})")
         except Exception as e:
-            logger.error(f"Error during status check: {e}", exc_info=True)
-            self._status = Status.EMPTY
+            logger.error(f"Error during presence detection: {e}", exc_info=True)
+            self._presence_level = PresenceLevel.EMPTY
 
-    def _status_check_loop(self, interval: int, router_ip: str, username:str, password:str):
+    def _presence_detection_loop(self, interval: int, router_ip: str, username:str, password:str):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         while not self._stop_event.is_set():
             loop.run_until_complete(
-                self._run_status_check(router_ip, username, password)
+                self._run_presence_detection(router_ip, username, password)
             )
             time.sleep(interval)
 
-    def start_status_check(self, router_ip:str, username:str, password:str, interval:int=30):
+    def start_polling(
+        self, router_ip: str, username: str, password: str, interval: int = 30
+    ):
         if self._interval_thread is None or not self._interval_thread.is_alive():
             self._stop_event.clear()
             self._interval_thread = threading.Thread(
-                target=self._status_check_loop,
+                target=self._presence_detection_loop,
                 args=(interval, router_ip, username, password),
                 daemon=True,
             )
             self._interval_thread.start()
 
-    def stop_status_check(self):
+    def stop_polling(self):
         if self._interval_thread and self._interval_thread.is_alive():
             self._stop_event.set()
             self._interval_thread.join()

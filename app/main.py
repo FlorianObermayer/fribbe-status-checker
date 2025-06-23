@@ -7,22 +7,28 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from app.services.MessageService import MessageService
-from app.services.StatusCheckerService import Status, StatusCheckerService
+from app.services.PresenceLevelService import PresenceLevel, PresenceLevelService
+from app.services.occupancy.OccupancyService import OccupancyService
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
-status_service = StatusCheckerService()
-status_service.start_status_check(
+status_service = PresenceLevelService()
+status_service.start_polling(
     os.environ["ROUTER_IP"],
     os.environ["ROUTER_USERNAME"],
     os.environ["ROUTER_PASSWORD"],
 )
+
+occupancy_service = OccupancyService(
+    os.environ["WEEKLY_PLAN_URL"], os.environ["EVENT_CALENDAR_URL"]
+)
+occupancy_service.start_polling()
+
 message_service = MessageService()
 
-
 class StatusResponse(BaseModel):
-    status: Status
+    status: PresenceLevel
     last_updated: datetime
     message: str
 
@@ -30,7 +36,7 @@ class StatusResponse(BaseModel):
 @app.get("/api/status", response_model=StatusResponse)
 async def get_status():
 
-    current_status = status_service.get_status()
+    current_status = status_service.get_level()
     last_updated = status_service.get_last_updated()
     message = message_service.get_message(current_status, last_updated)
 
