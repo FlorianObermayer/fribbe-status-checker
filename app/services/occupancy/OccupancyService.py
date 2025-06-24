@@ -73,7 +73,7 @@ class OccupancyService:
             )
             location = occ.occupied_str
 
-            lines.append(f"{begin} - {end}: {occ.event_name} ({location})")
+            lines.append(f"{begin} - {end} Uhr: {occ.event_name} ({location})")
 
             if occ.occupancy_type == OccupancyType.FULLY:
                 occupancy = OccupancyType.FULLY

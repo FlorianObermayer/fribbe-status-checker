@@ -134,6 +134,8 @@ def parse_event_calendar(event_calendar_table: Tag) -> List[Occupancy]:
             start_str, end_str = "08:00", "12:00"
         elif time_str.lower() in ["abends"]:
             start_str, end_str = "18:00", "22:00"
+        elif time_str.lower() in ["nachmittags"]:
+            start_str, end_str = "15:00", "18:00"
         elif time_str.lower() in ["ab mittag"]:
             start_str, end_str = "12:00", "18:00"
         elif "??" in time_str:
