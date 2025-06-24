@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="de">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,14 +8,18 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/styles.css">
 </head>
+
 <body id="status-body">
     <div class="container">
         <h1>Fribbe Beachvolleyball Status</h1>
-        
+
         <div class="status-indicator">
-            <div class="light red" id="red-light"></div>
-            <div class="light yellow" id="yellow-light"></div>
-            <div class="light green" id="green-light"></div>
+            <div id="red-light" class="light red"></div>
+            <div id="yellow-light" class="light yellow"></div>
+            <div id="green-light" class="light green"></div>
+        </div>
+        <div id="status-message" class="status-message">
+            Lade Status...
         </div>
         <div class="status-explanation">
             <div class="explanation-item" data-status="empty">
@@ -30,16 +35,21 @@
                 <span>Volles Haus</span>
             </div>
         </div>
-        
-        <div class="status-message" id="status-message">
-            Lade Status...
+
+        <!-- Occupancy Info Card -->
+        <div id="occupancy-card" class="occupancy-card">
+            <h2 id="occupancy-header">Lade Status...</h2>
+            <div>
+                <div><span id="occupancy-message">Lade Veranstaltung...</span></div>
+            </div>
         </div>
-        
-        <div class="last-updated">
-            Zuletzt aktualisiert: <span id="timestamp">wird geladen...</span>
+        <!-- Kombinierter Aktualisierungsmarker -->
+        <div id="combined-updated-marker">
+            <span id="combined-updated-text">Aktualisiert ...</span>
         </div>
     </div>
-    
+
     <script src="/static/js/app.js"></script>
 </body>
+
 </html>
