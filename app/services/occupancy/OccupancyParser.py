@@ -1,10 +1,14 @@
 from datetime import datetime, timedelta
-from typing import List
+from typing import List, Literal
 from bs4 import Tag
 
 from app.services.occupancy.Occupancy import Occupancy
 from app.services.occupancy.OccupancySource import OccupancySource
 from app.services.occupancy.OccupancyType import OccupancyType
+
+Weekday = Literal[
+    "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"
+]
 
 
 def _verify_table_headers(table: Tag, *headers: str):
@@ -19,7 +23,7 @@ def parse_weekly_plan(weekly_plan_table: Tag) -> List[Occupancy]:
     _verify_table_headers(weekly_plan_table, "Veranstaltung", "Zeit", "Ort / Felder")
 
     occupancies: List[Occupancy] = []
-    current_day = None
+    current_day: Weekday | None = None
     for row in weekly_plan_table.find_all("tr"):
         cells = row.find_all("td")
         if not cells:
@@ -51,10 +55,10 @@ def parse_weekly_plan(weekly_plan_table: Tag) -> List[Occupancy]:
 
 
 def _parse_weekly_plan_data(
-    day: str, time: str, event_name: str, location_field: str
+    day: Weekday, time: str, event_name: str, location_field: str
 ) -> Occupancy:
     start_str, end_str = [t.strip() for t in time.split("-")]
-    weekday_map = {
+    weekday_map: dict[Weekday, int] = {
         "Montag": 0,
         "Dienstag": 1,
         "Mittwoch": 2,
