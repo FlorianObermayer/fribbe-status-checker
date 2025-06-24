@@ -2,10 +2,19 @@
 from datetime import datetime
 import random
 from app.services.PresenceLevelService import PresenceLevel
+from app.services.occupancy.OccupancyType import OccupancyType
 
 
 class MessageService:
     def __init__(self):
+        self.occupied_messages = [
+            "Heute ist das Fribbe leider durch eine Veranstaltung belegt. Kopf hoch, morgen sieht’s bestimmt besser aus!",
+            "Das Feld ist heute nicht verfügbar – gönn dir einen freien Tag oder plan schon mal das nächste Match!",
+            "Heute kein Volleyball am Fribbe wegen einer Veranstaltung. Vielleicht ein guter Moment für ein Alternativprogramm?",
+            "Leider ist das Fribbe heute belegt. Lass dich nicht entmutigen – das nächste Spiel kommt bestimmt!",
+            "Heute sind die Felder vergeben. Nutze die Zeit für Regeneration oder ein Treffen mit Freunden abseits des Sandes!",
+        ]
+
         self.seasonal_messages = {
             "spring": {
                 PresenceLevel.EMPTY: [
@@ -183,23 +192,29 @@ class MessageService:
         else:
             return "night"
 
-    def get_message(self, status: PresenceLevel, last_updated: datetime) -> str:
-        # 20% Chance für einen Kombi-Spruch
+    def get_message(
+        self, level: PresenceLevel, occupancy: OccupancyType, last_updated: datetime
+    ) -> str:
+
+        if occupancy == OccupancyType.FULLY:
+            return random.choice(self.occupied_messages)
+
+        # 20% chance for a combo message
         if random.random() < 0.2:
             return random.choice(self.combo_messages)
 
-        # 40% Chance für saisonale oder tageszeitabhängige Nachricht
+        # 40% chance for saisonal or daytime-dependant messages
         if random.random() < 0.4:
             daytime = self.get_daytime(last_updated)
-            if daytime in self.time_messages and status in self.time_messages[daytime]:
-                return random.choice(self.time_messages[daytime][status])
+            if daytime in self.time_messages and level in self.time_messages[daytime]:
+                return random.choice(self.time_messages[daytime][level])
 
             season = self.get_season(last_updated)
             if (
                 season in self.seasonal_messages
-                and status in self.seasonal_messages[season]
+                and level in self.seasonal_messages[season]
             ):
-                return random.choice(self.seasonal_messages[season][status])
+                return random.choice(self.seasonal_messages[season][level])
 
-        # Fallback zu den Basis-Nachrichten (40% Chance)
-        return random.choice(self.base_messages[status])
+        # Fallback to base messages (40% chance)
+        return random.choice(self.base_messages[level])

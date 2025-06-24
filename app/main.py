@@ -46,25 +46,12 @@ class OccupancyResponse(BaseModel):
 
 
 class StatusResponse(BaseModel):
-    presence: PresenceResponse
     occupancy: OccupancyResponse
+    presence: PresenceResponse
 
 
 @app.get("/api/status", response_model=StatusResponse)
 async def get_status():
-    presence_level = presence_service.get_level()
-    presence_last_updated = presence_service.get_last_updated()
-    presence_message = message_service.get_message(
-        presence_level, presence_last_updated
-    )
-    presence_last_error = presence_service.get_last_error()
-
-    presence_response = PresenceResponse(
-        level=presence_level,
-        last_updated=presence_last_updated,
-        message=presence_message,
-        last_error=presence_last_error and str(presence_last_error),
-    )
 
     occ_message, occ_type, occ_source, occ_last_updated, occ_last_error = (
         occupancy_service.get_todays_occupancy()
@@ -78,9 +65,23 @@ async def get_status():
         last_error=occ_last_error and str(occ_last_error),
     )
 
+    presence_level = presence_service.get_level()
+    presence_last_updated = presence_service.get_last_updated()
+    presence_message = message_service.get_message(
+        presence_level, occ_type, presence_last_updated
+    )
+    presence_last_error = presence_service.get_last_error()
+
+    presence_response = PresenceResponse(
+        level=presence_level,
+        last_updated=presence_last_updated,
+        message=presence_message,
+        last_error=presence_last_error and str(presence_last_error),
+    )
+
     return StatusResponse(
-        presence=presence_response,
         occupancy=occupancy_response,
+        presence=presence_response,
     )
 
 
