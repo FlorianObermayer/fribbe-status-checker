@@ -23,6 +23,7 @@ class PresenceLevelService:
         self._interval_thread = None
         self._stop_event = threading.Event()
         self._last_error: Exception | None = None
+        self._presence_level: PresenceLevel = PresenceLevel.EMPTY
 
         self._devices_to_ignore = {
             "2C:CF:67:DD:46:23",  # raspberrypi
