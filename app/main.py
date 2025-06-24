@@ -1,41 +1,88 @@
 #!/usr/bin/env python3
 import os
 from datetime import datetime
+from typing import List
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from app.MessageService import MessageService
-from app.StatusCheckerService import Status, StatusCheckerService
+from app.services.MessageService import MessageService
+from app.services.PresenceLevelService import PresenceLevel, PresenceLevelService
+from app.services.occupancy.OccupancyService import OccupancyService
+from app.services.occupancy.OccupancySource import OccupancySource
+from app.services.occupancy.OccupancyType import OccupancyType
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
-status_service = StatusCheckerService()
-status_service.start_status_check(
+presence_service = PresenceLevelService()
+presence_service.start_polling(
     os.environ["ROUTER_IP"],
     os.environ["ROUTER_USERNAME"],
     os.environ["ROUTER_PASSWORD"],
 )
+
+occupancy_service = OccupancyService(
+    os.environ["WEEKLY_PLAN_URL"], os.environ["EVENT_CALENDAR_URL"]
+)
+occupancy_service.start_polling()
+
 message_service = MessageService()
 
 
-class StatusResponse(BaseModel):
-    status: Status
+class PresenceResponse(BaseModel):
+    level: PresenceLevel
     last_updated: datetime
     message: str
+    last_error: str | None
+
+
+class OccupancyResponse(BaseModel):
+    last_updated: datetime
+    type: OccupancyType
+    source: OccupancySource
+    messages: List[str]
+    last_error: str | None
+
+
+class StatusResponse(BaseModel):
+    occupancy: OccupancyResponse
+    presence: PresenceResponse
 
 
 @app.get("/api/status", response_model=StatusResponse)
 async def get_status():
 
-    current_status = status_service.get_status()
-    last_updated = status_service.get_last_updated()
-    message = message_service.get_message(current_status, last_updated)
+    occ_messages, occ_type, occ_source, occ_last_updated, occ_last_error = (
+        occupancy_service.get_todays_occupancy()
+    )
+
+    occupancy_response = OccupancyResponse(
+        last_updated=occ_last_updated,
+        type=occ_type,
+        source=occ_source,
+        messages=occ_messages,
+        last_error=occ_last_error and str(occ_last_error),
+    )
+
+    presence_level = presence_service.get_level()
+    presence_last_updated = presence_service.get_last_updated()
+    presence_message = message_service.get_message(
+        presence_level, occ_type, presence_last_updated
+    )
+    presence_last_error = presence_service.get_last_error()
+
+    presence_response = PresenceResponse(
+        level=presence_level,
+        last_updated=presence_last_updated,
+        message=presence_message,
+        last_error=presence_last_error and str(presence_last_error),
+    )
 
     return StatusResponse(
-        status=current_status, last_updated=last_updated, message=message
+        occupancy=occupancy_response,
+        presence=presence_response,
     )
 
 
