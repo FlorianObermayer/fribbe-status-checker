@@ -14,3 +14,4 @@ class Occupancy:
     occupancy_type: OccupancyType
     occupancy_source: OccupancySource
     occupied_str: str
+    time_str: str
