@@ -71,7 +71,7 @@ def _parse_weekly_plan_data(
     match location_field:
         case "":
             occupancy_type = OccupancyType.NONE
-        case _ if location_field.startswith("Feld"):
+        case _ if location_field.lower().startswith("feld"):
             occupancy_type = OccupancyType.PARTIALLY
         case _:
             occupancy_type = OccupancyType.FULLY
