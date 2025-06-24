@@ -60,7 +60,7 @@ async function updateStatus() {
         const occCard = document.getElementById('occupancy-card');
         if (Array.isArray(data.occupancy.messages) && data.occupancy.messages.length > 0) {
             occCard.style.display = '';
-            occMsgElem.innerHTML = '<ul style="margin:0; padding-left:18px;">' +
+            occMsgElem.innerHTML = '<ul style="margin:0; padding-left:24px;text-align:left;">' +
                 data.occupancy.messages.map(msg => `<li>${msg}</li>`).join('') + '</ul>';
         } else {
             occCard.style.display = 'none';
