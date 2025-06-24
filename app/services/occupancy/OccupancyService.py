@@ -35,7 +35,14 @@ class OccupancyService:
 
     def get_todays_occupancy(
         self,
-    ) -> Tuple[List[str], OccupancyType, OccupancySource, datetime, Exception | None]:
+    ) -> Tuple[
+        List[str],
+        List[Occupancy],
+        OccupancyType,
+        OccupancySource,
+        datetime,
+        Exception | None,
+    ]:
         """
         Retrieves today's occupancy information.
 
@@ -57,6 +64,7 @@ class OccupancyService:
         if not todays_occupancies:
             return (
                 [],
+                [],
                 OccupancyType.NONE,
                 OccupancySource.WEEKLY_PLAN,
                 self._last_updated,
@@ -67,16 +75,12 @@ class OccupancyService:
         occupancy: OccupancyType = OccupancyType.PARTIALLY
         source: OccupancySource = OccupancySource.WEEKLY_PLAN
 
+        events: List[Occupancy] = []
         for occ in sorted(todays_occupancies, key=lambda o: o.begin):
-            begin = occ.begin.strftime("%H:%M")
-            end = (
-                occ.end.strftime("%H:%M")
-                if occ.end
-                else occ.begin.replace(hour=23, minute=59).strftime("%H:%M")
-            )
             location = occ.occupied_str
 
-            lines.append(f"{begin} - {end} Uhr: {occ.event_name} ({location})")
+            events.append(occ)
+            lines.append(f"{occ.time_str}: {occ.event_name} ({location})")
 
             if occ.occupancy_type == OccupancyType.FULLY:
                 occupancy = OccupancyType.FULLY
@@ -86,13 +90,7 @@ class OccupancyService:
 
         # TODO: Also figure out if each occupation potentially overlaps with other resulting in a fully blocked scenario
 
-        return (
-            lines,
-            occupancy,
-            source,
-            self._last_updated,
-            self._last_error,
-        )
+        return (lines, events, occupancy, source, self._last_updated, self._last_error)
 
     @staticmethod
     async def _get_occupancy_data(source_url: str) -> Tag:

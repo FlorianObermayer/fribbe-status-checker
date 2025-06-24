@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from app.services.MessageService import MessageService
 from app.services.PresenceLevelService import PresenceLevel, PresenceLevelService
+from app.services.occupancy.Occupancy import Occupancy
 from app.services.occupancy.OccupancyService import OccupancyService
 from app.services.occupancy.OccupancySource import OccupancySource
 from app.services.occupancy.OccupancyType import OccupancyType
@@ -42,6 +43,7 @@ class OccupancyResponse(BaseModel):
     source: OccupancySource
     messages: List[str]
     last_error: str | None
+    events: List[Occupancy]
 
 
 class StatusResponse(BaseModel):
@@ -52,7 +54,7 @@ class StatusResponse(BaseModel):
 @app.get("/api/status", response_model=StatusResponse)
 async def get_status():
 
-    occ_messages, occ_type, occ_source, occ_last_updated, occ_last_error = (
+    occ_messages, occ_events, occ_type, occ_source, occ_last_updated, occ_last_error = (
         occupancy_service.get_todays_occupancy()
     )
 
@@ -61,6 +63,7 @@ async def get_status():
         type=occ_type,
         source=occ_source,
         messages=occ_messages,
+        events=occ_events,
         last_error=occ_last_error and str(occ_last_error),
     )
 

@@ -94,6 +94,7 @@ def _parse_weekly_plan_data(
         occupancy_type,
         OccupancySource.WEEKLY_PLAN,
         location_field,
+        time,
     )
 
 
@@ -187,6 +188,7 @@ def parse_event_calendar(event_calendar_table: Tag) -> List[Occupancy]:
                 occupancy_type,
                 OccupancySource.EVENT_CALENDAR,
                 location_field,
+                time_str,
             )
         )
     return occupancies
