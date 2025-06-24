@@ -23,9 +23,7 @@ presence_service.start_polling(
     os.environ["ROUTER_PASSWORD"],
 )
 
-occupancy_service = OccupancyService(
-    os.environ["WEEKLY_PLAN_URL"], os.environ["EVENT_CALENDAR_URL"]
-)
+occupancy_service = OccupancyService()
 occupancy_service.start_polling()
 
 message_service = MessageService()

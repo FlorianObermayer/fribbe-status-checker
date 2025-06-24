@@ -15,7 +15,7 @@ from test.test_utils import get_calendar_mock_table, get_weekly_mock_table
 
 
 def service():
-    return OccupancyService("", "")
+    return OccupancyService()
 
 
 @pytest.mark.asyncio
@@ -32,8 +32,8 @@ async def test_run_get_latest_occupancy_sets_week_occupancy(
 
 def test_get_todays_occupancy_no_occupancy():
     s = service()
-    msg, occupation, _, last_updated, last_error = s.get_todays_occupancy()
-    assert "" in msg
+    msgs, occupation, _, last_updated, last_error = s.get_todays_occupancy()
+    assert len(msgs) == 0
     assert occupation is OccupancyType.NONE
     assert isinstance(last_updated, datetime)
     assert last_error is None
@@ -45,8 +45,8 @@ def test_get_todays_week_occupancy_with_occupancy():
     occ[0].begin = datetime.now(zoneinfo.ZoneInfo("Europe/Berlin"))
     occ[0].end = occ[0].begin + timedelta(hours=4)
     s._week_occupancy = occ  # type: ignore
-    msg, occupancy, source, last_updated, last_error = s.get_todays_occupancy()
-    assert len(msg) > 0
+    msgs, occupancy, source, last_updated, last_error = s.get_todays_occupancy()
+    assert len(msgs) > 0
     assert occupancy is OccupancyType.PARTIALLY
     assert source is OccupancySource.WEEKLY_PLAN
     assert isinstance(last_updated, datetime)
@@ -56,11 +56,11 @@ def test_get_todays_week_occupancy_with_occupancy():
 def test_get_todays_calendar_occupancy_with_occupancy():
     s = service()
     occ = parse_event_calendar(get_calendar_mock_table())
-    occ[0].begin = datetime.now(zoneinfo.ZoneInfo("Europe/Berlin"))
+    occ[0].begin = datetime.now()
     occ[0].end = occ[0].begin + timedelta(hours=4)
     s._event_occupancy = occ  # type: ignore
-    msg, occupancy, source, last_updated, last_error = s.get_todays_occupancy()
-    assert len(msg) > 0
+    msgs, occupancy, source, last_updated, last_error = s.get_todays_occupancy()
+    assert len(msgs) > 0
     assert occupancy is OccupancyType.FULLY
     assert source is OccupancySource.EVENT_CALENDAR
     assert isinstance(last_updated, datetime)
