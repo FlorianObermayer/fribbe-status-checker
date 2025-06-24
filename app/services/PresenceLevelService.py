@@ -22,6 +22,7 @@ class PresenceLevelService:
         self._last_updated = datetime.now(tz=ZoneInfo("Europe/Berlin"))
         self._interval_thread = None
         self._stop_event = threading.Event()
+        self._last_error: Exception | None = None
 
         self._devices_to_ignore = {
             "2C:CF:67:DD:46:23",  # raspberrypi
@@ -33,6 +34,9 @@ class PresenceLevelService:
 
     def get_last_updated(self):
         return self._last_updated
+
+    def get_last_error(self):
+        return self._last_error
 
     async def _run_presence_detection(self, router_ip:str, username:str, password:str):
         try:
@@ -59,10 +63,12 @@ class PresenceLevelService:
                     self._presence_level = PresenceLevel.MANY
 
                 self._last_updated = datetime.now(tz=ZoneInfo("Europe/Berlin"))
+                self._last_error = None
             logger.info(f"Refresh Presence Level... DONE ({self._presence_level})")
         except Exception as e:
             logger.error(f"Error during presence detection: {e}", exc_info=True)
             self._presence_level = PresenceLevel.EMPTY
+            self._last_error = e
 
     def _presence_detection_loop(self, interval: int, router_ip: str, username:str, password:str):
         loop = asyncio.new_event_loop()

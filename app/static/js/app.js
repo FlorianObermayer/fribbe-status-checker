@@ -5,31 +5,31 @@ async function updateStatus() {
         const data = await response.json();
         
         // Setze Body-Klasse basierend auf Status
-        document.getElementById('status-body').className = `status-${data.status}`;
+        document.getElementById('status-body').className = `status-${data.presence.level}`;
         
         // Aktiviere das richtige Licht
         document.getElementById('red-light').classList.remove('active');
         document.getElementById('yellow-light').classList.remove('active');
         document.getElementById('green-light').classList.remove('active');
         
-        if (data.status === 'empty') {
+        if (data.presence.level === 'empty') {
             document.getElementById('red-light').classList.add('active');
-        } else if (data.status === 'few') {
+        } else if (data.presence.level === 'few') {
             document.getElementById('yellow-light').classList.add('active');
         } else {
             document.getElementById('green-light').classList.add('active');
         }
         
         // Setze Statusnachricht
-        document.getElementById('status-message').textContent = data.message;
+        document.getElementById('status-message').textContent = data.presence.message;
         
         document.querySelectorAll('.explanation-item').forEach(item => {
             item.classList.remove('active');
         });
-        document.querySelector(`.explanation-item[data-status="${data.status}"]`).classList.add('active');
+        document.querySelector(`.explanation-item[data-status="${data.presence.level}"]`).classList.add('active');
 
         // Formatieren des Datums
-        const lastUpdated = new Date(data.last_updated);
+        const lastUpdated = new Date(data.presence.last_updated);
         const options = { 
             weekday: 'long', 
             day: 'numeric', 
