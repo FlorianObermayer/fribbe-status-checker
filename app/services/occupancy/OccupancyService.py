@@ -32,13 +32,13 @@ class OccupancyService:
 
     def get_todays_occupancy(
         self,
-    ) -> Tuple[str, OccupancyType, OccupancySource, datetime, Exception | None]:
+    ) -> Tuple[List[str], OccupancyType, OccupancySource, datetime, Exception | None]:
         """
         Retrieves today's occupancy information.
 
         Returns:
-            Tuple[str, OccupancyType, OccupancySource, datetime, Exception | None]:
-                - A message summarizing today's occupancies, or a message indicating no occupancies.
+            Tuple[List[str], OccupancyType, OccupancySource, datetime, Exception | None]:
+                - A list of messages if today's occupancies or an empty list.
                 - The overall occupancy type for today.
                 - The source of the occupancy (event calendar or weekly plan)
                 - The timestamp of the last update.
@@ -53,7 +53,7 @@ class OccupancyService:
 
         if not todays_occupancies:
             return (
-                "",
+                [],
                 OccupancyType.NONE,
                 OccupancySource.WEEKLY_PLAN,
                 self._last_updated,
@@ -64,7 +64,7 @@ class OccupancyService:
         occupancy: OccupancyType = OccupancyType.PARTIALLY
         source: OccupancySource = OccupancySource.WEEKLY_PLAN
 
-        for occ in todays_occupancies:
+        for occ in sorted(todays_occupancies, key=lambda o: o.begin):
             begin = occ.begin.strftime("%H:%M")
             end = (
                 occ.end.strftime("%H:%M")
@@ -84,7 +84,7 @@ class OccupancyService:
         # TODO: Also figure out if each occupation potentially overlaps with other resulting in a fully blocked scenario
 
         return (
-            "\n".join(lines),
+            lines,
             occupancy,
             source,
             self._last_updated,

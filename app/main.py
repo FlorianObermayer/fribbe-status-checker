@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 from datetime import datetime
+from typing import List
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -41,7 +42,7 @@ class OccupancyResponse(BaseModel):
     last_updated: datetime
     type: OccupancyType
     source: OccupancySource
-    message: str
+    messages: List[str]
     last_error: str | None
 
 
@@ -53,7 +54,7 @@ class StatusResponse(BaseModel):
 @app.get("/api/status", response_model=StatusResponse)
 async def get_status():
 
-    occ_message, occ_type, occ_source, occ_last_updated, occ_last_error = (
+    occ_messages, occ_type, occ_source, occ_last_updated, occ_last_error = (
         occupancy_service.get_todays_occupancy()
     )
 
@@ -61,7 +62,7 @@ async def get_status():
         last_updated=occ_last_updated,
         type=occ_type,
         source=occ_source,
-        message=occ_message,
+        messages=occ_messages,
         last_error=occ_last_error and str(occ_last_error),
     )
 
