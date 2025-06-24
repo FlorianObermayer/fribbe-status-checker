@@ -20,9 +20,12 @@ logger = logging.getLogger("uvicorn.error")
 
 
 class OccupancyService:
-    def __init__(self, weekly_plan_url: str, event_calendar_url: str):
-        self.weekly_plan_url = weekly_plan_url
-        self.event_calendar_url = event_calendar_url
+
+    def __init__(self):
+        self.weekly_plan_url = "https://fribbebeach.de/fribbe/belegungsplan.html"
+        self.event_calendar_url = (
+            "https://fribbebeach.de/fribbe/veranstaltungskalender.html"
+        )
         self._week_occupancy: List[Occupancy] = []
         self._event_occupancy: List[Occupancy] = []
         self._last_updated = datetime.now(tz=ZoneInfo("Europe/Berlin"))
