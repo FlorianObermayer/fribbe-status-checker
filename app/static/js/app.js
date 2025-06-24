@@ -1,7 +1,34 @@
+// Funktion zum Auslesen des for_date aus der URL
+function getForDateFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('for_date');
+}
+
+
 // Funktion zum Aktualisieren des Status
 async function updateStatus() {
+
+    const dateTimeOptions = {
+        //weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit'
+    };
+
+    const dateOptions = {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'short',
+    };
+
     try {
-        const response = await fetch('/api/status');
+        let forDate = getForDateFromUrl();
+        let url = '/api/status';
+        if (forDate && forDate !== 'today') {
+            url += `?for_date=${encodeURIComponent(forDate)}`;
+        }
+        const response = await fetch(url);
         const data = await response.json();
         
         // Setze Body-Klasse basierend auf Status
@@ -42,9 +69,9 @@ async function updateStatus() {
         // Header dynamisch setzen
         const occHeader = document.getElementById('occupancy-header');
         if (data.occupancy.source === 'event_calendar') {
-            occHeader.textContent = 'Heutige Veranstaltungen';
+            occHeader.textContent = forDate ? `Veranstaltungen (${new Date(data.occupancy.for_date).toLocaleDateString('de-DE', dateOptions)})` : 'Heutige Veranstaltungen';
         } else if (data.occupancy.source === 'weekly_plan') {
-            occHeader.textContent = 'Heutiger Belegungsplan';
+            occHeader.textContent = forDate ? `Belegungsplan (${new Date(data.occupancy.for_date).toLocaleDateString('de-DE', dateOptions)})` : 'Heutiger Belegungsplan';
         }
         // Rötliche Färbung bei occupancy_type 'fully'
         if (data.occupancy.type === 'fully') {
@@ -53,23 +80,16 @@ async function updateStatus() {
             occCard.classList.remove('occupancy-fully');
         }
 
-        const options = {
-            //weekday: 'short',
-            day: 'numeric',
-            month: 'short',
-            hour: '2-digit',
-            minute: '2-digit'
-        };
         // Kombinierter Aktualisierungsmarker
         let combinedText = '';
         if (data.presence && data.presence.last_updated) {
             const p = new Date(data.presence.last_updated);
-            combinedText += `Anwesenheit vom ${p.toLocaleDateString('de-DE', options)}`;
+            combinedText += `Anwesenheit vom ${p.toLocaleDateString('de-DE', dateTimeOptions)}`;
         }
         if (data.occupancy && data.occupancy.last_updated) {
             const o = new Date(data.occupancy.last_updated);
             if (combinedText) combinedText += ' - ';
-            combinedText += `Belegung vom ${o.toLocaleDateString('de-DE', options)}`;
+            combinedText += `Belegung vom ${o.toLocaleDateString('de-DE', dateTimeOptions)}`;
         }
         if (!combinedText) combinedText = 'Aktualisiert: Nie';
         document.getElementById('combined-updated-text').textContent = combinedText;

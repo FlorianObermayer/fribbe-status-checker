@@ -1,11 +1,13 @@
 import asyncio
-from datetime import datetime
+from datetime import date, datetime, timedelta
 import logging
 import threading
 import time
 from zoneinfo import ZoneInfo
 from bs4 import BeautifulSoup, Tag
 from typing import List, Tuple
+
+import dateparser
 
 from app.services.occupancy.Occupancy import Occupancy
 from app.services.occupancy.OccupancyParser import (
@@ -14,6 +16,7 @@ from app.services.occupancy.OccupancyParser import (
 )
 from app.services.occupancy.OccupancySource import OccupancySource
 from app.services.occupancy.OccupancyType import OccupancyType
+from dataclasses import replace
 
 
 logger = logging.getLogger("uvicorn.error")
@@ -33,9 +36,8 @@ class OccupancyService:
         self._stop_event = threading.Event()
         self._last_error: Exception | None = None
 
-    def get_todays_occupancy(
-        self,
-    ) -> Tuple[
+    def get_occupancy(self, for_date_str: str) -> Tuple[
+        date,
         List[str],
         List[Occupancy],
         OccupancyType,
@@ -44,25 +46,43 @@ class OccupancyService:
         Exception | None,
     ]:
         """
-        Retrieves today's occupancy information.
+        Retrieves occupancy information for a given date.
 
-        Returns:
-            Tuple[List[str], OccupancyType, OccupancySource, datetime, Exception | None]:
-                - A list of messages if today's occupancies or an empty list.
-                - The overall occupancy type for today.
-                - The source of the occupancy (event calendar or weekly plan)
-                - The timestamp of the last update.
-                - the last parsing error if there was any
+        Args:
+            for_date_str (str): The date string (in any parseable format) for which to retrieve occupancy information.
+
+            Tuple[
+                date,              # The parsed date object, today's date if parsing failed.
+                List[str],         # Human-readable lines describing each occupancy event for the date.
+                List[Occupancy],   # List of Occupancy objects for the date.
+                OccupancyType,     # The overall occupancy type for the date (e.g., PARTIALLY, FULLY, NONE).
+                OccupancySource,   # The source of the occupancy information (e.g., WEEKLY_PLAN, EVENT_CALENDAR).
+                datetime,          # The timestamp of the last update to the occupancy data.
+                Exception | None   # The last parsing error encountered, or None if there was no error.
+
+        Notes:
+            - If no occupancies are found for the given date, returns empty lists and OccupancyType.NONE.
+            - The occupancy type is set to FULLY if any event for the date is fully occupied.
+            - The source is set to EVENT_CALENDAR if any event for the date comes from the event calendar.
+            - The method does not currently check for overlapping events that might result in a fully blocked scenario.
         """
-        today = datetime.now(tz=ZoneInfo("Europe/Berlin")).date()
-        todays_occupancies = [
+        for_date = (
+            dateparser.parse(
+                for_date_str,
+                languages=["de"],
+                settings={"TIMEZONE": "Europe/Berlin"},
+            )
+            or datetime.now()
+        ).date()
+        filtered_occupancies = [
             occ
             for occ in self._week_occupancy + self._event_occupancy
-            if occ.begin.date() == today
+            if occ.begin.date() == for_date
         ]
 
-        if not todays_occupancies:
+        if not filtered_occupancies:
             return (
+                for_date,
                 [],
                 [],
                 OccupancyType.NONE,
@@ -76,7 +96,7 @@ class OccupancyService:
         source: OccupancySource = OccupancySource.WEEKLY_PLAN
 
         events: List[Occupancy] = []
-        for occ in sorted(todays_occupancies, key=lambda o: o.begin):
+        for occ in sorted(filtered_occupancies, key=lambda o: o.begin):
             location = occ.occupied_str
 
             events.append(occ)
@@ -90,7 +110,15 @@ class OccupancyService:
 
         # TODO: Also figure out if each occupation potentially overlaps with other resulting in a fully blocked scenario
 
-        return (lines, events, occupancy, source, self._last_updated, self._last_error)
+        return (
+            for_date,
+            lines,
+            events,
+            occupancy,
+            source,
+            self._last_updated,
+            self._last_error,
+        )
 
     @staticmethod
     async def _get_occupancy_data(source_url: str) -> Tag:
@@ -108,13 +136,36 @@ class OccupancyService:
 
         return tables[0]  # type: ignore
 
+    def _extend_to(self, events: List[Occupancy], count: int) -> List[Occupancy]:
+        if len(events) >= count:
+            return events
+        if len(events) < 7:
+            raise Exception("Illegal number of events for _extend_to")
+
+        weeks = int(count / 7)
+        sorted_events = sorted(events, key=lambda o: o.begin)
+        result: List[Occupancy] = [*sorted_events]
+        for i in range(1, weeks):
+            for event in sorted_events:
+                shifted_occ = replace(
+                    event,
+                    begin=event.begin + timedelta(days=7 * i),
+                    end=(
+                        event.end + timedelta(days=7 * i)
+                        if event.end is not None
+                        else None
+                    ),
+                )
+                result.append(shifted_occ)
+        return result
+
     async def _run_get_latest_occupancy(self):
         try:
             logger.info(f"Refresh occupancy...")
             weekly_table = await OccupancyService._get_occupancy_data(
                 self.weekly_plan_url
             )
-            self._week_occupancy = parse_weekly_plan(weekly_table)
+            self._week_occupancy = self._extend_to(parse_weekly_plan(weekly_table), 365)
 
             event_table = await OccupancyService._get_occupancy_data(
                 self.event_calendar_url
