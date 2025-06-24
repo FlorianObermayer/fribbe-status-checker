@@ -69,7 +69,7 @@ class OccupancyService:
         for_date = (
             dateparser.parse(
                 for_date_str,
-                languages=["de"],
+                languages=["de", "en"],
                 settings={"TIMEZONE": "Europe/Berlin"},
             )
             or datetime.now()
