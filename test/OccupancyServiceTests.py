@@ -1,5 +1,5 @@
 import pytest
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from unittest.mock import MagicMock, patch
 import zoneinfo
 
@@ -32,11 +32,15 @@ async def test_run_get_latest_occupancy_sets_week_occupancy(
 
 def test_get_todays_occupancy_no_occupancy():
     s = service()
-    msgs, occupation, _, last_updated, last_error = s.get_todays_occupancy()
+    for_date, msgs, events, occupancy, _, last_updated, last_error = s.get_occupancy(
+        "today"
+    )
     assert len(msgs) == 0
-    assert occupation is OccupancyType.NONE
+    assert len(events) == 0
+    assert occupancy is OccupancyType.NONE
     assert isinstance(last_updated, datetime)
     assert last_error is None
+    assert isinstance(for_date, date)
 
 
 def test_get_todays_week_occupancy_with_occupancy():
@@ -45,11 +49,16 @@ def test_get_todays_week_occupancy_with_occupancy():
     occ[0].begin = datetime.now(zoneinfo.ZoneInfo("Europe/Berlin"))
     occ[0].end = occ[0].begin + timedelta(hours=4)
     s._week_occupancy = occ  # type: ignore
-    msgs, occupancy, source, last_updated, last_error = s.get_todays_occupancy()
+    for_date, msgs, events, occupancy, source, last_updated, last_error = (
+        s.get_occupancy("today")
+    )
     assert len(msgs) > 0
+    assert len(events) > 0
+    assert len(msgs) == len(events)
     assert occupancy is OccupancyType.PARTIALLY
     assert source is OccupancySource.WEEKLY_PLAN
     assert isinstance(last_updated, datetime)
+    assert isinstance(for_date, date)
     assert last_error is None
 
 
@@ -59,11 +68,16 @@ def test_get_todays_calendar_occupancy_with_occupancy():
     occ[0].begin = datetime.now()
     occ[0].end = occ[0].begin + timedelta(hours=4)
     s._event_occupancy = occ  # type: ignore
-    msgs, occupancy, source, last_updated, last_error = s.get_todays_occupancy()
+    for_date, msgs, events, occupancy, source, last_updated, last_error = (
+        s.get_occupancy("today")
+    )
     assert len(msgs) > 0
+    assert len(events) > 0
+    assert len(msgs) == len(events)
     assert occupancy is OccupancyType.FULLY
     assert source is OccupancySource.EVENT_CALENDAR
     assert isinstance(last_updated, datetime)
+    assert isinstance(for_date, date)
     assert last_error is None
 
 

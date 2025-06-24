@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from typing import List, Literal
 from bs4 import Tag
 
+from app.services.DatetimeParser import parse_event_times
 from app.services.occupancy.Occupancy import Occupancy
 from app.services.occupancy.OccupancySource import OccupancySource
 from app.services.occupancy.OccupancyType import OccupancyType
@@ -57,7 +58,6 @@ def parse_weekly_plan(weekly_plan_table: Tag) -> List[Occupancy]:
 def _parse_weekly_plan_data(
     day: Weekday, time: str, event_name: str, location_field: str
 ) -> Occupancy:
-    start_str, end_str = [t.strip() for t in time.split("-")]
     weekday_map: dict[Weekday, int] = {
         "Montag": 0,
         "Dienstag": 1,
@@ -80,16 +80,7 @@ def _parse_weekly_plan_data(
         case _:
             occupancy_type = OccupancyType.FULLY
 
-    try:
-        start_time: datetime = datetime.strptime(
-            f"{event_date} {start_str}", "%Y-%m-%d %H:%M"
-        )
-        end_time: datetime = datetime.strptime(
-            f"{event_date} {end_str}", "%Y-%m-%d %H:%M"
-        )
-    except:
-        start_time = datetime.strptime(f"{event_date} 00:00", "%Y-%m-%d %H:%M")
-        end_time = datetime.strptime(f"{event_date} 23:59", "%Y-%m-%d %H:%M")
+    start_time, end_time = parse_event_times(event_date, time)
 
     return Occupancy(
         start_time,
@@ -118,7 +109,7 @@ def parse_event_calendar(event_calendar_table: Tag) -> List[Occupancy]:
 
         # Parse date
         data_date = row.get("data-date")
-        if data_date:
+        if data_date and isinstance(data_date, str):
             event_date = data_date
         else:
             # fallback: try to parse from date_str (e.g. "01.05.")
@@ -127,36 +118,7 @@ def parse_event_calendar(event_calendar_table: Tag) -> List[Occupancy]:
             except Exception:
                 continue
 
-        # Parse time
-        if "-" in time_str:
-            # e.g. "12:00 - 16:00", "16:30 - 18:30"
-            start_str, end_str = [
-                t.strip().replace(" Uhr", "") for t in time_str.split("-")
-            ]
-        elif time_str.lower() in ["ganztags", "ganztägig"]:
-            start_str, end_str = "00:00", "23:59"
-        elif time_str.lower() in ["vormittags"]:
-            start_str, end_str = "08:00", "12:00"
-        elif time_str.lower() in ["abends"]:
-            start_str, end_str = "18:00", "22:00"
-        elif time_str.lower() in ["nachmittags"]:
-            start_str, end_str = "15:00", "18:00"
-        elif time_str.lower() in ["ab mittag"]:
-            start_str, end_str = "12:00", "18:00"
-        elif "??" in time_str:
-            # e.g. "13:00 - ?? Uhr"
-            start_str, end_str = (
-                time_str.split("-")[0].strip().replace(" Uhr", ""),
-                "23:59",
-            )
-        elif time_str.lower() in ["-", ""]:
-            start_str, end_str = "00:00", "23:59"
-        else:
-            # e.g. "10:00 Uhr"
-            start_str = time_str.replace(" Uhr", "").strip()
-            end_str = (
-                datetime.strptime(start_str, "%H:%M") + timedelta(hours=2)
-            ).strftime("%H:%M")
+        start_time, end_time = parse_event_times(event_date, time_str)
 
         # Occupancy type
         if not location_field or location_field == "-":
@@ -172,17 +134,6 @@ def parse_event_calendar(event_calendar_table: Tag) -> List[Occupancy]:
             occupancy_type = OccupancyType.FULLY
         else:
             occupancy_type = OccupancyType.PARTIALLY
-
-        # Parse datetime
-        try:
-            start_time = datetime.strptime(
-                f"{event_date} {start_str}", "%Y-%m-%d %H:%M"
-            )
-            end_time = datetime.strptime(f"{event_date} {end_str}", "%Y-%m-%d %H:%M")
-        except Exception:
-            # fallback to all-day
-            start_time = datetime.strptime(f"{event_date} 00:00", "%Y-%m-%d %H:%M")
-            end_time = datetime.strptime(f"{event_date} 23:59", "%Y-%m-%d %H:%M")
 
         occupancies.append(
             Occupancy(
