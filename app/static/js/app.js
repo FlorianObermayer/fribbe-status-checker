@@ -114,7 +114,7 @@ function setTrafficLightTooltips(thresholds) {
         || typeof thresholds.many !== 'number'
     ) return;
 
-    const redTooltip = `${thresholds.empty} oder weniger Geräte befinden sich im Fribbe-WiFi`;
+    const redTooltip = `${thresholds.empty ? `${thresholds.empty} oder weniger` : thresholds.empty} Geräte befinden sich im Fribbe-WiFi`;
     const yellowTooltip = `Zwischen ${thresholds.few} - ${thresholds.many} aktive Geräte befinden sich im Fribbe-WiFi`;
     const greenTooltip = `Mehr als ${thresholds.many} aktive Geräte befinden sich im Fribbe-WiFi`;
 
