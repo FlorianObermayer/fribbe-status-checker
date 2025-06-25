@@ -1,4 +1,3 @@
-first_update = true;
 
 function getForDateFromUrl() {
     const params = new URLSearchParams(window.location.search);
@@ -92,22 +91,10 @@ async function updateStatus() {
 
         // Tooltip logic: set native title attributes for traffic lights
         setTrafficLightTooltips(data.presence.thresholds);
-
-        if (first_update) {
-            setTimeout(() => {
-                window.scrollTo(0, 1);
-                setTimeout(() => {
-                    window.scrollTo(0, 0)
-                }, 50)
-
-            }, 20); // Hack: Fixes initial weird scrolling bug
-        }
-        first_update = false;
     } catch (error) {
         console.error('Fehler beim Laden des Status:', error);
         document.getElementById('status-message').textContent =
             'Fehler beim Laden des Status. Bitte versuche es später erneut.';
-        first_update = false;
     }
 }
 
