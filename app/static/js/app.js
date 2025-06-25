@@ -89,10 +89,55 @@ async function updateStatus() {
         if (!combinedText) combinedText = 'Aktualisiert: Nie';
         document.getElementById('combined-updated-text').textContent = combinedText;
 
+        // Tooltip logic: set native title attributes for traffic lights
+        setTrafficLightTooltips(data.presence.thresholds);
+
     } catch (error) {
         console.error('Fehler beim Laden des Status:', error);
         document.getElementById('status-message').textContent =
             'Fehler beim Laden des Status. Bitte versuche es später erneut.';
+    }
+}
+
+function setTrafficLightTooltips(thresholds) {
+
+    const red = document.getElementById('red-light');
+    const explanationRed = document.getElementById('explanation-red')
+    const yellow = document.getElementById('yellow-light');
+    const explanationYellow = document.getElementById('explanation-yellow');
+    const green = document.getElementById('green-light');
+    const explanationGreen = document.getElementById('explanation-green');
+
+    if (!thresholds
+        || typeof thresholds.empty !== 'number'
+        || typeof thresholds.few !== 'number'
+        || typeof thresholds.many !== 'number'
+    ) return;
+
+    const redTooltip = `${thresholds.empty} oder weniger Geräte befinden sich im Fribbe-WiFi`;
+    const yellowTooltip = `Zwischen ${thresholds.few} - ${thresholds.many} aktive Geräte befinden sich im Fribbe-WiFi`;
+    const greenTooltip = `Mehr als ${thresholds.many} aktive Geräte befinden sich im Fribbe-WiFi`;
+
+    if (red) {
+        red.title = redTooltip
+    }
+    if (explanationRed) {
+        explanationRed.title = redTooltip
+    }
+
+    if (yellow) {
+        yellow.title = yellowTooltip
+    }
+    if (explanationYellow) {
+        explanationYellow.title = yellowTooltip
+    }
+
+    if (green) {
+        green.title = greenTooltip
+    }
+
+    if (explanationGreen) {
+        explanationGreen.title = greenTooltip;
     }
 }
 
