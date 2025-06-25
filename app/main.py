@@ -3,7 +3,7 @@ import os
 from datetime import date, datetime
 from typing import List
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -114,3 +114,9 @@ async def get_html(for_date: str = "today"):
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     return FileResponse("app/static/images/favicon.ico")
+
+
+@app.get("/robots.txt", response_class=PlainTextResponse, include_in_schema=False)
+def robots():
+    data = """User-agent: *\nDisallow: /"""
+    return data
