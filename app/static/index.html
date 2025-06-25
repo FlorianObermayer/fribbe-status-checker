@@ -15,20 +15,20 @@
         <h1>Fribbe Beach - was geht aaaab?</h1>
 
         <div class="status-indicator">
-            <div id="red-light" class="light red"></div>
-            <div id="yellow-light" class="light yellow"></div>
-            <div id="green-light" class="light green"></div>
+            <div id="red-light" class="light red" data-status="empty"></div>
+            <div id="yellow-light" class="light yellow" data-status="few"></div>
+            <div id="green-light" class="light green" data-status="many"></div>
         </div>
         <div class="status-explanation">
-            <div class="explanation-item" data-status="empty">
+            <div id="explanation-red" class="explanation-item" data-status="empty">
                 <span class="explanation-dot red"></span>
                 <span>Nüscht.</span>
             </div>
-            <div class="explanation-item" data-status="few">
+            <div id="explanation-yellow" class="explanation-item" data-status="few">
                 <span class="explanation-dot yellow"></span>
                 <span>Bissle was...</span>
             </div>
-            <div class="explanation-item" data-status="many">
+            <div id="explanation-green" class="explanation-item" data-status="many">
                 <span class="explanation-dot green"></span>
                 <span>Volle Bude!</span>
             </div>
@@ -62,7 +62,8 @@
     </div>
     <div class="inofficial-hint">
         <p>
-            <b>Disclaimer:</b> Dies ist ein <b>inoffizielles Projekt</b> und steht in keiner offiziellen Verbindung zum DJK
+            <b>Disclaimer:</b> Dies ist ein <b>inoffizielles Projekt</b> und steht in keiner offiziellen Verbindung zum
+            DJK
             Augsburg Hochzoll
             e.V. - Fragen oder Anregungen gerne an Flo aus dem Beachwart-Team!
         </p>
