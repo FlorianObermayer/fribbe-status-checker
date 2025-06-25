@@ -177,7 +177,10 @@ document.addEventListener('DOMContentLoaded', () => {
     updateStatus();
     setInterval(updateStatus, 30000); // Refresh status every 30 seconds
     setTimeout(() => {
-        window.scrollTo(1, 0)
-        window.scrollTo(0, 0)
+        window.scrollTo(0, 1);
+        setTimeout(() => {
+            window.scrollTo(0, 0)
+        }, 50)
+
     }, 50); // Hack: Fixes initial weird scrolling bug
 });
