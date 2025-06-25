@@ -98,15 +98,25 @@ class OccupancyService:
         events: List[Occupancy] = []
         for occ in sorted(filtered_occupancies, key=lambda o: o.begin):
             location = occ.occupied_str
+            message = f"{occ.time_str}: {occ.event_name} ({location})"
 
             events.append(occ)
-            lines.append(f"{occ.time_str}: {occ.event_name} ({location})")
+            lines.append(message)
 
             if occ.occupancy_type == OccupancyType.FULLY:
                 occupancy = OccupancyType.FULLY
 
             if occ.occupancy_source == OccupancySource.EVENT_CALENDAR:
                 source = OccupancySource.EVENT_CALENDAR
+
+            # a full day blocking event should overrule everything
+            if (
+                occ.occupancy_type == OccupancyType.FULLY
+                and occ.occupancy_source == OccupancySource.EVENT_CALENDAR
+            ):
+                lines = [message]
+                events = [occ]
+                break
 
         # TODO: Also figure out if each occupation potentially overlaps with other resulting in a fully blocked scenario
 

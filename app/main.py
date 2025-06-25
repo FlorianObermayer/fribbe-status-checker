@@ -75,10 +75,20 @@ async def get_status(for_date: str = "today"):
         for_date=occ_for_date,
     )
 
+    # Get the time_str of the first "fully occupying event", if any
+    time_str = next(
+        (
+            event.time_str
+            for event in occ_events
+            if event.occupancy_type == OccupancyType.FULLY
+        ),
+        None,
+    )
+
     presence_level = presence_service.get_level()
     presence_last_updated = presence_service.get_last_updated()
     presence_message = message_service.get_message(
-        presence_level, occ_type, presence_last_updated
+        presence_level, occ_type, time_str, presence_last_updated
     )
     presence_last_error = presence_service.get_last_error()
 
