@@ -3,6 +3,84 @@ function getForDateFromUrl() {
     return params.get('for_date');
 }
 
+function setTooltipThresholds(thresholds) {
+    // thresholds: {empty: X, few: Y, many: Z}
+    // Ampel
+    document.querySelector('#red-light .tooltip').setAttribute('data-tooltip', `Weniger als ${thresholds.few} Geräte online (Ampel ist rot)`);
+    document.querySelector('#yellow-light .tooltip').setAttribute('data-tooltip', `Zwischen ${thresholds.few} und ${thresholds.many} Geräte online (Ampel ist gelb)`);
+    document.querySelector('#green-light .tooltip').setAttribute('data-tooltip', `Mehr als ${thresholds.many} Geräte online (Ampel ist grün)`);
+    // Legende
+    document.querySelector('.explanation-item[data-status="empty"] .tooltip').setAttribute('data-tooltip', `Weniger als ${thresholds.few} Geräte online: Ampel ist rot`);
+    document.querySelector('.explanation-item[data-status="few"] .tooltip').setAttribute('data-tooltip', `Zwischen ${thresholds.few} und ${thresholds.many} Geräte online: Ampel ist gelb`);
+    document.querySelector('.explanation-item[data-status="many"] .tooltip').setAttribute('data-tooltip', `Mehr als ${thresholds.many} Geräte online: Ampel ist grün`);
+}
+
+// Touch-Unterstützung für Tooltips
+function enableTouchTooltips() {
+    document.querySelectorAll('.tooltip').forEach(el => {
+        el.addEventListener('touchstart', function (e) {
+            e.stopPropagation();
+            document.querySelectorAll('.tooltip').forEach(t => t.classList.remove('show-tooltip'));
+            this.classList.add('show-tooltip');
+        });
+    });
+    document.body.addEventListener('touchstart', function () {
+        document.querySelectorAll('.tooltip').forEach(t => t.classList.remove('show-tooltip'));
+    });
+}
+
+function enableDynamicTooltipPositioning() {
+    // Für Mouse Hover
+    document.querySelectorAll('.tooltip').forEach(el => {
+        el.addEventListener('mousemove', function (e) {
+            if (!this.hasAttribute('data-tooltip')) return;
+            const tooltip = this;
+            const tooltipBox = tooltip;
+            const tooltipText = tooltip.getAttribute('data-tooltip');
+            // Temporär Tooltip anzeigen, um Größe zu messen
+            tooltip.classList.add('show-tooltip');
+            setTimeout(() => {
+                const after = window.getComputedStyle(tooltip, '::after');
+                // Position berechnen
+                const mouseX = e.clientX;
+                const mouseY = e.clientY;
+                // Tooltip-Box nach rechts unten, aber im Viewport
+                const boxWidth = 220;
+                const boxHeight = 60;
+                let left = mouseX + 16;
+                let top = mouseY + 8;
+                if (left + boxWidth > window.innerWidth) left = window.innerWidth - boxWidth - 8;
+                if (top + boxHeight > window.innerHeight) top = window.innerHeight - boxHeight - 8;
+                tooltip.style.setProperty('--tooltip-x', left + 'px');
+                tooltip.style.setProperty('--tooltip-y', top + 'px');
+            }, 0);
+        });
+        el.addEventListener('mouseleave', function () {
+            this.classList.remove('show-tooltip');
+        });
+    });
+    // Für Touch
+    document.querySelectorAll('.tooltip').forEach(el => {
+        el.addEventListener('touchstart', function (e) {
+            e.stopPropagation();
+            document.querySelectorAll('.tooltip').forEach(t => t.classList.remove('show-tooltip'));
+            this.classList.add('show-tooltip');
+            // Tooltip unter das Element setzen
+            const rect = this.getBoundingClientRect();
+            let left = rect.left + rect.width / 2 - 110;
+            let top = rect.bottom + 8;
+            if (left < 0) left = 8;
+            if (left + 220 > window.innerWidth) left = window.innerWidth - 220;
+            if (top + 60 > window.innerHeight) top = window.innerHeight - 60;
+            this.style.setProperty('--tooltip-x', left + 'px');
+            this.style.setProperty('--tooltip-y', top + 'px');
+        });
+    });
+    document.body.addEventListener('touchstart', function () {
+        document.querySelectorAll('.tooltip').forEach(t => t.classList.remove('show-tooltip'));
+    });
+}
+
 async function updateStatus() {
 
     const dateTimeOptions = {
@@ -89,6 +167,11 @@ async function updateStatus() {
         if (!combinedText) combinedText = 'Aktualisiert: Nie';
         document.getElementById('combined-updated-text').textContent = combinedText;
 
+        // Setze Tooltips für Schwellenwerte
+        if (data.presence && data.presence.thresholds) {
+            setTooltipThresholds(data.presence.thresholds);
+        }
+
     } catch (error) {
         console.error('Fehler beim Laden des Status:', error);
         document.getElementById('status-message').textContent =
@@ -97,6 +180,8 @@ async function updateStatus() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    enableTouchTooltips();
+    enableDynamicTooltipPositioning();
     // Date-Picker
     const dateInput = document.getElementById('for-date-picker');
     const todayBtn = document.getElementById('today-btn');
@@ -131,5 +216,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     updateStatus();
     setInterval(updateStatus, 30000); // Refresh status every 30 seconds
-    setTimeout(() => window.scrollTo(0, 0), 50); // Hack: Fixes initial weird scrolling bug
+    setTimeout(() => {
+        window.scrollTo(1, 0)
+        window.scrollTo(0, 0)
+    }, 50); // Hack: Fixes initial weird scrolling bug
 });
