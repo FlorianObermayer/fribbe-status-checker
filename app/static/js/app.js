@@ -145,7 +145,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const dateInput = document.getElementById('for-date-picker');
     const todayBtn = document.getElementById('today-btn');
     const urlForDate = getForDateFromUrl();
-    let todayStr = new Date().toISOString().slice(0, 10);
+    let today = new Date();
+    let todayStr = today.getFullYear() + '-' +
+        String(today.getMonth() + 1).padStart(2, '0') + '-' +
+        String(today.getDate()).padStart(2, '0');
     if (dateInput) {
         dateInput.value = urlForDate || todayStr;
         dateInput.max = new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString().slice(0, 10); // max 1 Jahr in Zukunft
