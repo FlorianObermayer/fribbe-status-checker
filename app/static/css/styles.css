@@ -6,7 +6,8 @@
     --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
-html, body {
+html,
+body {
     max-width: 100vw;
     overflow-x: hidden;
 }
@@ -83,6 +84,7 @@ h1 {
     border-radius: 50%;
     pointer-events: none;
 }
+
 .light.red {
     background-color: var(--color-red);
 }
@@ -98,9 +100,14 @@ h1 {
 .status-message {
     font-size: 1.05rem;
     margin: 14px 0;
-    padding: 10px;
-    border-radius: 8px;
-    background-color: rgba(255,255,255,0.8);
+    border-radius: 10px;
+        background-color: rgba(255, 255, 255, 0.92);
+        color: #444;
+        font-style: italic;
+        position: relative;
+        padding: 18px 8px;
+        max-width: 600px;
+        text-align: center;
 }
 
 #combined-updated-marker {
@@ -130,6 +137,7 @@ body.status-few {
 body.status-many {
     background-color: #e8f5e9;
 }
+
 /* CSS Ergänzungen */
 .status-explanation {
     display: flex;
@@ -179,6 +187,7 @@ body.status-many {
     border: 2.5px solid #f44336;
     box-shadow: 0 2px 12px 0 rgba(244, 67, 54, 0.08);
 }
+
 .occupancy-card {
     margin-top: 12px;
     background: #f6f6f6;
@@ -197,7 +206,7 @@ body.status-many {
     margin-bottom: 12px;
 }
 
-.occupancy-card > div {
+.occupancy-card>div {
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -205,15 +214,60 @@ body.status-many {
 }
 
 .inofficial-hint {
-    width: 90%;
-    text-align: center;
+    max-width: 600px;
+    text-align: left;
     margin-bottom: 0;
     font-size: 0.82rem;
     color: #aaa;
-    opacity: 0.7;
+    opacity: 0.8;
     letter-spacing: 0.01em;
     margin-top: 10px;
-    margin-bottom: 0;
+}
+
+.occupancy-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.occupancy-header-row h2 {
+    margin: 0;
+    font-size: 1.1rem;
+    flex: 1 1 auto;
+    text-align: left;
+}
+
+.occupancy-card .date-picker-row {
+    margin: 0;
+    gap: 6px;
+}
+
+.occupancy-card #for-date-picker {
+    font-size: 0.98rem;
+    padding: 2px 6px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    background: #fafafa;
+    color: #333;
+    max-width: 120px;
+}
+
+.occupancy-card #today-btn {
+    font-size: 0.95rem;
+    padding: 2px 8px;
+    border-radius: 6px;
+    border: 1px solid #bbb;
+    background: #f5f5f5;
+    color: #333;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.occupancy-card #today-btn:hover {
+    background: #e0e0e0;
 }
 
 @media (max-width: 600px) {
@@ -223,34 +277,50 @@ body.status-many {
         max-width: 100vw;
         width: 100%;
     }
+
     h1 {
         font-size: 1.3rem;
         margin-bottom: 16px;
     }
+
     .status-indicator {
         margin: 10px 0;
     }
+
     .light {
         width: 36px;
         height: 36px;
         margin: 0 2px;
     }
+
     .occupancy-card {
         padding: 10px 4px;
         border-radius: 8px;
     }
+
     #combined-updated-marker {
         left: 4px;
         bottom: 2px;
         font-size: 0.6rem;
         max-width: 98vw;
-       
+
     }
+
     .occupancy-card.occupancy-fully {
         border-radius: 0px;
     }
-        .fribbe-logo-inline {
-            width: 24px;
-            height: 24px;
-        }
+
+    .occupancy-header-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 4px;
+    }
+
+    .occupancy-header-row h2 {
+        text-align: center;
+    }
+
+    .inofficial-hint {
+        padding-left: 16px;
+    }
 }
