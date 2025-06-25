@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import asyncio
 from datetime import datetime
 from enum import Enum
@@ -8,6 +7,7 @@ from huawei_lte_api.Client import Client
 from huawei_lte_api.Connection import Connection
 import time
 import logging
+from readerwriterlock import rwlock
 
 logger = logging.getLogger('uvicorn.error')
 
@@ -29,15 +29,19 @@ class PresenceLevelService:
             "2C:CF:67:DD:46:23",  # raspberrypi
             "54:60:09:EE:19:28",  # chromecast-audio
         }
+        self._rwlock = rwlock.RWLockFair()
 
     def get_level(self):
-        return self._presence_level
+        with self._rwlock.gen_rlock():
+            return self._presence_level
 
     def get_last_updated(self):
-        return self._last_updated
+        with self._rwlock.gen_rlock():
+            return self._last_updated
 
     def get_last_error(self):
-        return self._last_error
+        with self._rwlock.gen_rlock():
+            return self._last_error
 
     async def _run_presence_detection(self, router_ip:str, username:str, password:str):
         try:
@@ -56,20 +60,22 @@ class PresenceLevelService:
                 logger.debug(
                     f"active member devices: {active_member_devices_ct}", exc_info=True
                 )
-                if active_member_devices_ct == 0:
-                    self._presence_level = PresenceLevel.EMPTY
-                elif active_member_devices_ct <= 5:
-                    self._presence_level = PresenceLevel.FEW
-                else:
-                    self._presence_level = PresenceLevel.MANY
+                with self._rwlock.gen_wlock():
+                    if active_member_devices_ct == 0:
+                        self._presence_level = PresenceLevel.EMPTY
+                    elif active_member_devices_ct <= 5:
+                        self._presence_level = PresenceLevel.FEW
+                    else:
+                        self._presence_level = PresenceLevel.MANY
 
-                self._last_updated = datetime.now(tz=ZoneInfo("Europe/Berlin"))
-                self._last_error = None
+                    self._last_updated = datetime.now(tz=ZoneInfo("Europe/Berlin"))
+                    self._last_error = None
             logger.info(f"Refresh Presence Level... DONE ({self._presence_level})")
         except Exception as e:
             logger.error(f"Error during presence detection: {e}", exc_info=True)
-            self._presence_level = PresenceLevel.EMPTY
-            self._last_error = e
+            with self._rwlock.gen_wlock():
+                self._presence_level = PresenceLevel.EMPTY
+                self._last_error = e
 
     def _presence_detection_loop(self, interval: int, router_ip: str, username:str, password:str):
         loop = asyncio.new_event_loop()

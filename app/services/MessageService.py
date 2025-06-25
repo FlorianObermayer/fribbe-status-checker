@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 from datetime import datetime
 import random
 from app.services.PresenceLevelService import PresenceLevel
