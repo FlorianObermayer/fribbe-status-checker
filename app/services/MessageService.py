@@ -8,11 +8,8 @@ from app.services.occupancy.OccupancyType import OccupancyType
 class MessageService:
     def __init__(self):
         self.occupied_messages = [
-            "Heute ist das Fribbe leider durch eine Veranstaltung belegt. Kopf hoch, morgen sieht’s bestimmt besser aus!",
-            "Das Feld ist heute nicht verfügbar – gönn dir einen freien Tag oder plan schon mal das nächste Match!",
-            "Heute kein Volleyball am Fribbe wegen einer Veranstaltung. Vielleicht ein guter Moment für ein Alternativprogramm?",
-            "Leider ist das Fribbe heute belegt. Lass dich nicht entmutigen – das nächste Spiel kommt bestimmt!",
-            "Heute sind die Felder vergeben. Nutze die Zeit für Regeneration oder ein Treffen mit Freunden abseits des Sandes!",
+            "Heute ({ftime}) ist das Fribbe leider durch eine Veranstaltung belegt.",
+            "Die Felder sind heute ({ftime}) leider nicht verfügbar.",
         ]
 
         self.seasonal_messages = {
@@ -193,11 +190,19 @@ class MessageService:
             return "night"
 
     def get_message(
-        self, level: PresenceLevel, occupancy: OccupancyType, last_updated: datetime
+        self,
+        level: PresenceLevel,
+        occupancy: OccupancyType,
+        occupancy_time_str: str | None,
+        for_datetime: datetime,
     ) -> str:
 
         if occupancy == OccupancyType.FULLY:
-            return random.choice(self.occupied_messages)
+            formatted_occ_messages = [
+                message.format(ftime=occupancy_time_str)
+                for message in self.occupied_messages
+            ]
+            return random.choice(formatted_occ_messages)
 
         # 20% chance for a combo message
         if random.random() < 0.2:
@@ -205,11 +210,11 @@ class MessageService:
 
         # 40% chance for saisonal or daytime-dependant messages
         if random.random() < 0.4:
-            daytime = self.get_daytime(last_updated)
+            daytime = self.get_daytime(for_datetime)
             if daytime in self.time_messages and level in self.time_messages[daytime]:
                 return random.choice(self.time_messages[daytime][level])
 
-            season = self.get_season(last_updated)
+            season = self.get_season(for_datetime)
             if (
                 season in self.seasonal_messages
                 and level in self.seasonal_messages[season]
