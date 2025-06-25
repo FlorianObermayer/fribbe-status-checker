@@ -9,12 +9,35 @@ import time
 import logging
 from readerwriterlock import rwlock
 
-logger = logging.getLogger('uvicorn.error')
+logger = logging.getLogger("uvicorn.error")
 
-class PresenceLevel(str,Enum):
+
+class PresenceLevel(str, Enum):
     EMPTY = "empty"
     FEW = "few"
     MANY = "many"
+
+
+class PresenceThresholds:
+    EMPTY = range(0, 1)  # 0 devices
+    FEW = range(1, 6)  # 1-5 devices
+    MANY = range(6, 100)  # > 5 devices
+
+    THRESHOLDS: dict[PresenceLevel, int] = {
+        PresenceLevel.EMPTY: EMPTY[0],
+        PresenceLevel.FEW: FEW[0],
+        PresenceLevel.MANY: MANY[0],
+    }
+
+    @staticmethod
+    def get_presence_level(devices_ct: int) -> PresenceLevel:
+        match devices_ct:
+            case ct if ct in PresenceThresholds.EMPTY:
+                return PresenceLevel.EMPTY
+            case ct if ct in PresenceThresholds.FEW:
+                return PresenceLevel.FEW
+            case _:
+                return PresenceLevel.MANY
 
 
 class PresenceLevelService:
@@ -43,7 +66,9 @@ class PresenceLevelService:
         with self._rwlock.gen_rlock():
             return self._last_error
 
-    async def _run_presence_detection(self, router_ip:str, username:str, password:str):
+    async def _run_presence_detection(
+        self, router_ip: str, username: str, password: str
+    ):
         try:
             logger.info(f"Refresh Presence Level...")
             with Connection(
@@ -61,13 +86,9 @@ class PresenceLevelService:
                     f"active member devices: {active_member_devices_ct}", exc_info=True
                 )
                 with self._rwlock.gen_wlock():
-                    if active_member_devices_ct == 0:
-                        self._presence_level = PresenceLevel.EMPTY
-                    elif active_member_devices_ct <= 5:
-                        self._presence_level = PresenceLevel.FEW
-                    else:
-                        self._presence_level = PresenceLevel.MANY
-
+                    self._presence_level = PresenceThresholds.get_presence_level(
+                        active_member_devices_ct
+                    )
                     self._last_updated = datetime.now(tz=ZoneInfo("Europe/Berlin"))
                     self._last_error = None
             logger.info(f"Refresh Presence Level... DONE ({self._presence_level})")
@@ -77,7 +98,9 @@ class PresenceLevelService:
                 self._presence_level = PresenceLevel.EMPTY
                 self._last_error = e
 
-    def _presence_detection_loop(self, interval: int, router_ip: str, username:str, password:str):
+    def _presence_detection_loop(
+        self, interval: int, router_ip: str, username: str, password: str
+    ):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         while not self._stop_event.is_set():

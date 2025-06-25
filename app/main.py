@@ -8,7 +8,11 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from app.services.MessageService import MessageService
-from app.services.PresenceLevelService import PresenceLevel, PresenceLevelService
+from app.services.PresenceLevelService import (
+    PresenceLevel,
+    PresenceLevelService,
+    PresenceThresholds,
+)
 from app.services.occupancy.Occupancy import Occupancy
 from app.services.occupancy.OccupancyService import OccupancyService
 from app.services.occupancy.OccupancySource import OccupancySource
@@ -35,6 +39,7 @@ class PresenceResponse(BaseModel):
     last_updated: datetime
     message: str
     last_error: str | None
+    thresholds: dict[PresenceLevel, int]
 
 
 class OccupancyResponse(BaseModel):
@@ -97,6 +102,7 @@ async def get_status(for_date: str = "today"):
         last_updated=presence_last_updated,
         message=presence_message,
         last_error=presence_last_error and str(presence_last_error),
+        thresholds=PresenceThresholds.THRESHOLDS,
     )
 
     return StatusResponse(
@@ -106,7 +112,7 @@ async def get_status(for_date: str = "today"):
 
 
 @app.get("/", response_class=HTMLResponse)
-async def get_html(for_date: str = "today"):
+async def get_html(for_date: str = "today"):  # keep unused variable for api reference
     with open("app/static/index.html") as f:
         return HTMLResponse(f.read())
 
