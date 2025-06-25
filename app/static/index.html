@@ -18,9 +18,6 @@
             <div id="yellow-light" class="light yellow"></div>
             <div id="green-light" class="light green"></div>
         </div>
-        <div id="status-message" class="status-message">
-            Lade Status...
-        </div>
         <div class="status-explanation">
             <div class="explanation-item" data-status="empty">
                 <span class="explanation-dot red"></span>
@@ -36,9 +33,19 @@
             </div>
         </div>
 
+        <div id="status-message" class="status-message">
+            Lade Status...
+        </div>
+
         <!-- Occupancy Info Card -->
         <div id="occupancy-card" class="occupancy-card">
-            <h2 id="occupancy-header">Lade Status...</h2>
+            <div class="occupancy-header-row">
+                <h2 id="occupancy-header">Lade Status...</h2>
+                <div class="date-picker-row">
+                    <input type="date" id="for-date-picker" />
+                    <button id="today-btn" type="button">Heute</button>
+                </div>
+            </div>
             <div>
                 <div><span id="occupancy-message">Lade Veranstaltung...</span></div>
             </div>
@@ -48,14 +55,16 @@
             <span id="combined-updated-text">Aktualisiert ...</span>
         </div>
         <div class="fribbe-logo-wrapper" style="display:none;">
-            <img src="/static/images/fribbe_logo_transparent_128x128.png" alt="Fribbe Logo" class="fribbe-logo" loading="lazy">
+            <img src="/static/images/fribbe_logo_transparent_128x128.png" alt="Fribbe Logo" class="fribbe-logo"
+                loading="lazy">
         </div>
-        </div>
-        <div class="inofficial-hint">
-            <p>
-                Dies ist ein <b>inoffizielles Projekt</b> und steht in keiner offiziellen Verbindung zum DJK Augsburg Hochzoll
-                e.V.
-            </p>
+    </div>
+    <div class="inofficial-hint">
+        <p>
+            Hinweis: Dies ist ein <b>inoffizielles Projekt</b> und steht in keiner offiziellen Verbindung zum DJK
+            Augsburg Hochzoll
+            e.V. - Fragen oder Anregungen gerne an Flo aus dem Beachwart-Team!
+        </p>
     </div>
 
     <script src="/static/js/app.js"></script>

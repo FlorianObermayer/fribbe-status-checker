@@ -63,8 +63,7 @@ async function updateStatus() {
             occMsgElem.innerHTML = '<ul style="margin:0; padding-left:24px;text-align:left;">' +
                 data.occupancy.messages.map(msg => `<li>${msg}</li>`).join('') + '</ul>';
         } else {
-            occCard.style.display = 'none';
-            occMsgElem.textContent = '-';
+            occMsgElem.textContent = 'Keine Belegungen oder Veranstaltungen!';
         }
         // Header dynamisch setzen
         const occHeader = document.getElementById('occupancy-header');
@@ -103,6 +102,38 @@ async function updateStatus() {
 
 // Status beim Laden aktualisieren und alle 30 Sekunden neu laden
 document.addEventListener('DOMContentLoaded', () => {
+    // Date-Picker initialisieren
+    const dateInput = document.getElementById('for-date-picker');
+    const todayBtn = document.getElementById('today-btn');
+    const urlForDate = getForDateFromUrl();
+    let todayStr = new Date().toISOString().slice(0, 10);
+    if (dateInput) {
+        dateInput.value = urlForDate || todayStr;
+        dateInput.max = new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString().slice(0, 10); // max 1 Jahr in Zukunft
+        dateInput.min = todayStr
+        dateInput.addEventListener('change', (e) => {
+            const val = e.target.value;
+            const params = new URLSearchParams(window.location.search);
+            if (val && val !== todayStr) {
+                params.set('for_date', val);
+            } else {
+                params.delete('for_date');
+            }
+            const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+            window.history.replaceState({}, '', newUrl);
+            updateStatus();
+        });
+    }
+    if (todayBtn) {
+        todayBtn.addEventListener('click', () => {
+            if (dateInput) dateInput.value = todayStr;
+            const params = new URLSearchParams(window.location.search);
+            params.delete('for_date');
+            const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+            window.history.replaceState({}, '', newUrl);
+            updateStatus();
+        });
+    }
     updateStatus();
     setInterval(updateStatus, 30000); // Alle 30 Sekunden aktualisieren
 });
