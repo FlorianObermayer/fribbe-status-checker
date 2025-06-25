@@ -35,13 +35,17 @@
         "PYTHONDONTWRITEBYTECODE",
         "PYTHONUNBUFFERED",
         "raspberrypi",
+        "readerwriterlock",
+        "rlock",
+        "rwlock",
         "schnapp",
         "sideout",
         "sideouts",
         "tageszeitabhängige",
         "uvicorn",
         "volleyballpartner",
-        "wlan"
+        "wlan",
+        "wlock"
     ],
     "python.analysis.typeCheckingMode": "strict",
     "python.testing.pytestArgs": [

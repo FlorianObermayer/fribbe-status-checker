@@ -6,6 +6,7 @@ import time
 from zoneinfo import ZoneInfo
 from bs4 import BeautifulSoup, Tag
 from typing import List, Tuple
+from readerwriterlock import rwlock
 
 import dateparser
 
@@ -35,6 +36,7 @@ class OccupancyService:
         self._interval_thread: threading.Thread | None = None
         self._stop_event = threading.Event()
         self._last_error: Exception | None = None
+        self._rwlock = rwlock.RWLockFair()
 
     def get_occupancy(self, for_date_str: str) -> Tuple[
         date,
@@ -66,69 +68,70 @@ class OccupancyService:
             - The source is set to EVENT_CALENDAR if any event for the date comes from the event calendar.
             - The method does not currently check for overlapping events that might result in a fully blocked scenario.
         """
-        for_date = (
-            dateparser.parse(
-                for_date_str,
-                languages=["de", "en"],
-                settings={"TIMEZONE": "Europe/Berlin"},
-            )
-            or datetime.now()
-        ).date()
-        filtered_occupancies = [
-            occ
-            for occ in self._week_occupancy + self._event_occupancy
-            if occ.begin.date() == for_date
-        ]
+        with self._rwlock.gen_rlock():
+            for_date = (
+                dateparser.parse(
+                    for_date_str,
+                    languages=["de", "en"],
+                    settings={"TIMEZONE": "Europe/Berlin"},
+                )
+                or datetime.now()
+            ).date()
+            filtered_occupancies = [
+                occ
+                for occ in self._week_occupancy + self._event_occupancy
+                if occ.begin.date() == for_date
+            ]
 
-        if not filtered_occupancies:
+            if not filtered_occupancies:
+                return (
+                    for_date,
+                    [],
+                    [],
+                    OccupancyType.NONE,
+                    OccupancySource.WEEKLY_PLAN,
+                    self._last_updated,
+                    self._last_error,
+                )
+
+            lines: List[str] = []
+            occupancy: OccupancyType = OccupancyType.PARTIALLY
+            source: OccupancySource = OccupancySource.WEEKLY_PLAN
+
+            events: List[Occupancy] = []
+            for occ in sorted(filtered_occupancies, key=lambda o: o.begin):
+                location = occ.occupied_str
+                message = f"{occ.time_str}: {occ.event_name} ({location})"
+
+                events.append(occ)
+                lines.append(message)
+
+                if occ.occupancy_type == OccupancyType.FULLY:
+                    occupancy = OccupancyType.FULLY
+
+                if occ.occupancy_source == OccupancySource.EVENT_CALENDAR:
+                    source = OccupancySource.EVENT_CALENDAR
+
+                # a full day blocking event should overrule everything
+                if (
+                    occ.occupancy_type == OccupancyType.FULLY
+                    and occ.occupancy_source == OccupancySource.EVENT_CALENDAR
+                ):
+                    lines = [message]
+                    events = [occ]
+                    break
+
+            # TODO: Also figure out if each occupation potentially overlaps with other resulting in a fully blocked scenario
+
             return (
                 for_date,
-                [],
-                [],
-                OccupancyType.NONE,
-                OccupancySource.WEEKLY_PLAN,
+                lines,
+                events,
+                occupancy,
+                source,
                 self._last_updated,
                 self._last_error,
             )
-
-        lines: List[str] = []
-        occupancy: OccupancyType = OccupancyType.PARTIALLY
-        source: OccupancySource = OccupancySource.WEEKLY_PLAN
-
-        events: List[Occupancy] = []
-        for occ in sorted(filtered_occupancies, key=lambda o: o.begin):
-            location = occ.occupied_str
-            message = f"{occ.time_str}: {occ.event_name} ({location})"
-
-            events.append(occ)
-            lines.append(message)
-
-            if occ.occupancy_type == OccupancyType.FULLY:
-                occupancy = OccupancyType.FULLY
-
-            if occ.occupancy_source == OccupancySource.EVENT_CALENDAR:
-                source = OccupancySource.EVENT_CALENDAR
-
-            # a full day blocking event should overrule everything
-            if (
-                occ.occupancy_type == OccupancyType.FULLY
-                and occ.occupancy_source == OccupancySource.EVENT_CALENDAR
-            ):
-                lines = [message]
-                events = [occ]
-                break
-
-        # TODO: Also figure out if each occupation potentially overlaps with other resulting in a fully blocked scenario
-
-        return (
-            for_date,
-            lines,
-            events,
-            occupancy,
-            source,
-            self._last_updated,
-            self._last_error,
-        )
 
     @staticmethod
     async def _get_occupancy_data(source_url: str) -> Tag:
@@ -175,18 +178,18 @@ class OccupancyService:
             weekly_table = await OccupancyService._get_occupancy_data(
                 self.weekly_plan_url
             )
-            self._week_occupancy = self._extend_to(parse_weekly_plan(weekly_table), 365)
-
             event_table = await OccupancyService._get_occupancy_data(
                 self.event_calendar_url
             )
-
-            self._event_occupancy = parse_event_calendar(event_table)
-            self._last_updated = datetime.now(tz=ZoneInfo("Europe/Berlin"))
-            self._last_error = None
+            with self._rwlock.gen_wlock():
+                self._week_occupancy = self._extend_to(parse_weekly_plan(weekly_table), 365)
+                self._event_occupancy = parse_event_calendar(event_table)
+                self._last_updated = datetime.now(tz=ZoneInfo("Europe/Berlin"))
+                self._last_error = None
             logger.info(f"Refresh occupancy... DONE")
         except Exception as e:
-            self._last_error = e
+            with self._rwlock.gen_wlock():
+                self._last_error = e
             logger.error(f"Error during occupancy check: {e}", exc_info=True)
 
     def _occupancy_loop(self, interval: int):
