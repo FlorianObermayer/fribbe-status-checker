@@ -1,15 +1,11 @@
-// Funktion zum Auslesen des for_date aus der URL
 function getForDateFromUrl() {
     const params = new URLSearchParams(window.location.search);
     return params.get('for_date');
 }
 
-
-// Funktion zum Aktualisieren des Status
 async function updateStatus() {
 
     const dateTimeOptions = {
-        //weekday: 'short',
         day: 'numeric',
         month: 'short',
         hour: '2-digit',
@@ -30,15 +26,15 @@ async function updateStatus() {
         }
         const response = await fetch(url);
         const data = await response.json();
-        
-        // Setze Body-Klasse basierend auf Status
+
+        // Setze body based on presence state
         document.getElementById('status-body').className = `status-${data.presence.level}`;
-        
-        // Aktiviere das richtige Licht
+
+        // Set correct traffic light based on presence state
         document.getElementById('red-light').classList.remove('active');
         document.getElementById('yellow-light').classList.remove('active');
         document.getElementById('green-light').classList.remove('active');
-        
+
         if (data.presence.level === 'empty') {
             document.getElementById('red-light').classList.add('active');
         } else if (data.presence.level === 'few') {
@@ -46,10 +42,10 @@ async function updateStatus() {
         } else {
             document.getElementById('green-light').classList.add('active');
         }
-        
-        // Setze Statusnachricht
+
+        // Set status message
         document.getElementById('status-message').textContent = data.presence.message;
-        
+
         document.querySelectorAll('.explanation-item').forEach(item => {
             item.classList.remove('active');
         });
@@ -65,21 +61,21 @@ async function updateStatus() {
         } else {
             occMsgElem.textContent = 'Keine Belegungen oder Veranstaltungen!';
         }
-        // Header dynamisch setzen
+        // Set Occupancy box header based on selected date / event type
         const occHeader = document.getElementById('occupancy-header');
         if (data.occupancy.source === 'event_calendar') {
             occHeader.textContent = forDate ? `Veranstaltungen (${new Date(data.occupancy.for_date).toLocaleDateString('de-DE', dateOptions)})` : 'Heutige Veranstaltungen';
         } else if (data.occupancy.source === 'weekly_plan') {
             occHeader.textContent = forDate ? `Belegungsplan (${new Date(data.occupancy.for_date).toLocaleDateString('de-DE', dateOptions)})` : 'Heutiger Belegungsplan';
         }
-        // Rötliche Färbung bei occupancy_type 'fully'
+        // Mark box red with occupancy_type 'fully'
         if (data.occupancy.type === 'fully') {
             occCard.classList.add('occupancy-fully');
         } else {
             occCard.classList.remove('occupancy-fully');
         }
 
-        // Kombinierter Aktualisierungsmarker
+        // Combined Refresh Marker
         let combinedText = '';
         if (data.presence && data.presence.last_updated) {
             const p = new Date(data.presence.last_updated);
@@ -95,14 +91,13 @@ async function updateStatus() {
 
     } catch (error) {
         console.error('Fehler beim Laden des Status:', error);
-        document.getElementById('status-message').textContent = 
+        document.getElementById('status-message').textContent =
             'Fehler beim Laden des Status. Bitte versuche es später erneut.';
     }
 }
 
-// Status beim Laden aktualisieren und alle 30 Sekunden neu laden
 document.addEventListener('DOMContentLoaded', () => {
-    // Date-Picker initialisieren
+    // Date-Picker
     const dateInput = document.getElementById('for-date-picker');
     const todayBtn = document.getElementById('today-btn');
     const urlForDate = getForDateFromUrl();
@@ -135,5 +130,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     updateStatus();
-    setInterval(updateStatus, 30000); // Alle 30 Sekunden aktualisieren
+    setInterval(updateStatus, 30000); // Refresh status every 30 seconds
+    setTimeout(() => window.scrollTo(0, 0), 50); // Hack: Fixes initial weird scrolling bug
 });
