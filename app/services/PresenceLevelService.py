@@ -19,9 +19,9 @@ class PresenceLevel(str, Enum):
 
 
 class PresenceThresholds:
-    EMPTY = range(0, 1)  # 0 devices
-    FEW = range(1, 6)  # 1-5 devices
-    MANY = range(6, 100)  # > 5 devices
+    EMPTY = range(0, 2)  # 0-1 devices
+    FEW = range(2, 8)  # 2-7 devices
+    MANY = range(8, 100)  # 8+ devices
 
     THRESHOLDS: dict[PresenceLevel, int] = {
         PresenceLevel.EMPTY: EMPTY[0],
