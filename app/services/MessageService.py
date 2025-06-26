@@ -1,5 +1,6 @@
 from datetime import datetime
 import random
+from zoneinfo import ZoneInfo
 from app.services.PresenceLevelService import PresenceLevel
 from app.services.occupancy.Model import OccupancyType
 
@@ -193,7 +194,6 @@ class MessageService:
         level: PresenceLevel,
         occupancy: OccupancyType,
         occupancy_time_str: str | None,
-        for_datetime: datetime,
     ) -> str:
 
         if occupancy == OccupancyType.FULLY:
@@ -206,6 +206,8 @@ class MessageService:
         # 20% chance for a combo message
         if random.random() < 0.2:
             return random.choice(self.combo_messages)
+
+        for_datetime = datetime.now(tz=ZoneInfo("Europe/Berlin"))
 
         # 40% chance for saisonal or daytime-dependant messages
         if random.random() < 0.4:

@@ -14,6 +14,9 @@
                 "app.main:app",
                 "--reload"
             ],
+            "env": {
+                "API_KEYS_PATH": "apikeys.dev.json"
+            },
             "jinja": true
         }
     ]

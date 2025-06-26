@@ -9,6 +9,8 @@ import time
 import logging
 from readerwriterlock import rwlock
 
+from app.services.MacAddressHelper import should_ignore_device
+
 logger = logging.getLogger("uvicorn.error")
 
 
@@ -42,16 +44,12 @@ class PresenceThresholds:
 
 class PresenceLevelService:
     def __init__(self):
-        self._last_updated = datetime.now(tz=ZoneInfo("Europe/Berlin"))
+        self._last_updated: datetime | None = None
         self._interval_thread = None
         self._stop_event = threading.Event()
         self._last_error: Exception | None = None
         self._presence_level: PresenceLevel = PresenceLevel.EMPTY
 
-        self._devices_to_ignore = {
-            "2C:CF:67:DD:46:23",  # raspberrypi
-            "54:60:09:EE:19:28",  # chromecast-audio
-        }
         self._rwlock = rwlock.RWLockFair()
 
     def get_level(self):
@@ -79,7 +77,7 @@ class PresenceLevelService:
                     [
                         device
                         for device in client.wlan.host_list()["Hosts"]["Host"]
-                        if device["MacAddress"] not in self._devices_to_ignore
+                        if not should_ignore_device(device["MacAddress"])
                     ]
                 )
                 logger.debug(
@@ -110,13 +108,22 @@ class PresenceLevelService:
             time.sleep(interval)
 
     def start_polling(
-        self, router_ip: str, username: str, password: str, interval: int = 30
+        self,
+        router_ip: str,
+        username: str,
+        password: str,
+        interval: int = 60,
+        delay_to_first_poll: int = 0,
     ):
         if self._interval_thread is None or not self._interval_thread.is_alive():
             self._stop_event.clear()
+
+            def delayed_start():
+                time.sleep(delay_to_first_poll)
+                self._presence_detection_loop(interval, router_ip, username, password)
+
             self._interval_thread = threading.Thread(
-                target=self._presence_detection_loop,
-                args=(interval, router_ip, username, password),
+                target=delayed_start,
                 daemon=True,
             )
             self._interval_thread.start()
