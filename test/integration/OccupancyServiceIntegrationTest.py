@@ -2,7 +2,7 @@ from time import sleep
 
 from app.services.occupancy.OccupancyService import OccupancyService
 
-def test_occupation_service():
+def test_occupancy_service():
     service = OccupancyService()
     service.start_polling(2)
     sleep(7)
