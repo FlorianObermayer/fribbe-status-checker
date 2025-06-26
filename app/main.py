@@ -15,8 +15,8 @@ from app.services.PresenceLevelService import (
 )
 from app.services.occupancy.Model import Occupancy
 from app.services.occupancy.OccupancyService import OccupancyService
-from app.services.occupancy.OccupancySource import OccupancySource
-from app.services.occupancy.OccupancyType import OccupancyType
+from app.services.occupancy.Model import OccupancySource
+from app.services.occupancy.Model import OccupancyType
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="app/static"), name="static")

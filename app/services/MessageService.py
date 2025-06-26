@@ -1,7 +1,7 @@
 from datetime import datetime
 import random
 from app.services.PresenceLevelService import PresenceLevel
-from app.services.occupancy.OccupancyType import OccupancyType
+from app.services.occupancy.Model import OccupancyType
 
 
 class MessageService:
