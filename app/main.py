@@ -13,7 +13,7 @@ from app.services.PresenceLevelService import (
     PresenceLevelService,
     PresenceThresholds,
 )
-from app.services.occupancy.Occupancy import Occupancy
+from app.services.occupancy.Model import Occupancy
 from app.services.occupancy.OccupancyService import OccupancyService
 from app.services.occupancy.OccupancySource import OccupancySource
 from app.services.occupancy.OccupancyType import OccupancyType
