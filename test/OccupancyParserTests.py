@@ -1,7 +1,7 @@
 import pytest
 
-from app.services.occupancy.OccupancyParser import _parse_weekly_plan_data, parse_weekly_plan  # type: ignore
-from app.services.occupancy.OccupancyType import OccupancyType
+from app.services.occupancy.OccupancyParser import Weekday, _parse_weekly_plan_data, parse_weekly_plan  # type: ignore
+from app.services.occupancy.Model import OccupancyType
 from test.test_utils import get_weekly_mock_table
 
 
@@ -35,7 +35,11 @@ from test.test_utils import get_weekly_mock_table
     ],
 )
 def test_parse_weekly_plan_data(
-    day: str, time: str, event_name: str, location_field: str, expected: OccupancyType
+    day: Weekday,
+    time: str,
+    event_name: str,
+    location_field: str,
+    expected: OccupancyType,
 ):
     assert _parse_weekly_plan_data(day, time, event_name, location_field).occupancy_type == expected
 

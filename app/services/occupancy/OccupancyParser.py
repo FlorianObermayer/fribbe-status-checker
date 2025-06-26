@@ -3,9 +3,9 @@ from typing import List, Literal
 from bs4 import Tag
 
 from app.services.DatetimeParser import parse_event_times
-from app.services.occupancy.Occupancy import Occupancy
-from app.services.occupancy.OccupancySource import OccupancySource
-from app.services.occupancy.OccupancyType import OccupancyType
+from app.services.occupancy.Model import Occupancy
+from app.services.occupancy.Model import OccupancySource
+from app.services.occupancy.Model import OccupancyType
 
 Weekday = Literal[
     "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"

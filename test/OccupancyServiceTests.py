@@ -3,8 +3,8 @@ from datetime import date, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 from app.services.occupancy.OccupancyService import OccupancyService
-from app.services.occupancy.OccupancySource import OccupancySource
-from app.services.occupancy.OccupancyType import OccupancyType
+from app.services.occupancy.Model import OccupancySource
+from app.services.occupancy.Model import OccupancyType
 from app.services.occupancy.OccupancyParser import (
     parse_event_calendar,
     parse_weekly_plan,
