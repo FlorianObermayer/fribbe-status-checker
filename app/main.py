@@ -78,6 +78,23 @@ class DetailsResponse(BaseResponse):
     last_device_on_site: datetime | None
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return FileResponse("app/static/images/favicon.ico")
+
+
+@app.get("/robots.txt", response_class=PlainTextResponse, include_in_schema=False)
+def robots():
+    data = """User-agent: *\nDisallow: /"""
+    return data
+
+
+@app.get("/", response_class=HTMLResponse)
+async def get_html(for_date: str = "today"):  # keep unused variable for api reference
+    with open("app/static/index.html") as f:
+        return HTMLResponse(f.read())
+
+
 @app.get("/api/status", response_model=StatusResponse)
 async def get_status(for_date: str = "today"):
 
@@ -128,23 +145,6 @@ async def get_status(for_date: str = "today"):
         occupancy=occupancy_response,
         presence=presence_response,
     )
-
-
-@app.get("/", response_class=HTMLResponse)
-async def get_html(for_date: str = "today"):  # keep unused variable for api reference
-    with open("app/static/index.html") as f:
-        return HTMLResponse(f.read())
-
-
-@app.get("/favicon.ico", include_in_schema=False)
-async def favicon():
-    return FileResponse("app/static/images/favicon.ico")
-
-
-@app.get("/robots.txt", response_class=PlainTextResponse, include_in_schema=False)
-def robots():
-    data = """User-agent: *\nDisallow: /"""
-    return data
 
 
 @app.get("/api/internal/details", response_model=DetailsResponse)
