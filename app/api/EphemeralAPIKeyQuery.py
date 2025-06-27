@@ -28,8 +28,7 @@ class EphemeralAPIKeyQuery(APIKeyQuery):
                 data = json.load(f)
                 return data or []
         except Exception as e:
-            logger.warning("CustomAPIKeyQuery - failed to load api keys")
-            logger.error(f"Exception: {e}")
+            logger.warning(f"CustomAPIKeyQuery - failed to load api keys: {e}")
             return []
 
     _api_keys: list[dict[str, str]] = _load_apikeys()
@@ -54,9 +53,17 @@ class EphemeralAPIKeyQuery(APIKeyQuery):
                 if valid_until:
                     try:
                         valid_until_datetime = datetime.fromisoformat(valid_until)
-                        if now > valid_until_datetime:
+                        now_with_tz = (
+                            now
+                            if valid_until_datetime.tzinfo is None
+                            else datetime.now(valid_until_datetime.tzinfo)
+                        )
+                        if now_with_tz > valid_until_datetime:
                             return False
-                    except Exception:
+                    except Exception as e:
+                        logger.warning(
+                            f"CustomAPIKeyQuery::_is_key_valid - failed to compare datetime objects: {e}"
+                        )
                         return False
                 return True
         return False
