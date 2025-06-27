@@ -1,4 +1,3 @@
-
 function getForDateFromUrl() {
     const params = new URLSearchParams(window.location.search);
     return params.get('for_date');
@@ -89,8 +88,7 @@ async function updateStatus() {
         if (!combinedText) combinedText = 'Aktualisiert: Nie';
         document.getElementById('combined-updated-text').textContent = combinedText;
 
-        // Tooltip logic: set native title attributes for traffic lights
-        setTrafficLightTooltips(data.presence.thresholds);
+        setTrafficLightExplanation(data.presence.thresholds);
     } catch (error) {
         console.error('Fehler beim Laden des Status:', error);
         document.getElementById('status-message').textContent =
@@ -98,14 +96,7 @@ async function updateStatus() {
     }
 }
 
-function setTrafficLightTooltips(thresholds) {
-
-    const red = document.getElementById('red-light');
-    const explanationRed = document.getElementById('explanation-red')
-    const yellow = document.getElementById('yellow-light');
-    const explanationYellow = document.getElementById('explanation-yellow');
-    const green = document.getElementById('green-light');
-    const explanationGreen = document.getElementById('explanation-green');
+function setTrafficLightExplanation(thresholds) {
 
     if (!thresholds
         || typeof thresholds.empty !== 'number'
@@ -113,31 +104,54 @@ function setTrafficLightTooltips(thresholds) {
         || typeof thresholds.many !== 'number'
     ) return;
 
+    const red = document.getElementById('red-light');
+    const explanationRed = document.getElementById('explanation-red')
+    const redLegend = document.getElementById('legend-red-detail');
+
+    const yellow = document.getElementById('yellow-light');
+    const explanationYellow = document.getElementById('explanation-yellow');
+    const yellowLegend = document.getElementById('legend-yellow-detail');
+
+    const green = document.getElementById('green-light');
+    const explanationGreen = document.getElementById('explanation-green');
+    const greenLegend = document.getElementById('legend-green-detail');
+
     const redTooltip = `${thresholds.empty ? `${thresholds.empty} oder weniger` : thresholds.empty} aktive Geräte befinden sich im Fribbe-WiFi`;
     const yellowTooltip = `Zwischen ${thresholds.few} - ${thresholds.many} aktive Geräte befinden sich im Fribbe-WiFi`;
     const greenTooltip = `Mehr als ${thresholds.many} aktive Geräte befinden sich im Fribbe-WiFi`;
 
-    if (red) {
-        red.title = redTooltip
-    }
-    if (explanationRed) {
-        explanationRed.title = redTooltip
-    }
+    if (red) red.title = redTooltip;
+    if (explanationRed) explanationRed.title = redTooltip;
+    if (redLegend) redLegend.textContent = redTooltip;
 
-    if (yellow) {
-        yellow.title = yellowTooltip
-    }
-    if (explanationYellow) {
-        explanationYellow.title = yellowTooltip
-    }
+    if (yellow) yellow.title = yellowTooltip;
+    if (explanationYellow) explanationYellow.title = yellowTooltip;
+    if (yellowLegend) yellowLegend.textContent = yellowTooltip;
+    if (green) green.title = greenTooltip;
+    if (explanationGreen) explanationGreen.title = greenTooltip;
+    if (greenLegend) greenLegend.textContent = greenTooltip;
+}
 
-    if (green) {
-        green.title = greenTooltip
-    }
-
-    if (explanationGreen) {
-        explanationGreen.title = greenTooltip;
-    }
+function setupLegendToggle() {
+    const toggle = document.querySelector('.legend-toggle');
+    const overlay = document.querySelector('.legend-overlay');
+    if (!toggle || !overlay) return;
+    toggle.addEventListener('click', () => {
+        const isOpen = overlay.classList.toggle('open');
+        toggle.classList.toggle('open', isOpen);
+    });
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            overlay.classList.remove('open');
+            toggle.classList.remove('open');
+        }
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            overlay.classList.remove('open');
+            toggle.classList.remove('open');
+        }
+    });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -178,4 +192,5 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     updateStatus();
     setInterval(updateStatus, 30000); // Refresh status every 30 seconds
+    setupLegendToggle();
 });
