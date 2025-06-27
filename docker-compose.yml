@@ -14,12 +14,12 @@ services:
     ports:
       - 8007:80
     volumes:
-      - secrets-data:/app/secrets
+      - secrets-data:/code/secrets
     environment:
       - ROUTER_USERNAME=${ROUTER_USERNAME}
       - ROUTER_PASSWORD=${ROUTER_PASSWORD}
       - ROUTER_IP=${ROUTER_IP:-192.168.8.1}
-      - API_KEYS_PATH=${API_KEYS_PATH:-/app/secrets/apikeys.json}
+      - API_KEYS_PATH=${API_KEYS_PATH:-/code/secrets/apikeys.json}
     restart: unless-stopped
 
 volumes:
