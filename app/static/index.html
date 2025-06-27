@@ -19,7 +19,7 @@
             <div id="yellow-light" class="light yellow" data-status="few"></div>
             <div id="green-light" class="light green" data-status="many"></div>
         </div>
-        <div class="status-explanation">
+        <div class="status-explanation legend-toggle" tabindex="0">
             <div id="explanation-red" class="explanation-item" data-status="empty">
                 <span class="explanation-dot red"></span>
                 <span>Nüscht.</span>
@@ -31,6 +31,18 @@
             <div id="explanation-green" class="explanation-item" data-status="many">
                 <span class="explanation-dot green"></span>
                 <span>Volle Bude!</span>
+            </div>
+        </div>
+        <div class="legend-overlay">
+            <div class="legend-panel">
+                <div class="legend-row red"><span class="explanation-dot red"></span><span id="legend-red-detail">Rot:
+                        ...</span></div>
+                <div class="legend-row yellow"><span class="explanation-dot yellow"></span><span
+                        id="legend-yellow-detail">Gelb:
+                        ...</span></div>
+                <div class="legend-row green"><span class="explanation-dot green"></span><span
+                        id="legend-green-detail">Grün:
+                        ...</span></div>
             </div>
         </div>
 

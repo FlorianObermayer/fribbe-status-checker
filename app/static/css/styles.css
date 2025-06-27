@@ -101,13 +101,13 @@ h1 {
     font-size: 1.05rem;
     margin: 14px 0;
     border-radius: 10px;
-        background-color: rgba(255, 255, 255, 0.92);
-        color: #444;
-        font-style: italic;
-        position: relative;
-        padding: 18px 8px;
-        max-width: 600px;
-        text-align: center;
+    background-color: rgba(255, 255, 255, 0.92);
+    color: #444;
+    font-style: italic;
+    position: relative;
+    padding: 18px 8px;
+    max-width: 600px;
+    text-align: center;
 }
 
 #combined-updated-marker {
@@ -270,6 +270,82 @@ body.status-many {
     background: #e0e0e0;
 }
 
+.legend-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    font-size: 1rem;
+    font-weight: 500;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    margin: 20px auto 0 auto;
+    padding: 10px 16px;
+    cursor: pointer;
+    user-select: none;
+    width: fit-content;
+    transition: background 0.2s;
+    position: relative;
+    z-index: 101;
+}
+
+.legend-toggle:active,
+.legend-toggle:focus {
+    background: #f5f5f5;
+}
+
+.legend-overlay {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.18);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    z-index: 100;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.25s;
+}
+
+.legend-overlay.open {
+    pointer-events: auto;
+    opacity: 1;
+}
+
+.legend-panel {
+    margin-top: 80px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 18px 20px 14px 20px;
+    min-width: 240px;
+    max-width: 90vw;
+    font-size: 1.05rem;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transform: translateY(-40px);
+    opacity: 0;
+    transition: transform 0.25s, opacity 0.25s;
+}
+
+.legend-overlay.open .legend-panel {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.legend-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 2px 0;
+}
+
 @media (max-width: 600px) {
     .container {
         padding: 10px 0 24px 0;
@@ -322,5 +398,29 @@ body.status-many {
 
     .inofficial-hint {
         padding-left: 16px;
+    }
+
+    .legend-toggle {
+        display: flex;
+        box-shadow: none;
+        border-radius: 0px;
+    }
+
+    .legend-panel {
+        display: block;
+        box-shadow: none;
+        border-radius: 0px;
+    }
+
+    .legend-overlay {
+        display: flex;
+    }
+}
+
+@media (min-width: 601px) {
+
+    .legend-toggle,
+    .legend-overlay {
+        display: flex !important;
     }
 }
