@@ -1,26 +1,29 @@
 #!/usr/bin/env python3
 from genericpath import exists
 import os
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from typing import List
 from fastapi import FastAPI, Depends, Body
 from fastapi.responses import HTMLResponse, FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
 import secrets
 import json
 
 from app.api.EphemeralAPIKeyQuery import EphemeralAPIKeyQuery
+from app.api.Responses import (
+    PresenceResponse,
+    StatusResponse,
+    DetailsResponse,
+    OccupancyResponse,
+    ApiKey,
+)
 from app.services.internal.InternalService import InternalService
 from app.services.MessageService import MessageService
 from app.services.PresenceLevelService import (
-    PresenceLevel,
     PresenceLevelService,
     PresenceThresholds,
 )
-from app.services.occupancy.Model import Occupancy
 from app.services.occupancy.OccupancyService import OccupancyService
-from app.services.occupancy.Model import OccupancySource
 from app.services.occupancy.Model import OccupancyType
 
 
@@ -45,37 +48,6 @@ internal_service.start_polling(
 )
 
 message_service = MessageService()
-
-
-class BaseResponse(BaseModel):
-    last_updated: datetime | None
-    last_error: str | None
-
-
-class PresenceResponse(BaseResponse):
-    level: PresenceLevel
-    message: str
-    thresholds: dict[PresenceLevel, int]
-
-
-class OccupancyResponse(BaseResponse):
-    type: OccupancyType
-    source: OccupancySource
-    messages: List[str]
-    events: List[Occupancy]
-    for_date: date
-
-
-class StatusResponse(BaseModel):
-    occupancy: OccupancyResponse
-    presence: PresenceResponse
-
-
-class DetailsResponse(BaseResponse):
-    wardens_on_site: List[str]
-    active_devices: int
-    first_device_on_site: datetime | None
-    last_device_on_site: datetime | None
 
 
 @app.get("/favicon.ico", include_in_schema=False)
@@ -160,13 +132,8 @@ def details(_: str = Depends(EphemeralAPIKeyQuery(name="api_key"))):
         active_devices=internal_service.get_active_devices_ct(),
         first_device_on_site=internal_service.get_first_device_on_site(),
         last_device_on_site=internal_service.get_last_device_on_site(),
+        last_service_start=internal_service.get_last_service_started(),
     )
-
-
-class ApiKey(BaseModel):
-    key: str
-    comment: str | None
-    valid_until: datetime | None
 
 
 @app.post("/api/internal/api_key/create", response_model=ApiKey)
