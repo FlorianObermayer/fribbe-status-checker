@@ -17,6 +17,9 @@ logger = logging.getLogger("uvicorn.error")
 
 class InternalService:
     def __init__(self):
+        self._last_service_started: datetime = datetime.now(
+            tz=ZoneInfo("Europe/Berlin")
+        )
         self._last_updated : datetime | None =  None
         self._interval_thread = None
         self._stop_event = threading.Event()
@@ -28,6 +31,9 @@ class InternalService:
         self._last_device_on_site: datetime | None = None
 
         self._rwlock = rwlock.RWLockFair()
+
+    def get_last_service_started(self):
+        return self._last_service_started
 
     def get_last_updated(self):
         with self._rwlock.gen_rlock():
@@ -60,6 +66,11 @@ class InternalService:
         if self._last_updated and self._last_updated.date() != now.date():
             self._first_device_on_site = None
             self._last_device_on_site = None
+
+        if self._first_device_on_site is None and (
+            new_active_devices_ct > 0 or self._active_devices_ct > 9
+        ):
+            self._first_device_on_site = now
 
         if (
             self._active_devices_ct == 0
