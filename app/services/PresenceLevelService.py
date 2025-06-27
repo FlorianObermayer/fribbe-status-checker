@@ -26,7 +26,7 @@ class PresenceThresholds:
     MANY = range(8, 100)  # 8+ devices
 
     THRESHOLDS: dict[PresenceLevel, int] = {
-        PresenceLevel.EMPTY: EMPTY[0],
+        PresenceLevel.EMPTY: EMPTY[-1],
         PresenceLevel.FEW: FEW[0],
         PresenceLevel.MANY: MANY[0],
     }
