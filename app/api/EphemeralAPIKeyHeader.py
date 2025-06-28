@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 from fastapi import Request
-from fastapi.security import APIKeyQuery
+from fastapi.security import APIKeyHeader
 import json
 import os
 from datetime import datetime
@@ -9,7 +9,7 @@ from datetime import datetime
 logger = logging.getLogger("uvicorn.error")
 
 
-class EphemeralAPIKeyQuery(APIKeyQuery):
+class EphemeralAPIKeyHeader(APIKeyHeader):
 
     def __init__(
         self,
@@ -35,19 +35,19 @@ class EphemeralAPIKeyQuery(APIKeyQuery):
 
     @staticmethod
     def refresh_api_keys():
-        EphemeralAPIKeyQuery._api_keys = EphemeralAPIKeyQuery._load_apikeys()
+        EphemeralAPIKeyHeader._api_keys = EphemeralAPIKeyHeader._load_apikeys()
 
     def _should_bypass_authentication(
         self,
     ):
         return (
             self._bypass_on_empty_api_key_list
-            and len(EphemeralAPIKeyQuery._api_keys) == 0
+            and len(EphemeralAPIKeyHeader._api_keys) == 0
         )
 
     def _is_key_valid(self, key: str) -> bool:
         now = datetime.now()
-        for entry in EphemeralAPIKeyQuery._api_keys:
+        for entry in EphemeralAPIKeyHeader._api_keys:
             if entry.get("key") == key:
                 valid_until = entry.get("valid_until")
                 if valid_until:

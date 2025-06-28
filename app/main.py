@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 import secrets
 import json
 
-from app.api.EphemeralAPIKeyQuery import EphemeralAPIKeyQuery
+from app.api.EphemeralAPIKeyHeader import EphemeralAPIKeyHeader
 from app.api.Responses import (
     PresenceResponse,
     StatusResponse,
@@ -120,7 +120,7 @@ async def get_status(for_date: str = "today"):
 
 
 @app.get("/api/internal/details", response_model=DetailsResponse)
-def details(_: str = Depends(EphemeralAPIKeyQuery(name="api_key"))):
+def details(_: str = Depends(EphemeralAPIKeyHeader(name="api_key"))):
 
     last_error = internal_service.get_last_error()
     wardens = internal_service.get_wardens_on_site()
@@ -141,7 +141,7 @@ def create_api_key(
     comment: str = Body("", embed=True),
     valid_until: datetime = Body(None, embed=True),
     _: str = Depends(
-        EphemeralAPIKeyQuery(name="api_key", bypass_on_empty_api_key_list=True)
+        EphemeralAPIKeyHeader(name="api_key", bypass_on_empty_api_key_list=True)
     ),
 ) -> ApiKey:
     """
@@ -174,6 +174,6 @@ def create_api_key(
     with open(apikeys_path, "w") as f:
         json.dump(keys, f, indent=2)
 
-    EphemeralAPIKeyQuery.refresh_api_keys()
+    EphemeralAPIKeyHeader.refresh_api_keys()
 
     return new_api_key
