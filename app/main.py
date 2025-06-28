@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-from genericpath import exists
 import os
 from datetime import datetime, timedelta
-from typing import List
-from fastapi import FastAPI, Depends, Body
+from fastapi import FastAPI, Depends, Body, HTTPException
 from fastapi.responses import HTMLResponse, FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
+
 import secrets
-import json
 
 from app.api.EphemeralAPIKeyHeader import EphemeralAPIKeyHeader
+from app.api.EphemeralAPIKeyStore import EphemeralAPIKeyStore
 from app.api.Responses import (
+    ApiKeys,
     PresenceResponse,
     StatusResponse,
     DetailsResponse,
@@ -149,31 +149,51 @@ def create_api_key(
     - comment: Optional comment for the key
     - valid_until: Optional datetime (default: 6 months from now)
     """
-    apikeys_path = os.environ["API_KEYS_PATH"]
     # Generate a new key
     new_key = secrets.token_urlsafe(48)
-
     valid_until = (valid_until or datetime.now() + timedelta(days=180)).replace(
         microsecond=0
     )
-
     new_api_key = ApiKey(key=new_key, comment=comment, valid_until=valid_until)
-
-    keys: List[dict[str, str]] = []
-    if exists(apikeys_path):
-        # Load existing keys if it exists
-        with open(apikeys_path, "r") as f:
-            keys = json.load(f)
-
+    keys = EphemeralAPIKeyStore.load_json()
     if not keys:
         keys = []
-
-    # Add new key
     keys.append(new_api_key.model_dump(mode="json"))
-    # Save
-    with open(apikeys_path, "w") as f:
-        json.dump(keys, f, indent=2)
+    EphemeralAPIKeyStore.save(keys)
+    EphemeralAPIKeyHeader.refresh_api_keys()
+    return new_api_key
 
+
+@app.delete("/api/internal/api_key/delete")
+def delete_api_key(
+    key: str = Body(..., embed=True),
+    _: str = Depends(EphemeralAPIKeyHeader(name="api_key")),
+):
+    """
+    Deletes an API key by its value or prefix (at least 5 characters). Only deletes if there is a unique match.
+    """
+    if len(key) < 5:
+        raise HTTPException(
+            status_code=400, detail="Key prefix must be at least 5 characters long"
+        )
+    keys = EphemeralAPIKeyStore.load_json()
+    matches = [k for k in keys if "key" in k and k["key"].startswith(key)]
+    if len(matches) == 0:
+        raise HTTPException(status_code=404, detail="Api key not found")
+    if len(matches) > 1:
+        raise HTTPException(
+            status_code=409, detail="Ambiguous key prefix: multiple matches found"
+        )
+    key_to_delete = matches[0]["key"]
+    keys = [k for k in keys if not (k.get("key") == key_to_delete)]
+    EphemeralAPIKeyStore.save(keys)
     EphemeralAPIKeyHeader.refresh_api_keys()
 
-    return new_api_key
+
+@app.get("/api/internal/api_key/list", response_model=ApiKeys)
+def list_api_keys(_: str = Depends(EphemeralAPIKeyHeader(name="api_key"))):
+    """
+    Returns all API keys as a list. Requires a valid API key for authentication.
+    """
+    keys = EphemeralAPIKeyStore.load()
+    return ApiKeys(api_keys=keys)

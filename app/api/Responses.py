@@ -41,3 +41,7 @@ class ApiKey(BaseModel):
     key: str
     comment: str | None
     valid_until: datetime | None
+
+
+class ApiKeys(BaseModel):
+    api_keys: List[ApiKey]
