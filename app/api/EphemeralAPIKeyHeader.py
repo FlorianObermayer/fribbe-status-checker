@@ -35,24 +35,24 @@ class EphemeralAPIKeyHeader(APIKeyHeader):
     def _is_key_valid(self, key: str) -> bool:
         now = datetime.now()
         for entry in EphemeralAPIKeyHeader._api_keys:
-            if entry.get("key") == key:
-                valid_until = entry.get("valid_until")
-                if valid_until:
-                    try:
-                        valid_until_datetime = datetime.fromisoformat(valid_until)
-                        now_with_tz = (
-                            now
-                            if valid_until_datetime.tzinfo is None
-                            else datetime.now(valid_until_datetime.tzinfo)
-                        )
-                        if now_with_tz > valid_until_datetime:
-                            return False
-                    except Exception as e:
-                        logger.warning(
-                            f"CustomAPIKeyQuery::_is_key_valid - failed to compare datetime objects: {e}"
-                        )
-                        return False
-                return True
+            if entry.get("key") != key:
+                continue
+            valid_until = entry.get("valid_until")
+            if not valid_until:
+                return False
+            try:
+                valid_until_datetime = datetime.fromisoformat(valid_until)
+                now_with_tz = (
+                    now
+                    if valid_until_datetime.tzinfo is None
+                    else datetime.now(valid_until_datetime.tzinfo)
+                )
+                return valid_until_datetime >= now_with_tz
+            except Exception as e:
+                logger.warning(
+                    f"CustomAPIKeyQuery::_is_key_valid - failed to compare datetime objects: {e}"
+                )
+                return False
         return False
 
     async def __call__(self, request: Request) -> Optional[str]:

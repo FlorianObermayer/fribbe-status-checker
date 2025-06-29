@@ -39,8 +39,8 @@ class DetailsResponse(BaseResponse):
 
 class ApiKey(BaseModel):
     key: str
-    comment: str | None
-    valid_until: datetime | None
+    comment: str
+    valid_until: datetime
 
 
 class ApiKeys(BaseModel):
