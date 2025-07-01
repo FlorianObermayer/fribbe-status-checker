@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
+import logging
 import os
 from datetime import datetime, timedelta
-from fastapi import FastAPI, Depends, Body, HTTPException
+from typing import Awaitable, Callable
+from fastapi import FastAPI, Depends, Body, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -28,6 +30,20 @@ from app.services.occupancy.Model import OccupancyType
 
 
 app = FastAPI()
+
+
+@app.middleware("http")
+async def log_requests(
+    request: Request, call_next: Callable[[Request], Awaitable[Response]]
+) -> Response:
+    logger = logging.getLogger("uvicorn.error")
+    api_key = request.headers.get("api_key")
+    if api_key:
+        logger.info(f"-H api_key[:4]={api_key[:4]}")
+    response = await call_next(request)
+    return response
+
+
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 presence_service = PresenceLevelService()
@@ -120,7 +136,7 @@ async def get_status(for_date: str = "today"):
 
 
 @app.get("/api/internal/details", response_model=DetailsResponse)
-def details(_: str = Depends(EphemeralAPIKeyHeader(name="api_key"))):
+def details(_: str = Depends(EphemeralAPIKeyHeader())):
 
     last_error = internal_service.get_last_error()
     wardens = internal_service.get_wardens_on_site()
@@ -140,9 +156,7 @@ def details(_: str = Depends(EphemeralAPIKeyHeader(name="api_key"))):
 def create_api_key(
     comment: str = Body("", embed=True),
     valid_until: datetime = Body(None, embed=True),
-    _: str = Depends(
-        EphemeralAPIKeyHeader(name="api_key", bypass_on_empty_api_key_list=True)
-    ),
+    _: str = Depends(EphemeralAPIKeyHeader(bypass_on_empty_api_key_list=True)),
 ) -> ApiKey:
     """
     Create a new API key, store it in the JSON file, and return it. Requires valid API key to create or no API keys to begin with at all (admin setup mode)
@@ -167,7 +181,7 @@ def create_api_key(
 @app.delete("/api/internal/api_key/delete")
 def delete_api_key(
     key: str = Body(..., embed=True),
-    _: str = Depends(EphemeralAPIKeyHeader(name="api_key")),
+    _: str = Depends(EphemeralAPIKeyHeader()),
 ):
     """
     Deletes an API key by its value or prefix (at least 5 characters). Only deletes if there is a unique match.
@@ -191,7 +205,7 @@ def delete_api_key(
 
 
 @app.get("/api/internal/api_key/list", response_model=ApiKeys)
-def list_api_keys(_: str = Depends(EphemeralAPIKeyHeader(name="api_key"))):
+def list_api_keys(_: str = Depends(EphemeralAPIKeyHeader())):
     """
     Returns all API keys as a list. Requires a valid API key for authentication.
     """

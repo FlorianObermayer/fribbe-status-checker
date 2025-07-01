@@ -33,12 +33,21 @@ class EphemeralAPIKeyHeader(APIKeyHeader):
         )
 
     def _is_key_valid(self, key: str) -> bool:
+        log_key = key[:4]
         now = datetime.now()
         for entry in EphemeralAPIKeyHeader._api_keys:
             if entry.get("key") != key:
                 continue
+
+            comment = entry.get("comment")
+            logger.info(
+                f"CustomAPIKeyQuery::_is_key_valid(api_key={log_key}...) - found key (comment: {comment or 'None'})"
+            )
             valid_until = entry.get("valid_until")
             if not valid_until:
+                logger.error(
+                    f"CustomAPIKeyQuery::_is_key_valid(api_key={log_key}...) - key is missing [valid_until] property"
+                )
                 return False
             try:
                 valid_until_datetime = datetime.fromisoformat(valid_until)
@@ -47,12 +56,24 @@ class EphemeralAPIKeyHeader(APIKeyHeader):
                     if valid_until_datetime.tzinfo is None
                     else datetime.now(valid_until_datetime.tzinfo)
                 )
-                return valid_until_datetime >= now_with_tz
-            except Exception as e:
+                if valid_until_datetime >= now_with_tz:
+                    logger.info(
+                        f"CustomAPIKeyQuery::_is_key_valid(api_key={log_key}...) - key is valid"
+                    )
+                    return True
+
                 logger.warning(
-                    f"CustomAPIKeyQuery::_is_key_valid - failed to compare datetime objects: {e}"
+                    f"CustomAPIKeyQuery::_is_key_valid(api_key={log_key}...) - key is outdated"
                 )
                 return False
+            except Exception as e:
+                logger.warning(
+                    f"CustomAPIKeyQuery::_is_key_valid(api_key={log_key}...) - failed to compare datetime objects: {e}"
+                )
+                return False
+        logger.warning(
+            f"CustomAPIKeyQuery::_is_key_valid(api_key={log_key}...) - key not found in registered keys"
+        )
         return False
 
     async def __call__(self, request: Request) -> Optional[str]:
