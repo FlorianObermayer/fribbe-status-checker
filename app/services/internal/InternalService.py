@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 import threading
 from typing import List
 from zoneinfo import ZoneInfo
@@ -62,10 +62,14 @@ class InternalService:
     def _update_device_statistics(self, new_active_devices_ct: int):
         now = datetime.now(tz=ZoneInfo("Europe/Berlin"))
 
-        # reset on day change
-        if self._last_updated and self._last_updated.date() != now.date():
-            self._first_device_on_site = None
-            self._last_device_on_site = None
+        # reset at 5am
+        reset_hour = 5
+        if self._last_updated:
+            last_virtual_day = (self._last_updated - timedelta(hours=reset_hour)).date()
+            now_virtual_day = (now - timedelta(hours=reset_hour)).date()
+            if last_virtual_day < now_virtual_day:
+                self._first_device_on_site = None
+                self._last_device_on_site = None
 
         if self._first_device_on_site is None and (
             new_active_devices_ct > 0 or self._active_devices_ct > 9

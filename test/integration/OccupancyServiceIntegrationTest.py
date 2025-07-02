@@ -1,7 +1,10 @@
 from time import sleep
+import pytest
 
 from app.services.occupancy.OccupancyService import OccupancyService
 
+
+@pytest.mark.skip("test only relevant on manual lookup")
 def test_occupancy_service():
     service = OccupancyService()
     service.start_polling(2)
