@@ -1,5 +1,4 @@
 from typing import (
-    Optional,
     Protocol,
     Self,
     TypeVar,
@@ -14,9 +13,7 @@ from typing import (
 import json
 import os
 
-K = TypeVar("K", bound=str)
 V = TypeVar("V")
-
 
 @runtime_checkable
 class DictSerializable(Protocol):
@@ -25,31 +22,35 @@ class DictSerializable(Protocol):
     def from_dict(cls, d: Dict[str, Any]) -> Self: ...
 
 
-PRIMITIVE_TYPES = (int, float, str, bool, dict, list)
-
-
-class PersistentDict(MutableMapping[K, V], Generic[K, V]):
-    def __init__(self, path: str, value_type: Optional[Type[V]] = None):
+class PersistentDict(MutableMapping[str, V], Generic[V]):
+    def __init__(self, path: str, value_type: Type[V]):
         self._path = path
         self._value_type = value_type
-        if self._value_type not in PRIMITIVE_TYPES and not self._is_dict_serializable():
+        if not self._is_primitive_type() and not self._is_dict_serializable():
             raise TypeError(
                 "PersistentDict: value_type must be a primitive type or implement to_dict/from_dict!"
             )
+        self._data: Dict[str, V] = {}
         self._load()
 
+    def _is_primitive_type(self) -> bool:
+        primitive_types = (int, float, str, bool, dict, list)
+        # Handle generics like dict[str, int], list[int], etc.
+        origin = getattr(self._value_type, "__origin__", None)
+        if origin in (dict, list):
+            return True
+        return self._value_type in primitive_types
+
     def _is_dict_serializable(self) -> bool:
-        return (
-            self._value_type is not None
-            and hasattr(self._value_type, "from_dict")
-            and hasattr(self._value_type, "to_dict")
+        return hasattr(self._value_type, "from_dict") and hasattr(
+            self._value_type, "to_dict"
         )
 
     def _load(self):
         if os.path.exists(self._path):
             with open(self._path, "r", encoding="utf-8") as f:
                 raw = json.load(f)
-            if self._value_type in PRIMITIVE_TYPES:
+            if self._is_primitive_type():
                 self._data = {k: v for k, v in raw.items()}
             elif self._is_dict_serializable():
                 self._data = {k: self._value_type.from_dict(v) for k, v in raw.items()}  # type: ignore
@@ -60,7 +61,7 @@ class PersistentDict(MutableMapping[K, V], Generic[K, V]):
 
     def _save(self):
         with open(self._path, "w", encoding="utf-8") as f:
-            if self._value_type in PRIMITIVE_TYPES:
+            if self._is_primitive_type():
                 json.dump(self._data, f, ensure_ascii=False, indent=2)
             elif self._is_dict_serializable():
                 serializable = {k: v.to_dict() for k, v in self._data.items()}  # type: ignore
@@ -69,14 +70,14 @@ class PersistentDict(MutableMapping[K, V], Generic[K, V]):
                 serializable = {k: v for k, v in self._data.items()}
                 json.dump(serializable, f, ensure_ascii=False, indent=2)
 
-    def __getitem__(self, key: K) -> V:
+    def __getitem__(self, key: str) -> V:
         return self._data[key]
 
-    def __setitem__(self, key: K, value: V) -> None:
+    def __setitem__(self, key: str, value: V) -> None:
         self._data[key] = value
         self._save()
 
-    def __delitem__(self, key: K) -> None:
+    def __delitem__(self, key: str) -> None:
         del self._data[key]
         self._save()
 
