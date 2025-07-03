@@ -27,6 +27,9 @@ from app.services.PresenceLevelService import (
 )
 from app.services.occupancy.OccupancyService import OccupancyService
 from app.services.occupancy.Model import OccupancyType
+from app.services.NotificationService import NotificationService
+from fastapi.responses import JSONResponse
+import markdown
 
 
 app = FastAPI()
@@ -64,6 +67,7 @@ internal_service.start_polling(
 )
 
 message_service = MessageService()
+notification_service = NotificationService()
 
 
 @app.get("/favicon.ico", include_in_schema=False)
@@ -211,3 +215,51 @@ def list_api_keys(_: str = Depends(EphemeralAPIKeyHeader())):
     """
     keys = EphemeralAPIKeyStore.load()
     return ApiKeys(api_keys=keys)
+
+
+@app.post("/api/notifications")
+async def post_notification(
+    message: str = Body(...),
+    valid_until: datetime = Body(None),
+    enabled: bool = Body(True),
+    _: str = Depends(EphemeralAPIKeyHeader()),
+):
+    nid = notification_service.add(message, valid_until, enabled)
+    return {"id": nid}
+
+
+@app.get("/api/notifications/active", response_class=HTMLResponse)
+async def get_active_notifications():
+    notifications = notification_service.get_active()
+    # Combine all active messages as markdown, convert to HTML
+    html = "\n".join(
+        [f"<div>{markdown.markdown(n.message)}</div>" for n in notifications]
+    )
+    return HTMLResponse(html)
+
+
+@app.get("/api/notifications", response_class=JSONResponse)
+async def list_notifications(_: str = Depends(EphemeralAPIKeyHeader())):
+    notifications = notification_service.list_all()
+    return JSONResponse([notify.to_dict() for notify in notifications])
+
+
+@app.delete(
+    "/api/notifications/{nid}",
+)
+async def delete_notification(nid: str, _: str = Depends(EphemeralAPIKeyHeader())):
+    if not notification_service.delete(nid):
+        raise HTTPException(status_code=404, detail="Notification not found")
+
+
+@app.put(
+    "/api/notifications/{nid}",
+)
+async def update_notification(
+    nid: str,
+    enabled: bool = Body(None),
+    valid_until: datetime = Body(None),
+    _: str = Depends(EphemeralAPIKeyHeader()),
+):
+    if not notification_service.update(nid, enabled, valid_until):
+        raise HTTPException(status_code=404, detail="Notification not found")
