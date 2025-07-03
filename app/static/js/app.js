@@ -154,28 +154,47 @@ function setupLegendToggle() {
     });
 }
 
-let lastNotificationHtml = null;
+let lastNotificationHash = null;
 let notificationDismissed = false;
+
+function hashString(str) {
+    let hash = 0, i, chr;
+    if (str.length === 0) return hash;
+    for (i = 0; i < str.length; i++) {
+        chr = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + chr;
+        hash |= 0;
+    }
+    return hash;
+}
 
 async function pollNotifications() {
     try {
-        const resp = await fetch('/api/notifications/active');
+        const resp = await fetch('/api/notifications/html');
         const html = await resp.text();
         const box = document.getElementById('notification-box');
         const htmlDiv = document.getElementById('notification-html');
+        const hash = hashString(html);
         if (html && html.trim()) {
-            if (html !== lastNotificationHtml) {
-                // content changed => show it again
+            if (hash !== lastNotificationHash) {
                 notificationDismissed = false;
+                localStorage.removeItem('notificationDismissedHash');
             }
-            lastNotificationHtml = html;
+            lastNotificationHash = hash;
+
+            if (localStorage.getItem('notificationDismissedHash') == hash.toString()) {
+                notificationDismissed = true;
+            }
             if (!notificationDismissed) {
                 htmlDiv.innerHTML = html;
                 box.style.display = '';
+            } else {
+                box.style.display = 'none';
             }
         } else {
             box.style.display = 'none';
-            lastNotificationHtml = null;
+            lastNotificationHash = null;
+            localStorage.removeItem('notificationDismissedHash');
         }
     } catch (e) {
         // ignore box on error
@@ -229,8 +248,11 @@ document.addEventListener('DOMContentLoaded', () => {
         closeBtn.addEventListener('click', () => {
             document.getElementById('notification-box').style.display = 'none';
             notificationDismissed = true;
+            if (lastNotificationHash !== null) {
+                localStorage.setItem('notificationDismissedHash', lastNotificationHash.toString());
+            }
         });
     }
     pollNotifications();
-    setInterval(pollNotifications, 5000); // TODO: Change to 30 seconds
+    setInterval(pollNotifications, 30000); // Poll for new notifications every 30 seconds
 });
