@@ -12,6 +12,7 @@
         "chillrunde",
         "chromecast",
         "dateparser",
+        "dictserializable",
         "fastapi",
         "feld",
         "fribbe",
