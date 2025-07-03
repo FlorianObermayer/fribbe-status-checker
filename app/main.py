@@ -224,12 +224,12 @@ async def post_notification(
     enabled: bool = Body(True),
     _: str = Depends(EphemeralAPIKeyHeader()),
 ):
-    nid = notification_service.add(message, valid_until, enabled)
-    return {"id": nid}
+    notification_id = notification_service.add(message, valid_until, enabled)
+    return {"id": notification_id}
 
 
-@app.get("/api/notifications/active", response_class=HTMLResponse)
-async def get_active_notifications():
+@app.get("/api/notifications/html", response_class=HTMLResponse)
+async def get_notifications_as_html():
     notifications = notification_service.get_active()
     # Combine all active messages as markdown, convert to HTML
     html = "\n<hr/>".join(
@@ -245,21 +245,23 @@ async def list_notifications(_: str = Depends(EphemeralAPIKeyHeader())):
 
 
 @app.delete(
-    "/api/notifications/{nid}",
+    "/api/notifications/{notification_id}",
 )
-async def delete_notification(nid: str, _: str = Depends(EphemeralAPIKeyHeader())):
-    if not notification_service.delete(nid):
+async def delete_notification(
+    notification_id: str, _: str = Depends(EphemeralAPIKeyHeader())
+):
+    if not notification_service.delete(notification_id):
         raise HTTPException(status_code=404, detail="Notification not found")
 
 
 @app.put(
-    "/api/notifications/{nid}",
+    "/api/notifications/{notification_id}",
 )
 async def update_notification(
-    nid: str,
+    notification_id: str,
     enabled: bool = Body(None),
     valid_until: datetime = Body(None),
     _: str = Depends(EphemeralAPIKeyHeader()),
 ):
-    if not notification_service.update(nid, enabled, valid_until):
+    if not notification_service.update(notification_id, enabled, valid_until):
         raise HTTPException(status_code=404, detail="Notification not found")
