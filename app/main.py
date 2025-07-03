@@ -156,7 +156,7 @@ def details(_: str = Depends(EphemeralAPIKeyHeader())):
     )
 
 
-@app.post("/api/internal/api_key/create", response_model=ApiKey)
+@app.post("/api/internal/api_key/create", response_model=ApiKey, tags=["API Keys"])
 def create_api_key(
     comment: str = Body("", embed=True),
     valid_until: datetime = Body(None, embed=True),
@@ -182,7 +182,7 @@ def create_api_key(
     return new_api_key
 
 
-@app.delete("/api/internal/api_key/delete")
+@app.delete("/api/internal/api_key/delete", tags=["API Keys"])
 def delete_api_key(
     key: str = Body(..., embed=True),
     _: str = Depends(EphemeralAPIKeyHeader()),
@@ -208,7 +208,7 @@ def delete_api_key(
     EphemeralAPIKeyHeader.refresh_api_keys()
 
 
-@app.get("/api/internal/api_key/list", response_model=ApiKeys)
+@app.get("/api/internal/api_key/list", response_model=ApiKeys, tags=["API Keys"])
 def list_api_keys(_: str = Depends(EphemeralAPIKeyHeader())):
     """
     Returns all API keys as a list. Requires a valid API key for authentication.
@@ -217,7 +217,7 @@ def list_api_keys(_: str = Depends(EphemeralAPIKeyHeader())):
     return ApiKeys(api_keys=keys)
 
 
-@app.post("/api/notifications")
+@app.post("/api/notifications", tags=["Notifications"])
 async def post_notification(
     message: str = Body(...),
     valid_until: datetime = Body(None),
@@ -228,7 +228,7 @@ async def post_notification(
     return {"id": notification_id}
 
 
-@app.get("/api/notifications/html", response_class=HTMLResponse)
+@app.get("/api/notifications/html", response_class=HTMLResponse, tags=["Notifications"])
 async def get_notifications_as_html():
     notifications = notification_service.get_active()
     # Combine all active messages as markdown, convert to HTML
@@ -238,15 +238,13 @@ async def get_notifications_as_html():
     return HTMLResponse(html)
 
 
-@app.get("/api/notifications", response_class=JSONResponse)
+@app.get("/api/notifications", response_class=JSONResponse, tags=["Notifications"])
 async def list_notifications(_: str = Depends(EphemeralAPIKeyHeader())):
     notifications = notification_service.list_all()
     return JSONResponse([notify.to_dict() for notify in notifications])
 
 
-@app.delete(
-    "/api/notifications/{notification_id}",
-)
+@app.delete("/api/notifications/{notification_id}", tags=["Notifications"])
 async def delete_notification(
     notification_id: str, _: str = Depends(EphemeralAPIKeyHeader())
 ):
@@ -254,9 +252,7 @@ async def delete_notification(
         raise HTTPException(status_code=404, detail="Notification not found")
 
 
-@app.put(
-    "/api/notifications/{notification_id}",
-)
+@app.put("/api/notifications/{notification_id}", tags=["Notifications"])
 async def update_notification(
     notification_id: str,
     enabled: bool = Body(None),
