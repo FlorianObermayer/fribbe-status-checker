@@ -232,7 +232,7 @@ async def post_notification(
 async def get_active_notifications():
     notifications = notification_service.get_active()
     # Combine all active messages as markdown, convert to HTML
-    html = "\n".join(
+    html = "\n<hr/>".join(
         [f"<div>{markdown.markdown(n.message)}</div>" for n in notifications]
     )
     return HTMLResponse(html)

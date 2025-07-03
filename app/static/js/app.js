@@ -154,6 +154,36 @@ function setupLegendToggle() {
     });
 }
 
+let lastNotificationHtml = null;
+let notificationDismissed = false;
+
+async function pollNotifications() {
+    try {
+        const resp = await fetch('/api/notifications/active');
+        const html = await resp.text();
+        const box = document.getElementById('notification-box');
+        const htmlDiv = document.getElementById('notification-html');
+        if (html && html.trim()) {
+            if (html !== lastNotificationHtml) {
+                // content changed => show it again
+                notificationDismissed = false;
+            }
+            lastNotificationHtml = html;
+            if (!notificationDismissed) {
+                htmlDiv.innerHTML = html;
+                box.style.display = '';
+            }
+        } else {
+            box.style.display = 'none';
+            lastNotificationHtml = null;
+        }
+    } catch (e) {
+        // ignore box on error
+        document.getElementById('notification-box').style.display = 'none';
+        console.error(e)
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // Date-Picker
     const dateInput = document.getElementById('for-date-picker');
@@ -193,4 +223,14 @@ document.addEventListener('DOMContentLoaded', () => {
     updateStatus();
     setInterval(updateStatus, 30000); // Refresh status every 30 seconds
     setupLegendToggle();
+
+    const closeBtn = document.getElementById('notification-close');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            document.getElementById('notification-box').style.display = 'none';
+            notificationDismissed = true;
+        });
+    }
+    pollNotifications();
+    setInterval(pollNotifications, 5000); // TODO: Change to 30 seconds
 });
