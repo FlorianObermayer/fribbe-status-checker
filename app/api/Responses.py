@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from typing import List
+from typing import Dict, List, Self
 from pydantic import BaseModel
 from app.services.PresenceLevelService import PresenceLevel
 from app.services.occupancy.Model import Occupancy, OccupancySource, OccupancyType
@@ -41,6 +41,21 @@ class ApiKey(BaseModel):
     key: str
     comment: str
     valid_until: datetime
+
+    @classmethod
+    def from_dict(cls, d: Dict[str, str]) -> Self:
+        return cls(
+            key=d["key"],
+            comment=d["comment"],
+            valid_until=datetime.fromisoformat(d["valid_until"]),
+        )
+
+    def to_dict(self) -> Dict[str, str]:
+        return {
+            "key": self.key,
+            "comment": self.comment,
+            "valid_until": self.valid_until.isoformat(),
+        }
 
 
 class ApiKeys(BaseModel):
