@@ -12,7 +12,6 @@ from typing import (
     Type,
     MutableMapping,
     Generic,
-    cast,
     get_args,
     get_origin,
     runtime_checkable,
@@ -174,10 +173,10 @@ class PersistentDict(MutableMapping[str, V], Generic[V]):
             return value.to_dict()
 
         if isinstance(value, (list, tuple, set)):
-            return [self._serialize(item) for item in value]
+            return [self._serialize(item) for item in value]  # type: ignore
 
         if isinstance(value, dict):
-            return {str(k): self._serialize(v) for k, v in value.items()}
+            return {str(k): self._serialize(v) for k, v in value.items()}  # type: ignore
 
         return str(value)
 
