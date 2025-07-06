@@ -194,16 +194,16 @@ def delete_api_key(
         raise HTTPException(
             status_code=400, detail="Key prefix must be at least 5 characters long"
         )
-    keys = EphemeralAPIKeyStore.load()()
-    matches = [k for k in keys if "key" in k and k["key"].startswith(key)]
+    keys = EphemeralAPIKeyStore.load()
+    matches = [k for k in keys if k.key.startswith(key)]
     if len(matches) == 0:
         raise HTTPException(status_code=404, detail="Api key not found")
     if len(matches) > 1:
         raise HTTPException(
             status_code=409, detail="Ambiguous key prefix: multiple matches found"
         )
-    key_to_delete = matches[0]["key"]
-    keys = [k for k in keys if not (k.get("key") == key_to_delete)]
+    key_to_delete = matches[0].key
+    keys = [k for k in keys if not (k.key == key_to_delete)]
     EphemeralAPIKeyStore.save(keys)
     EphemeralAPIKeyHeader.refresh_api_keys()
 
@@ -220,11 +220,14 @@ def list_api_keys(_: str = Depends(EphemeralAPIKeyHeader())):
 @app.post("/api/notifications", tags=["Notifications"])
 async def post_notification(
     message: str = Body(...),
+    valid_from: datetime = Body(datetime.now()),
     valid_until: datetime = Body(None),
     enabled: bool = Body(True),
     _: str = Depends(EphemeralAPIKeyHeader()),
 ):
-    notification_id = notification_service.add(message, valid_until, enabled)
+    notification_id = notification_service.add(
+        message, valid_from, valid_until, enabled
+    )
     return {"id": notification_id}
 
 
