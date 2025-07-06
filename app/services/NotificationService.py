@@ -1,7 +1,11 @@
 from dataclasses import dataclass
 from datetime import datetime
+from os import path
+import os
 from typing import Dict, List, Optional, Self
 import uuid
+
+from app.services.PersistentCollections import PersistentDict
 
 
 @dataclass
@@ -9,42 +13,76 @@ class Notification:
     id: str
     message: str
     created: datetime
-    valid_until: datetime
-    enabled: bool = True
+    valid_from: datetime | None
+    valid_until: datetime | None
+    enabled: bool
 
     def is_active(self) -> bool:
-        return self.enabled and self.valid_until > datetime.now(self.valid_until.tzinfo)
+        return (
+            self.enabled
+            and (
+                self.valid_from is None
+                or datetime.now(self.valid_from.tzinfo) >= self.valid_from
+            )
+            and (
+                self.valid_until is None
+                or datetime.now(self.valid_until.tzinfo) < self.valid_until
+            )
+        )
 
     def to_dict(self) -> Dict[str, str | bool]:
-        return {
+        result: Dict[str, str | bool] = {
             "id": self.id,
             "message": self.message,
-            "valid_until": self.valid_until.isoformat(),
             "enabled": self.enabled,
             "created": self.created.isoformat(),
         }
+
+        if self.valid_from:
+            result["valid_from"] = self.valid_from.isoformat()
+
+        if self.valid_until:
+            result["valid_until"] = self.valid_until.isoformat()
+
+        return result
 
     @classmethod
     def from_dict(cls, d: Dict[str, str | bool]) -> Self:
         return cls(
             id=str(d["id"]),
             message=str(d["message"]),
-            valid_until=datetime.fromisoformat(str(d["valid_until"])),
+            valid_from=(
+                datetime.fromisoformat(str(d["valid_from"]))
+                if d.get("valid_from")
+                else None
+            ),
+            valid_until=(
+                datetime.fromisoformat(str(d["valid_until"]))
+                if d.get("valid_until")
+                else None
+            ),
             enabled=bool(d.get("enabled", True)),
             created=datetime.fromisoformat(str(d["created"])),
         )
 
 
 class NotificationService:
-    def __init__(self, persist_path: str = "./notifications.json"):
-        self._store: dict[str, Notification] = {}  # TODO: PERSIST
 
-    def add(self, message: str, valid_until: datetime, enabled: bool = True) -> str:
+    def __init__(self):
+        self._store: PersistentDict[Notification] = PersistentDict(
+            path.join(os.environ["LOCAL_DATA_PATH"], "notifications.json"),
+            value_type=Notification,
+        )
+
+    def add(
+        self, message: str, valid_until: datetime, valid_from: datetime, enabled: bool
+    ) -> str:
         nid = str(uuid.uuid4())
         notification = Notification(
             created=datetime.now(),
             id=nid,
             message=message,
+            valid_from=valid_from,
             valid_until=valid_until,
             enabled=enabled,
         )
