@@ -56,3 +56,4 @@ venv.bak/
 
 # Test files
 apikeys.dev.json
+dev-data/

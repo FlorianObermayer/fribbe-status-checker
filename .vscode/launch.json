@@ -14,10 +14,6 @@
                 "app.main:app",
                 "--reload"
             ],
-            "env": {
-                "API_KEYS_PATH": "apikeys.dev.json",
-                "LOCAL_DATA_PATH": "dev-data"
-            },
             "jinja": true
         }
     ]

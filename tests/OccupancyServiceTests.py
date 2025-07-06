@@ -10,7 +10,7 @@ from app.services.occupancy.OccupancyParser import (
     parse_weekly_plan,
 )
 
-from test.test_utils import get_calendar_mock_table, get_weekly_mock_table
+from tests.test_utils import get_calendar_mock_table, get_weekly_mock_table
 
 
 def service():
