@@ -1,16 +1,22 @@
 import logging
-from typing import Optional
+from typing import List, Optional
 from fastapi import Request
 from fastapi.security import APIKeyHeader
 from datetime import datetime
 
 from app.api.EphemeralAPIKeyStore import EphemeralAPIKeyStore
+from app.api.Responses import ApiKey
 
 logger = logging.getLogger("uvicorn.error")
 
 
 class EphemeralAPIKeyHeader(APIKeyHeader):
-    _api_keys: list[dict[str, str]] = EphemeralAPIKeyStore.load_json()
+
+    @staticmethod
+    def _load_keys() -> List[ApiKey]:
+        return EphemeralAPIKeyStore.load()
+
+    _api_keys: List[ApiKey] = _load_keys()
 
     def __init__(
         self,
@@ -24,7 +30,7 @@ class EphemeralAPIKeyHeader(APIKeyHeader):
 
     @staticmethod
     def refresh_api_keys():
-        EphemeralAPIKeyHeader._api_keys = EphemeralAPIKeyStore.load_json()
+        EphemeralAPIKeyHeader._api_keys = EphemeralAPIKeyHeader._load_keys()
 
     def _should_bypass_authentication(self):
         return (
@@ -36,27 +42,25 @@ class EphemeralAPIKeyHeader(APIKeyHeader):
         log_key = key[:4]
         now = datetime.now()
         for entry in EphemeralAPIKeyHeader._api_keys:
-            if entry.get("key") != key:
+            if entry.key != key:
                 continue
 
-            comment = entry.get("comment")
             logger.info(
-                f"CustomAPIKeyQuery::_is_key_valid(api_key={log_key}...) - found key (comment: {comment or 'None'})"
+                f"CustomAPIKeyQuery::_is_key_valid(api_key={log_key}...) - found key (comment: {entry.comment or 'None'})"
             )
-            valid_until = entry.get("valid_until")
+            valid_until = entry.valid_until
             if not valid_until:
                 logger.error(
                     f"CustomAPIKeyQuery::_is_key_valid(api_key={log_key}...) - key is missing [valid_until] property"
                 )
                 return False
             try:
-                valid_until_datetime = datetime.fromisoformat(valid_until)
                 now_with_tz = (
                     now
-                    if valid_until_datetime.tzinfo is None
-                    else datetime.now(valid_until_datetime.tzinfo)
+                    if valid_until.tzinfo is None
+                    else datetime.now(valid_until.tzinfo)
                 )
-                if valid_until_datetime >= now_with_tz:
+                if valid_until >= now_with_tz:
                     logger.info(
                         f"CustomAPIKeyQuery::_is_key_valid(api_key={log_key}...) - key is valid"
                     )
