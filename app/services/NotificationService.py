@@ -77,7 +77,7 @@ class NotificationService:
     def add(
         self, message: str, valid_until: datetime, valid_from: datetime, enabled: bool
     ) -> str:
-        nid = str(uuid.uuid4())
+        nid = str(f"nid-{uuid.uuid4()}")
         notification = Notification(
             created=datetime.now(),
             id=nid,
@@ -89,8 +89,17 @@ class NotificationService:
         self._store[nid] = notification
         return nid
 
-    def get_active(self) -> List[Notification]:
-        result = [n for n in self._store.values() if n.is_active()]
+    def get(self, notification_ids: List[str] = ["all_active"]) -> List[Notification]:
+        result: List[Notification] = []
+
+        if "all" in notification_ids:
+            result = [*self._store.values()]
+        elif "all_valid" in notification_ids:
+            return [n for n in self._store.values() if n.is_active()]
+        else:
+            requested_ids = {id for id in notification_ids if id.startswith("nid-")}
+            result = [n for n in self._store.values() if n.id in requested_ids]
+
         result.sort(key=lambda n: n.created, reverse=True)
         return result
 

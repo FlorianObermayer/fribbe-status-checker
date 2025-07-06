@@ -2,8 +2,8 @@
 import logging
 import os
 from datetime import datetime, timedelta
-from typing import Awaitable, Callable
-from fastapi import FastAPI, Depends, Body, HTTPException, Request, Response
+from typing import Annotated, Awaitable, Callable, List, Literal
+from fastapi import FastAPI, Depends, Body, HTTPException, Query, Request, Response
 from fastapi.responses import HTMLResponse, FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -11,6 +11,7 @@ import secrets
 
 from app.api.EphemeralAPIKeyHeader import EphemeralAPIKeyHeader
 from app.api.EphemeralAPIKeyStore import EphemeralAPIKeyStore
+from app.api.Requests import NotificationQuery
 from app.api.Responses import (
     ApiKeys,
     PresenceResponse,
@@ -231,9 +232,11 @@ async def post_notification(
     return {"id": notification_id}
 
 
-@app.get("/api/notifications/html", response_class=HTMLResponse, tags=["Notifications"])
-async def get_notifications_as_html():
-    notifications = notification_service.get_active()
+@app.get("/api/notifications", response_class=HTMLResponse, tags=["Notifications"])
+async def get_notifications_as_html(
+    request: NotificationQuery = Query(...),
+):
+    notifications = notification_service.get(request.notification_ids)
     # Combine all active messages as markdown, convert to HTML
     html = "\n<hr/>".join(
         [f"<div>{markdown.markdown(n.message)}</div>" for n in notifications]
@@ -241,7 +244,7 @@ async def get_notifications_as_html():
     return HTMLResponse(html)
 
 
-@app.get("/api/notifications", response_class=JSONResponse, tags=["Notifications"])
+@app.get("/api/notifications/list", response_class=JSONResponse, tags=["Notifications"])
 async def list_notifications(_: str = Depends(EphemeralAPIKeyHeader())):
     notifications = notification_service.list_all()
     return JSONResponse([notify.to_dict() for notify in notifications])
@@ -264,3 +267,11 @@ async def update_notification(
 ):
     if not notification_service.update(notification_id, enabled, valid_until):
         raise HTTPException(status_code=404, detail="Notification not found")
+
+
+@app.get("/preview/notifications", tags=["Notifications"])
+async def get_notification_preview(
+    _: NotificationQuery = Query(...),
+):  # keep unused variable for api reference
+    with open("app/static/index.html") as f:
+        return HTMLResponse(f.read())

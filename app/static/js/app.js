@@ -3,6 +3,11 @@ function getForDateFromUrl() {
     return params.get('for_date');
 }
 
+function getNotificationIdsFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    return params.getAll('notification_ids');
+}
+
 async function updateStatus() {
     const dateTimeOptions = {
         day: 'numeric',
@@ -170,7 +175,18 @@ function hashString(str) {
 
 async function pollNotifications() {
     try {
-        const resp = await fetch('/api/notifications/html');
+        let notification_ids = getNotificationIdsFromUrl();
+        console.log("Notification IDs: ", notification_ids);
+
+        if (notification_ids.length === 0) {
+            notification_ids = ["all_valid"]
+        }
+
+        const query = notification_ids.join("&notification_ids=")
+        const resp = await fetch(`/api/notifications/?notification_ids=${query}`);
+        if (!resp.ok) {
+            throw Error(resp.statusText)
+        }
         const html = await resp.text();
         const box = document.getElementById('notification-box');
         const htmlDiv = document.getElementById('notification-html');
