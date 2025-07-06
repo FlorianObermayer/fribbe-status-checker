@@ -34,6 +34,7 @@
         "osterspecial",
         "parseable",
         "persistentdict",
+        "persistentlist",
         "pytest",
         "PYTHONDONTWRITEBYTECODE",
         "PYTHONUNBUFFERED",
