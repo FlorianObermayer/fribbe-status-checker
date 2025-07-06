@@ -4,6 +4,7 @@
         "adduser",
         "appuser",
         "asyncio",
+        "autouse",
         "beachfeld",
         "Beachwart",
         "beautifulsoup",
@@ -53,7 +54,7 @@
     ],
     "python.analysis.typeCheckingMode": "strict",
     "python.testing.pytestArgs": [
-        "test"
+        "tests"
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true

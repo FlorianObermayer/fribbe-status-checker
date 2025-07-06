@@ -220,7 +220,7 @@ def list_api_keys(_: str = Depends(EphemeralAPIKeyHeader())):
 @app.post("/api/notifications", tags=["Notifications"])
 async def post_notification(
     message: str = Body(...),
-    valid_from: datetime = Body(datetime.now()),
+    valid_from: datetime = Body(None),
     valid_until: datetime = Body(None),
     enabled: bool = Body(True),
     _: str = Depends(EphemeralAPIKeyHeader()),
