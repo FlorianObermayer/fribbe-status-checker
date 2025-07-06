@@ -169,10 +169,10 @@ def create_api_key(
         microsecond=0
     )
     new_api_key = ApiKey(key=new_key, comment=comment, valid_until=valid_until)
-    keys = EphemeralAPIKeyStore.load_json()
+    keys = EphemeralAPIKeyStore.load()
     if not keys:
         keys = []
-    keys.append(new_api_key.model_dump(mode="json"))
+    keys.append(new_api_key)
     EphemeralAPIKeyStore.save(keys)
     EphemeralAPIKeyHeader.refresh_api_keys()
     return new_api_key
@@ -190,7 +190,7 @@ def delete_api_key(
         raise HTTPException(
             status_code=400, detail="Key prefix must be at least 5 characters long"
         )
-    keys = EphemeralAPIKeyStore.load_json()
+    keys = EphemeralAPIKeyStore.load()()
     matches = [k for k in keys if "key" in k and k["key"].startswith(key)]
     if len(matches) == 0:
         raise HTTPException(status_code=404, detail="Api key not found")
