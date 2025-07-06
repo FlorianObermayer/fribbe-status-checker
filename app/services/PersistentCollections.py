@@ -25,9 +25,11 @@ V = TypeVar("V")
 
 @runtime_checkable
 class DictSerializable(Protocol):
-    def to_dict(self) -> Dict[str, Any]: ...
+
+    def to_dict(self) -> Dict[str, str]: ...
+
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> Self: ...
+    def from_dict(cls, d: Dict[str, str]) -> Self: ...
 
 
 class PersistentDict(MutableMapping[str, V], Generic[V]):

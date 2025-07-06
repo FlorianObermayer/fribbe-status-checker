@@ -1,9 +1,9 @@
-import json
 import logging
 import os
 from typing import List
 
 from app.api.Responses import ApiKey
+from app.services.PersistentCollections import PersistentList
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -15,28 +15,14 @@ class EphemeralAPIKeyStore:
 
     @staticmethod
     def load() -> List[ApiKey]:
-        try:
-            with open(EphemeralAPIKeyStore._get_path()) as f:
-                data = json.load(f)
-                return data or []
-        except Exception as e:
-            logger.warning(f"EphemeralAPIKeyStore - failed to load api keys: {e}")
-            return []
+        return PersistentList(EphemeralAPIKeyStore._get_path(), ApiKey).to_list()
 
     @staticmethod
-    def load_json() -> List[dict[str, str]]:
+    def save(keys: List[ApiKey]):
         try:
-            with open(EphemeralAPIKeyStore._get_path()) as f:
-                data = json.load(f)
-                return data or []
-        except Exception as e:
-            logger.warning(f"EphemeralAPIKeyStore - failed to load api keys: {e}")
-            return []
+            persistent_list = PersistentList(EphemeralAPIKeyStore._get_path(), ApiKey)
+            persistent_list.clear()
+            persistent_list.extend(keys)
 
-    @staticmethod
-    def save(keys: List[dict[str, str]] | List[ApiKey]):
-        try:
-            with open(EphemeralAPIKeyStore._get_path(), "w") as f:
-                json.dump(keys, f, indent=2)
         except Exception as e:
             logger.error(f"EphemeralAPIKeyStore - failed to save api keys: {e}")
