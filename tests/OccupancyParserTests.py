@@ -2,7 +2,7 @@ import pytest
 
 from app.services.occupancy.OccupancyParser import Weekday, _parse_weekly_plan_data, parse_weekly_plan  # type: ignore
 from app.services.occupancy.Model import OccupancyType
-from test.test_utils import get_weekly_mock_table
+from tests.test_utils import get_weekly_mock_table
 
 
 @pytest.mark.parametrize(

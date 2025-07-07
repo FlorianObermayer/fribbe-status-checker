@@ -10,6 +10,15 @@ from dataclasses import dataclass, asdict
 import pytest
 
 
+def test_persistentdict_write_to_non_existing_subfolder():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = os.path.join(tmpdir, "subfolder", "in_subfolder.json")
+        d = PersistentDict(path, int)
+        d["foo"] = 123
+        d2: PersistentDict[int] = PersistentDict(path, int)
+        assert d2["foo"] == 123
+
+
 def test_persistentdict_write_and_read():
     with tempfile.TemporaryDirectory() as tmpdir:
         path = os.path.join(tmpdir, "test.json")

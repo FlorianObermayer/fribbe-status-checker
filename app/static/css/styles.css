@@ -346,6 +346,77 @@ body.status-many {
     padding: 2px 0;
 }
 
+.notification-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    transition: opacity 0.3s;
+}
+
+.notification-content {
+    background: #fffbe7;
+    color: #333;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 24px 20px 20px 20px;
+    max-width: 550px;
+    width: 90vw;
+    position: relative;
+    font-size: 1.08rem;
+    animation: fadeInScale 0.3s;
+    max-height: 70vh;
+        overflow-y: auto;
+        padding-top: 0;
+}
+
+.notification-close {
+    position: sticky;
+    top: 0;
+    right: 0;
+    float: right;
+    background: none;
+    border: none;
+    font-size: 2rem;
+    color: #888;
+    cursor: pointer;
+    transition: color 0.2s;
+    z-index: 10;
+    background: #fffbe7;
+        margin-left: auto;
+        display: block;
+}
+
+.notification-close:hover {
+    color: #f44336;
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+#notification-html>*:first-child {
+    margin-top: 0;
+}
+
+#notification-html>*:last-child {
+    margin-bottom: 0;
+}
+
 @media (max-width: 600px) {
     .container {
         padding: 10px 0 24px 0;
@@ -414,6 +485,11 @@ body.status-many {
 
     .legend-overlay {
         display: flex;
+    }
+
+    .notification-content {
+        padding: 16px 6vw 16px 6vw;
+        font-size: 1rem;
     }
 }
 

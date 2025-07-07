@@ -5,3 +5,5 @@ pytest>=8.4.1
 pytest-asyncio>=1.0.0
 dateparser>=1.2.1
 readerwriterlock>=1.0.9
+markdown>=3.8.2
+pytest-cov>=6.2.1

@@ -3,6 +3,11 @@ function getForDateFromUrl() {
     return params.get('for_date');
 }
 
+function getNotificationIdsFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    return params.getAll('notification_ids');
+}
+
 async function updateStatus() {
     const dateTimeOptions = {
         day: 'numeric',
@@ -154,6 +159,65 @@ function setupLegendToggle() {
     });
 }
 
+let notificationDismissed = false;
+
+function hashString(str) {
+    let hash = 0, i, chr;
+    if (str.length === 0) return hash;
+    for (i = 0; i < str.length; i++) {
+        chr = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + chr;
+        hash |= 0;
+    }
+    return hash + "";
+}
+
+async function pollNotifications() {
+    try {
+        let notification_ids = getNotificationIdsFromUrl();
+
+        if (notification_ids.length === 0) {
+            notification_ids = ["all_active"]
+        }
+
+        const query = notification_ids.join("&n_ids=")
+        const resp = await fetch(`/api/notifications?n_ids=${query}`);
+        if (!resp.ok) {
+            throw Error(resp.statusText)
+        }
+        const html = await resp.text();
+        const box = document.getElementById('notification-box');
+        const htmlDiv = document.getElementById('notification-html');
+        htmlDiv.innerHTML = html;
+        const hash = hashString(htmlDiv.textContent);
+        const lastNotificationHash = localStorage.getItem('notificationDismissedHash');
+        if (html && html.trim()) {
+            if (hash !== lastNotificationHash) {
+                notificationDismissed = false;
+                console.log("removing due to different hash", hash, lastNotificationHash)
+                localStorage.removeItem('notificationDismissedHash');
+            } else {
+                notificationDismissed = true;
+            }
+
+            if (!notificationDismissed) {
+                box.style.display = '';
+            } else {
+                box.style.display = 'none';
+            }
+        } else {
+            box.style.display = 'none';
+            console.log("removing due to no html")
+            localStorage.removeItem('notificationDismissedHash');
+        }
+    } catch (e) {
+        // ignore box on error
+        document.getElementById('notification-box').style.display = 'none';
+        localStorage.removeItem('notificationDismissedHash');
+        console.error(e)
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // Date-Picker
     const dateInput = document.getElementById('for-date-picker');
@@ -193,4 +257,21 @@ document.addEventListener('DOMContentLoaded', () => {
     updateStatus();
     setInterval(updateStatus, 30000); // Refresh status every 30 seconds
     setupLegendToggle();
+
+    const closeBtn = document.getElementById('notification-close');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            htmlDiv = document.getElementById('notification-html')
+            hash = hashString(htmlDiv.textContent);
+
+            document.getElementById('notification-box').style.display = 'none';
+            notificationDismissed = true;
+            console.log("hash on click", hash);
+            if (hash !== null) {
+                localStorage.setItem('notificationDismissedHash', hash);
+            }
+        });
+    }
+    pollNotifications();
+    setInterval(pollNotifications, 30000); // Poll for new notifications every 30 seconds
 });

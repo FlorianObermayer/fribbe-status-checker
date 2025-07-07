@@ -16,7 +16,11 @@ class EphemeralAPIKeyHeader(APIKeyHeader):
     def _load_keys() -> List[ApiKey]:
         return EphemeralAPIKeyStore.load()
 
-    _api_keys: List[ApiKey] = _load_keys()
+    @staticmethod
+    def refresh_api_keys():
+        EphemeralAPIKeyHeader._api_keys = EphemeralAPIKeyHeader._load_keys()
+
+    _api_keys: List[ApiKey]
 
     def __init__(
         self,
@@ -27,10 +31,7 @@ class EphemeralAPIKeyHeader(APIKeyHeader):
     ):
         super().__init__(name=name, auto_error=auto_error)
         self._bypass_on_empty_api_key_list = bypass_on_empty_api_key_list
-
-    @staticmethod
-    def refresh_api_keys():
-        EphemeralAPIKeyHeader._api_keys = EphemeralAPIKeyHeader._load_keys()
+        EphemeralAPIKeyHeader._api_keys = self._load_keys()
 
     def _should_bypass_authentication(self):
         return (
@@ -87,3 +88,4 @@ class EphemeralAPIKeyHeader(APIKeyHeader):
         if not api_key or not self._is_key_valid(api_key):
             api_key = None
             return self.check_api_key(api_key, self.auto_error)
+        return api_key
