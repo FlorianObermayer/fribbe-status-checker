@@ -2,7 +2,7 @@
 import logging
 import os
 from datetime import datetime, timedelta
-from typing import Awaitable, Callable, Optional
+from typing import Annotated, Awaitable, Callable, Optional
 from fastapi import (
     FastAPI,
     Depends,
@@ -283,7 +283,7 @@ async def post_notification(
     openapi_extra=requires_auth_extra(),
 )
 async def get_notifications_as_html(
-    request: NotificationQuery = Query(...),
+    request: Annotated[NotificationQuery, Query()],
     api_key: Optional[str] = Depends(HybridAuth(auto_error=False)),
 ):
 

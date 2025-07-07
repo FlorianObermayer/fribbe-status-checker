@@ -18,12 +18,12 @@
 
 <body>
     <h1>Fribbe - Nachricht erstellen</h1>
-    <p>Erstelle ganz einfach Nachrichten, die dann auf der Status Seite für jeden angezeigt werden!</p>
+    <p>Erstelle Nachrichten, die auf der Status Seite angezeigt werden!</p>
+
     <div class="api-key-group">
         <div class="form-group">
-            <label for="apiKey">API Schlüssel (benötigt, um Nachrichten zu erstellen - frag Flo, wenn du einen
-                brauchst!)</label>
-            <input type="text" id="apiKey" placeholder="Gebe deinen API Schlüssel ein...">
+            <label for="apiKey">API-Schlüssel</label>
+            <input type="password" class="api-key-input" id="apiKey" placeholder="Gebe deinen API Schlüssel ein...">
             <div class="form-group">
                 <label>
                     <input type="checkbox" id="rememberMe" checked>
@@ -38,20 +38,21 @@
         <textarea id="message" placeholder="Schreibe deine Nachricht..."></textarea>
     </div>
 
-    <div class="form-group">
-        <label for="validFrom">Gilt ab wann (optional)</label>
-        <input type="datetime-local" id="validFrom">
-    </div>
-
-    <div class="form-group">
-        <label for="validUntil">Gilt bis (optional)</label>
-        <input type="datetime-local" id="validUntil">
+    <div class="datetime-group">
+        <div class="form-group">
+            <label for="validFrom">Gilt ab (optional)</label>
+            <input type="datetime-local" id="validFrom">
+            </div>
+        <div class="form-group">
+            <label for="validUntil">Gilt bis (optional)</label>
+            <input type="datetime-local" id="validUntil">
+        </div>
     </div>
 
     <div class="form-group">
         <label>
-            <input type="checkbox" id="enabled" checked>
-            Aktiv
+            <input type="checkbox" id="enabled" unchecked>
+            Live Schalten!
         </label>
     </div>
 

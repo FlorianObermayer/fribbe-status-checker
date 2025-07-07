@@ -12,6 +12,7 @@ const easyMDE = new EasyMDE({
     spellChecker: false,
     toolbar: false,
     forceSync: true,
+
 });
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -42,7 +43,7 @@ document.getElementById('submitBtn').addEventListener('click', async function ()
     }
 
     if (!apiKey) {
-        resultDiv.textContent = 'API Schlüssel ist ein Pflichtfeld';
+        resultDiv.textContent = 'API Schlüssel ist ein Pflichtfeld - Frag Flo, falls du einen brauchst!';
         resultDiv.classList.add('error');
         return;
     }
@@ -72,10 +73,20 @@ document.getElementById('submitBtn').addEventListener('click', async function ()
         });
 
         if (response.ok) {
-            const result = await response.json()
-            const notification_id = result["notification_id"];
-            resultDiv.textContent = `Nachricht erfolgreich erstellt! (preview unter: ${window.location.origin}/preview/notifications?n_id=${notification_id})`;
-            resultDiv.classList.add('success');
+            if (response.ok) {
+                const result = await response.json();
+                const notification_id = result["notification_id"];
+                resultDiv.innerHTML = `
+    <div class="success-message">
+        Nachricht erfolgreich erstellt ${!!enabled ? "und LIVE geschaltet" : "(nur als Vorschau)"}!
+        <a href="${window.location.origin}/preview/notifications?n_ids=${notification_id}" 
+           target="_blank" 
+           class="preview-button">
+           Vorschau öffnen
+        </a>
+    </div>`;
+                resultDiv.classList.add('success');
+            }
         } else {
             const errorData = await response.json();
             resultDiv.textContent = `Error: ${errorData.detail || response.statusText}`;
