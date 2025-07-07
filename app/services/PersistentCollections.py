@@ -194,6 +194,7 @@ class PersistentDict(MutableMapping[str, V], Generic[V]):
             self._data = {}
 
     def _save(self):
+        os.makedirs(os.path.dirname(self._path), exist_ok=True)
         with open(self._path, "w", encoding="utf-8") as f:
             serialized = {k: self._serialize(v) for k, v in self._data.items()}
             json.dump(
