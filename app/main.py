@@ -2,7 +2,7 @@
 import logging
 import os
 from datetime import datetime, timedelta
-from typing import Awaitable, Callable, Dict, Optional
+from typing import Awaitable, Callable, Optional
 from fastapi import (
     FastAPI,
     Depends,
@@ -54,6 +54,7 @@ app.add_middleware(
     secret_key=os.environ["SESSION_SECRET_KEY"],
     session_cookie="session_cookie",
     max_age=60 * 60 * 24 * 7,  # 7 Days or until api key expires
+    # path=os.path.join(os.environ["LOCAL_DATA_PATH"],"session" )
 )
 
 
