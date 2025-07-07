@@ -291,6 +291,10 @@ async def get_notifications_as_html(
     n_ids = request.filter_unprotected_n_ids() if api_key is None else request.n_ids
 
     notifications = notification_service.get(n_ids)
+
+    if len(notifications) == 0:
+        return HTMLResponse("")
+
     # Combine all queried messages as markdown, convert to HTML
     html = """
 <style>
