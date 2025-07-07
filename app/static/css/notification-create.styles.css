@@ -1,6 +1,6 @@
 body {
     font-family: Arial, sans-serif;
-    max-width: 800px;
+    max-width: 550px;
     margin: 0 auto;
     padding: 20px;
     line-height: 1.6;
@@ -73,4 +73,63 @@ button:hover {
     padding: 15px;
     background-color: #f9f9f9;
     border-radius: 4px;
+}
+.api-key-input {
+    width: 100%;
+}
+
+.CodeMirror {
+    background: #fffbe7;
+    border-radius: 12px;
+    max-width: 550px;
+}
+
+/* Button-Stil */
+.preview-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background-color: #4CAF50;
+    color: white !important;
+    padding: 6px 12px;
+    border-radius: 4px;
+    text-decoration: none !important;
+    margin-left: 10px;
+    font-size: 14px;
+    transition: background-color 0.3s;
+}
+
+.preview-button:hover {
+    background-color: #45a049;
+}
+
+/* Icon-Anpassung */
+.preview-button svg {
+    margin-right: 4px;
+}
+
+/* Erfolgsmeldung-Ausrichtung */
+.success-message {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.datetime-group {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 15px;
+}
+
+.datetime-group .form-group {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+@media (max-width: 600px) {
+    .datetime-group {
+        flex-direction: column;
+        gap: 15px;
+    }
 }

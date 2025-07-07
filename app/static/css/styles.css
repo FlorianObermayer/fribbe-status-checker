@@ -365,7 +365,7 @@ body.status-many {
     color: #333;
     border-radius: 12px;
     box-shadow: var(--shadow);
-    padding: 24px 20px 20px 20px;
+    padding: 12px;
     max-width: 550px;
     width: 90vw;
     position: relative;
@@ -373,7 +373,8 @@ body.status-many {
     animation: fadeInScale 0.3s;
     max-height: 70vh;
     overflow-y: auto;
-    padding-top: 0;
+    align-self: center;
+    text-align: start;
 }
 
 .notification-close {
@@ -382,15 +383,15 @@ body.status-many {
     right: 0;
     float: right;
     background: none;
-    border: none;
     font-size: 2rem;
     color: #888;
     cursor: pointer;
     transition: color 0.2s;
     z-index: 10;
-    background: #fffbe7;
     margin-left: auto;
     display: block;
+    border-radius: 6px;
+    border: none
 }
 
 .notification-close:hover {

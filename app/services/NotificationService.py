@@ -95,8 +95,10 @@ class NotificationService:
 
         if "all" in notification_ids:
             result = [*self._store.values()]
-        elif "all_active" in notification_ids:
+        elif "all_active" in notification_ids or "latest_active" in notification_ids:
             result = [n for n in self._store.values() if n.is_active()]
+        elif "all_enabled" in notification_ids:
+            result = [n for n in self._store.values() if n.enabled]
         else:
             requested_ids = {id for id in notification_ids if id.startswith("nid-")}
             result = [n for n in self._store.values() if n.id in requested_ids]
@@ -109,6 +111,10 @@ class NotificationService:
             ),
             reverse=True,
         )
+
+        if "latest_active" in notification_ids:
+            result = [result[0]]
+
         return result
 
     def list_all(self) -> List[Notification]:
