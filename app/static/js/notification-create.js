@@ -72,7 +72,9 @@ document.getElementById('submitBtn').addEventListener('click', async function ()
         });
 
         if (response.ok) {
-            resultDiv.textContent = 'Nachricht erfolgreich erstellt!';
+            const result = await response.json()
+            const notification_id = result["notification_id"];
+            resultDiv.textContent = `Nachricht erfolgreich erstellt! (preview unter: ${window.location.origin}/preview/notifications?n_id=${notification_id})`;
             resultDiv.classList.add('success');
         } else {
             const errorData = await response.json();
