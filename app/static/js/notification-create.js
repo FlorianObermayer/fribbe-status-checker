@@ -12,7 +12,6 @@ const easyMDE = new EasyMDE({
     spellChecker: false,
     toolbar: false,
     forceSync: true,
-
 });
 
 document.addEventListener('DOMContentLoaded', () => {
