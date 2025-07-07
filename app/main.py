@@ -292,7 +292,15 @@ async def get_notifications_as_html(
 
     notifications = notification_service.get(n_ids)
     # Combine all queried messages as markdown, convert to HTML
-    html = "\n<hr/>".join(
+    html = """
+<style>
+    img {
+        max-width: 100%;
+        height: auto;
+       
+    }
+</style>
+""" + "\n<hr/>".join(
         [f"<div>{markdown.markdown(n.message)}</div>" for n in notifications]
     )
     return HTMLResponse(html)
