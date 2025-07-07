@@ -2,35 +2,25 @@
 import logging
 import os
 from datetime import datetime, timedelta
-from typing import Awaitable, Callable, Dict, Optional
-from fastapi import (
-    FastAPI,
-    Depends,
-    Body,
-    HTTPException,
-    Query,
-    Request,
-    Response,
-)
+from typing import Awaitable, Callable
+from fastapi import FastAPI, Depends, Body, HTTPException, Query, Request, Response
 from fastapi.responses import HTMLResponse, FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from zoneinfo import ZoneInfo
 
 import secrets
 
+from app.api.EphemeralAPIKeyHeader import EphemeralAPIKeyHeader
 from app.api.EphemeralAPIKeyStore import EphemeralAPIKeyStore
-from app.api.HybridAuth import HybridAuth
 from app.api.Requests import NotificationQuery
 from app.api.Responses import (
     ApiKeys,
-    PostNotificationResponse,
     PresenceResponse,
     StatusResponse,
     DetailsResponse,
     OccupancyResponse,
     ApiKey,
 )
-from app.api.Schema import requires_auth_extra, update_openapi_schema
 from app.services.internal.InternalService import InternalService
 from app.services.MessageService import MessageService
 from app.services.PresenceLevelService import (
@@ -41,20 +31,10 @@ from app.services.occupancy.OccupancyService import OccupancyService
 from app.services.occupancy.Model import OccupancyType
 from app.services.NotificationService import NotificationService
 from fastapi.responses import JSONResponse
-from starlette.middleware.sessions import SessionMiddleware
-
 import markdown
 
 
 app = FastAPI()
-
-
-app.add_middleware(
-    SessionMiddleware,
-    secret_key=os.environ["SESSION_SECRET_KEY"],
-    session_cookie="session_cookie",
-    max_age=60 * 60 * 24 * 7,  # 7 Days or until api key expires
-)
 
 
 @app.middleware("http")
@@ -109,7 +89,7 @@ async def get_html(for_date: str = "today"):  # keep unused variable for api ref
         return HTMLResponse(f.read())
 
 
-@app.get("/api/status", response_model=StatusResponse, tags=["Status"])
+@app.get("/api/status", response_model=StatusResponse)
 async def get_status(for_date: str = "today"):
 
     (
@@ -161,13 +141,8 @@ async def get_status(for_date: str = "today"):
     )
 
 
-@app.get(
-    "/api/internal/details",
-    response_model=DetailsResponse,
-    tags=["Internal"],
-    openapi_extra=requires_auth_extra(),
-)
-def details(_: str = Depends(HybridAuth())):
+@app.get("/api/internal/details", response_model=DetailsResponse)
+def details(_: str = Depends(EphemeralAPIKeyHeader())):
 
     last_error = internal_service.get_last_error()
     wardens = internal_service.get_wardens_on_site()
@@ -183,16 +158,11 @@ def details(_: str = Depends(HybridAuth())):
     )
 
 
-@app.post(
-    "/api/internal/api_key/create",
-    response_model=ApiKey,
-    tags=["API Keys"],
-    openapi_extra=requires_auth_extra(),
-)
+@app.post("/api/internal/api_key/create", response_model=ApiKey, tags=["API Keys"])
 def create_api_key(
     comment: str = Body("", embed=True),
     valid_until: datetime = Body(None, embed=True),
-    _: Optional[str] = Depends(HybridAuth(bypass_on_empty_api_key_list=True)),
+    _: str = Depends(EphemeralAPIKeyHeader(bypass_on_empty_api_key_list=True)),
 ) -> ApiKey:
     """
     Create a new API key, store it in the JSON file, and return it. Requires valid API key to create or no API keys to begin with at all (admin setup mode)
@@ -201,26 +171,23 @@ def create_api_key(
     """
     # Generate a new key
     new_key = secrets.token_urlsafe(48)
-    valid_until = (
-        valid_until or datetime.now(tz=ZoneInfo("Europe/Berlin")) + timedelta(days=180)
-    ).replace(microsecond=0)
+    valid_until = (valid_until or datetime.now(tz=ZoneInfo("Europe/Berlin")) + timedelta(days=180)).replace(
+        microsecond=0
+    )
     new_api_key = ApiKey(key=new_key, comment=comment, valid_until=valid_until)
     keys = EphemeralAPIKeyStore.load()
     if not keys:
         keys = []
     keys.append(new_api_key)
     EphemeralAPIKeyStore.save(keys)
+    EphemeralAPIKeyHeader.refresh_api_keys()
     return new_api_key
 
 
-@app.delete(
-    "/api/internal/api_key/delete",
-    tags=["API Keys"],
-    openapi_extra=requires_auth_extra(),
-)
+@app.delete("/api/internal/api_key/delete", tags=["API Keys"])
 def delete_api_key(
     key: str = Body(..., embed=True),
-    _: str = Depends(HybridAuth()),
+    _: str = Depends(EphemeralAPIKeyHeader()),
 ):
     """
     Deletes an API key by its value or prefix (at least 5 characters). Only deletes if there is a unique match.
@@ -240,15 +207,11 @@ def delete_api_key(
     key_to_delete = matches[0].key
     keys = [k for k in keys if not (k.key == key_to_delete)]
     EphemeralAPIKeyStore.save(keys)
+    EphemeralAPIKeyHeader.refresh_api_keys()
 
 
-@app.get(
-    "/api/internal/api_key/list",
-    response_model=ApiKeys,
-    tags=["API Keys"],
-    openapi_extra=requires_auth_extra(),
-)
-def list_api_keys(_: Optional[str] = Depends(HybridAuth())):
+@app.get("/api/internal/api_key/list", response_model=ApiKeys, tags=["API Keys"])
+def list_api_keys(_: str = Depends(EphemeralAPIKeyHeader())):
     """
     Returns all API keys as a list. Requires a valid API key for authentication.
     """
@@ -256,34 +219,26 @@ def list_api_keys(_: Optional[str] = Depends(HybridAuth())):
     return ApiKeys(api_keys=keys)
 
 
-@app.post(
-    "/api/notifications",
-    tags=["Notifications"],
-    openapi_extra=requires_auth_extra(),
-    response_model=PostNotificationResponse,
-)
+@app.post("/api/notifications", tags=["Notifications"])
 async def post_notification(
     message: str = Body(...),
     valid_from: datetime = Body(None),
     valid_until: datetime = Body(None),
     enabled: bool = Body(True),
-    _: str = Depends(HybridAuth()),
+    _: str = Depends(EphemeralAPIKeyHeader()),
 ):
     notification_id = notification_service.add(
         message, valid_from, valid_until, enabled
     )
-    return {"notification_id": notification_id}
+    return {"id": notification_id}
 
 
 @app.get(
-    "/api/notifications",
-    response_class=HTMLResponse,
-    tags=["Notifications", "HTML"],
-    openapi_extra=requires_auth_extra(),
+    "/api/notifications", response_class=HTMLResponse, tags=["Notifications", "HTML"]
 )
 async def get_notifications_as_html(
     request: NotificationQuery = Query(...),
-    api_key: Optional[str] = Depends(HybridAuth(auto_error=False)),
+    api_key: str | None = Depends(EphemeralAPIKeyHeader(auto_error=False)),
 ):
 
     # Without an API Key, only allow "public" queries
@@ -297,53 +252,35 @@ async def get_notifications_as_html(
     return HTMLResponse(html)
 
 
-@app.get(
-    "/api/notifications/list",
-    response_class=JSONResponse,
-    tags=["Notifications"],
-    openapi_extra=requires_auth_extra(),
-)
-async def list_notifications(_: str = Depends(HybridAuth())):
+@app.get("/api/notifications/list", response_class=JSONResponse, tags=["Notifications"])
+async def list_notifications(_: str = Depends(EphemeralAPIKeyHeader())):
     notifications = notification_service.list_all()
     return JSONResponse([notify.to_dict() for notify in notifications])
 
 
-@app.delete(
-    "/api/notifications/{notification_id}",
-    tags=["Notifications"],
-    openapi_extra=requires_auth_extra(),
-)
-async def delete_notification(notification_id: str, _: str = Depends(HybridAuth())):
+@app.delete("/api/notifications/{notification_id}", tags=["Notifications"])
+async def delete_notification(
+    notification_id: str, _: str = Depends(EphemeralAPIKeyHeader())
+):
     if not notification_service.delete(notification_id):
         raise HTTPException(status_code=404, detail="Notification not found")
 
 
-@app.put(
-    "/api/notifications/{notification_id}",
-    tags=["Notifications"],
-    openapi_extra=requires_auth_extra(),
-)
+@app.put("/api/notifications/{notification_id}", tags=["Notifications"])
 async def update_notification(
     notification_id: str,
     enabled: bool = Body(None),
-    valid_from: datetime = Body(None),
     valid_until: datetime = Body(None),
-    _: str = Depends(HybridAuth()),
+    _: str = Depends(EphemeralAPIKeyHeader()),
 ):
-    if not notification_service.update(
-        notification_id, enabled, valid_from, valid_until
-    ):
+    if not notification_service.update(notification_id, enabled, valid_until):
         raise HTTPException(status_code=404, detail="Notification not found")
 
 
-@app.get(
-    "/preview/notifications",
-    tags=["Notifications"],
-    openapi_extra=requires_auth_extra(),
-)
+@app.get("/preview/notifications", tags=["Notifications"])
 async def get_notification_preview(
     _: NotificationQuery = Query(...),
-    __: str = Depends(HybridAuth()),
+    __: str = Depends(EphemeralAPIKeyHeader()),
 ):  # keep unused variable for api reference
     with open("app/static/index.html") as f:
         return HTMLResponse(f.read())
@@ -355,6 +292,3 @@ async def get_notification_preview(
 async def get_notification_builder():
     with open("app/static/notification-create.html") as f:
         return HTMLResponse(f.read())
-
-
-update_openapi_schema(app)
