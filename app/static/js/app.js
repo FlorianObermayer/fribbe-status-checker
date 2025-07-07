@@ -194,7 +194,6 @@ async function pollNotifications() {
         if (html && html.trim()) {
             if (hash !== lastNotificationHash) {
                 notificationDismissed = false;
-                console.log("removing due to different hash", hash, lastNotificationHash)
                 localStorage.removeItem('notificationDismissedHash');
             } else {
                 notificationDismissed = true;
@@ -207,7 +206,6 @@ async function pollNotifications() {
             }
         } else {
             box.style.display = 'none';
-            console.log("removing due to no html")
             localStorage.removeItem('notificationDismissedHash');
         }
     } catch (e) {
@@ -266,7 +264,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             document.getElementById('notification-box').style.display = 'none';
             notificationDismissed = true;
-            console.log("hash on click", hash);
             if (hash !== null) {
                 localStorage.setItem('notificationDismissedHash', hash);
             }

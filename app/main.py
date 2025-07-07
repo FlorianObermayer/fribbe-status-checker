@@ -6,6 +6,7 @@ from typing import Awaitable, Callable
 from fastapi import FastAPI, Depends, Body, HTTPException, Query, Request, Response
 from fastapi.responses import HTMLResponse, FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
+from zoneinfo import ZoneInfo
 
 import secrets
 
@@ -170,7 +171,7 @@ def create_api_key(
     """
     # Generate a new key
     new_key = secrets.token_urlsafe(48)
-    valid_until = (valid_until or datetime.now() + timedelta(days=180)).replace(
+    valid_until = (valid_until or datetime.now(tz=ZoneInfo("Europe/Berlin")) + timedelta(days=180)).replace(
         microsecond=0
     )
     new_api_key = ApiKey(key=new_key, comment=comment, valid_until=valid_until)

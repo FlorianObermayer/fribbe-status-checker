@@ -4,6 +4,7 @@ from os import path
 import os
 from typing import Dict, List, Optional, Self
 import uuid
+from zoneinfo import ZoneInfo
 
 from app.services.PersistentCollections import PersistentDict
 
@@ -79,7 +80,7 @@ class NotificationService:
     ) -> str:
         nid = str(f"nid-{uuid.uuid4()}")
         notification = Notification(
-            created=datetime.now(),
+            created=datetime.now(tz=ZoneInfo("Europe/Berlin")),
             id=nid,
             message=message,
             valid_from=valid_from,

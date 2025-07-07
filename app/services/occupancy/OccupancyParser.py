@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from typing import List, Literal
+from zoneinfo import ZoneInfo
 from bs4 import Tag
 
 from app.services.DatetimeParser import parse_event_times
@@ -67,7 +68,7 @@ def _parse_weekly_plan_data(
         "Samstag": 5,
         "Sonntag": 6,
     }
-    today = datetime.now().date()
+    today = datetime.now(tz=ZoneInfo("Europe/Berlin")).date()
     today_weekday = today.weekday()
     event_weekday = weekday_map.get(day, today_weekday)
     days_ahead = (event_weekday - today_weekday) % 7
@@ -114,7 +115,7 @@ def parse_event_calendar(event_calendar_table: Tag) -> List[Occupancy]:
         else:
             # fallback: try to parse from date_str (e.g. "01.05.")
             try:
-                event_date = f"{datetime.now().year}-{date_str[3:5]}-{date_str[0:2]}"
+                event_date = f"{datetime.now(tz=ZoneInfo('Europe/Berlin')).year}-{date_str[3:5]}-{date_str[0:2]}"
             except Exception:
                 continue
 

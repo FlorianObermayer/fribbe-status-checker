@@ -1,6 +1,7 @@
 import os
 import tempfile
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from pydantic import ValidationError
 import pytest
@@ -17,7 +18,7 @@ def set_env():
 
 
 def test_is_key_valid():
-    now = datetime.now()
+    now = datetime.now(tz=ZoneInfo("Europe/Berlin"))
     valid_key = ApiKey(
         key="02552721-61c1-4535-979e-fb57c8f3c3f0-valid",
         comment="",
@@ -44,4 +45,8 @@ def test_is_key_valid():
 
 def test_key_too_short():
     with pytest.raises(ValidationError):
-        ApiKey(key="too_short", comment="", valid_until=datetime.now())
+        ApiKey(
+            key="too_short",
+            comment="",
+            valid_until=datetime.now(tz=ZoneInfo("Europe/Berlin")),
+        )

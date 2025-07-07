@@ -60,8 +60,8 @@ def test_reset_at_5am(service: InternalService):
     yesterday = datetime.now(tz=ZoneInfo("Europe/Berlin")) - timedelta(days=1)
     yesterday = yesterday.replace(hour=4, minute=0, second=0, microsecond=0)
     service._last_updated = yesterday  # type: ignore
-    service._first_device_on_site = datetime.now()  # type: ignore
-    service._last_device_on_site = datetime.now()  # type: ignore
+    service._first_device_on_site = datetime.now(tz=ZoneInfo("Europe/Berlin"))  # type: ignore
+    service._last_device_on_site = datetime.now(tz=ZoneInfo("Europe/Berlin"))  # type: ignore
     service._active_devices_ct = 0  # type: ignore
     service._update_device_statistics(0)  # type: ignore
     assert service._first_device_on_site is None  # type: ignore

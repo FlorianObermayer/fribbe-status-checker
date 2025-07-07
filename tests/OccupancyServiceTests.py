@@ -1,3 +1,4 @@
+from zoneinfo import ZoneInfo
 import pytest
 from datetime import date, datetime, timedelta
 from unittest.mock import MagicMock, patch
@@ -45,7 +46,9 @@ def test_get_todays_occupancy_no_occupancy():
 def test_get_todays_week_occupancy_with_occupancy():
     s = service()
     occ = parse_weekly_plan(get_weekly_mock_table())
-    occ[0].begin = datetime.now()
+    occ[0].begin = (
+        datetime.now()
+    )  # HACK: Don't use Datetime with timezone as we can't compare it to the mock data then...
     occ[0].end = occ[0].begin + timedelta(hours=4)
     s._week_occupancy = occ  # type: ignore
     for_date, msgs, events, occupancy, source, last_updated, last_error = (
@@ -64,7 +67,7 @@ def test_get_todays_week_occupancy_with_occupancy():
 def test_get_todays_calendar_occupancy_with_occupancy():
     s = service()
     occ = parse_event_calendar(get_calendar_mock_table())
-    occ[0].begin = datetime.now()
+    occ[0].begin = datetime.now(tz=ZoneInfo("Europe/Berlin"))
     occ[0].end = occ[0].begin + timedelta(hours=4)
     s._event_occupancy = occ  # type: ignore
     for_date, msgs, events, occupancy, source, last_updated, last_error = (
