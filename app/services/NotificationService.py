@@ -75,7 +75,7 @@ class NotificationService:
         )
 
     def add(
-        self, message: str, valid_until: datetime, valid_from: datetime, enabled: bool
+        self, message: str, valid_from: datetime, valid_until: datetime, enabled: bool
     ) -> str:
         nid = str(f"nid-{uuid.uuid4()}")
         notification = Notification(
@@ -94,7 +94,7 @@ class NotificationService:
 
         if "all" in notification_ids:
             result = [*self._store.values()]
-        elif "all_valid" in notification_ids:
+        elif "all_active" in notification_ids:
             return [n for n in self._store.values() if n.is_active()]
         else:
             requested_ids = {id for id in notification_ids if id.startswith("nid-")}

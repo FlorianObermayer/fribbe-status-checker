@@ -176,14 +176,13 @@ function hashString(str) {
 async function pollNotifications() {
     try {
         let notification_ids = getNotificationIdsFromUrl();
-        console.log("Notification IDs: ", notification_ids);
 
         if (notification_ids.length === 0) {
-            notification_ids = ["all_valid"]
+            notification_ids = ["all_active"]
         }
 
-        const query = notification_ids.join("&notification_ids=")
-        const resp = await fetch(`/api/notifications/?notification_ids=${query}`);
+        const query = notification_ids.join("&n_ids=")
+        const resp = await fetch(`/api/notifications?n_ids=${query}`);
         if (!resp.ok) {
             throw Error(resp.statusText)
         }
