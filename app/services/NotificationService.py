@@ -95,7 +95,7 @@ class NotificationService:
         if "all" in notification_ids:
             result = [*self._store.values()]
         elif "all_active" in notification_ids:
-            return [n for n in self._store.values() if n.is_active()]
+            result = [n for n in self._store.values() if n.is_active()]
         else:
             requested_ids = {id for id in notification_ids if id.startswith("nid-")}
             result = [n for n in self._store.values() if n.id in requested_ids]

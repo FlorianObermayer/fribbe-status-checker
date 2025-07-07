@@ -159,7 +159,6 @@ function setupLegendToggle() {
     });
 }
 
-let lastNotificationHash = null;
 let notificationDismissed = false;
 
 function hashString(str) {
@@ -170,7 +169,7 @@ function hashString(str) {
         hash = ((hash << 5) - hash) + chr;
         hash |= 0;
     }
-    return hash;
+    return hash + "";
 }
 
 async function pollNotifications() {
@@ -189,31 +188,32 @@ async function pollNotifications() {
         const html = await resp.text();
         const box = document.getElementById('notification-box');
         const htmlDiv = document.getElementById('notification-html');
-        const hash = hashString(html);
+        htmlDiv.innerHTML = html;
+        const hash = hashString(htmlDiv.textContent);
+        const lastNotificationHash = localStorage.getItem('notificationDismissedHash');
         if (html && html.trim()) {
             if (hash !== lastNotificationHash) {
                 notificationDismissed = false;
+                console.log("removing due to different hash", hash, lastNotificationHash)
                 localStorage.removeItem('notificationDismissedHash');
-            }
-            lastNotificationHash = hash;
-
-            if (localStorage.getItem('notificationDismissedHash') == hash.toString()) {
+            } else {
                 notificationDismissed = true;
             }
+
             if (!notificationDismissed) {
-                htmlDiv.innerHTML = html;
                 box.style.display = '';
             } else {
                 box.style.display = 'none';
             }
         } else {
             box.style.display = 'none';
-            lastNotificationHash = null;
+            console.log("removing due to no html")
             localStorage.removeItem('notificationDismissedHash');
         }
     } catch (e) {
         // ignore box on error
         document.getElementById('notification-box').style.display = 'none';
+        localStorage.removeItem('notificationDismissedHash');
         console.error(e)
     }
 }
@@ -261,10 +261,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeBtn = document.getElementById('notification-close');
     if (closeBtn) {
         closeBtn.addEventListener('click', () => {
+            htmlDiv = document.getElementById('notification-html')
+            hash = hashString(htmlDiv.textContent);
+
             document.getElementById('notification-box').style.display = 'none';
             notificationDismissed = true;
-            if (lastNotificationHash !== null) {
-                localStorage.setItem('notificationDismissedHash', lastNotificationHash.toString());
+            console.log("hash on click", hash);
+            if (hash !== null) {
+                localStorage.setItem('notificationDismissedHash', hash);
             }
         });
     }
