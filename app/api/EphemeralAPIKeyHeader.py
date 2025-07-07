@@ -88,3 +88,4 @@ class EphemeralAPIKeyHeader(APIKeyHeader):
         if not api_key or not self._is_key_valid(api_key):
             api_key = None
             return self.check_api_key(api_key, self.auto_error)
+        return api_key

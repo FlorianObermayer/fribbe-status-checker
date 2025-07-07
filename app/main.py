@@ -2,7 +2,7 @@
 import logging
 import os
 from datetime import datetime, timedelta
-from typing import Annotated, Awaitable, Callable, List, Literal
+from typing import Awaitable, Callable
 from fastapi import FastAPI, Depends, Body, HTTPException, Query, Request, Response
 from fastapi.responses import HTMLResponse, FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
@@ -82,7 +82,7 @@ def robots():
     return data
 
 
-@app.get("/", response_class=HTMLResponse)
+@app.get("/", response_class=HTMLResponse, tags=["HTML"])
 async def get_html(for_date: str = "today"):  # keep unused variable for api reference
     with open("app/static/index.html") as f:
         return HTMLResponse(f.read())
@@ -232,12 +232,19 @@ async def post_notification(
     return {"id": notification_id}
 
 
-@app.get("/api/notifications", response_class=HTMLResponse, tags=["Notifications"])
+@app.get(
+    "/api/notifications", response_class=HTMLResponse, tags=["Notifications", "HTML"]
+)
 async def get_notifications_as_html(
     request: NotificationQuery = Query(...),
+    api_key: str | None = Depends(EphemeralAPIKeyHeader(auto_error=False)),
 ):
-    notifications = notification_service.get(request.notification_ids)
-    # Combine all active messages as markdown, convert to HTML
+
+    # Without an API Key, only allow "public" queries
+    n_ids = request.filter_unprotected_n_ids() if api_key is None else request.n_ids
+
+    notifications = notification_service.get(n_ids)
+    # Combine all queried messages as markdown, convert to HTML
     html = "\n<hr/>".join(
         [f"<div>{markdown.markdown(n.message)}</div>" for n in notifications]
     )
@@ -272,6 +279,17 @@ async def update_notification(
 @app.get("/preview/notifications", tags=["Notifications"])
 async def get_notification_preview(
     _: NotificationQuery = Query(...),
+    __: str = Depends(EphemeralAPIKeyHeader()),
 ):  # keep unused variable for api reference
     with open("app/static/index.html") as f:
+        return HTMLResponse(f.read())
+
+
+@app.get(
+    "/notification-create", response_class=HTMLResponse, tags=["Notifications", "HTML"]
+)
+async def get_notification_builder(
+    for_date: str = "today",
+):  # keep unused variable for api reference
+    with open("app/static/notification-create.html") as f:
         return HTMLResponse(f.read())
