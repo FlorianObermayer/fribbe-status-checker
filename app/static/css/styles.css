@@ -491,6 +491,7 @@ body.status-many {
     .notification-content {
         padding: 16px 6vw 16px 6vw;
         font-size: 1rem;
+        border-radius: 3px;
     }
 }
 
