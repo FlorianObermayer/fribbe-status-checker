@@ -1,5 +1,6 @@
 import logging
 from typing import List, Optional
+from zoneinfo import ZoneInfo
 from fastapi import Request
 from fastapi.security import APIKeyHeader
 from datetime import datetime
@@ -41,7 +42,7 @@ class EphemeralAPIKeyHeader(APIKeyHeader):
 
     def _is_key_valid(self, key: str) -> bool:
         log_key = key[:4]
-        now = datetime.now()
+        now = datetime.now(tz=ZoneInfo("Europe/Berlin"))
         for entry in EphemeralAPIKeyHeader._api_keys:
             if entry.key != key:
                 continue

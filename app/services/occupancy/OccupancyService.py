@@ -75,7 +75,7 @@ class OccupancyService:
                     languages=["de", "en"],
                     settings={"TIMEZONE": "Europe/Berlin"},
                 )
-                or datetime.now()
+                or datetime.now(tz=ZoneInfo("Europe/Berlin"))
             ).date()
             filtered_occupancies = [
                 occ

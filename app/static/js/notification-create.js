@@ -58,8 +58,8 @@ document.getElementById('submitBtn').addEventListener('click', async function ()
         enabled
     };
 
-    if (validFrom) payload.valid_from = validFrom + ':00Z';
-    if (validUntil) payload.valid_until = validUntil + ':00Z';
+    if (validFrom) payload.valid_from = new Date(validFrom).toISOString();
+    if (validUntil) payload.valid_until = new Date(validUntil).toISOString();
 
     try {
         const response = await fetch('/api/notifications', {
