@@ -288,8 +288,6 @@ async def get_notification_preview(
 @app.get(
     "/notification-create", response_class=HTMLResponse, tags=["Notifications", "HTML"]
 )
-async def get_notification_builder(
-    for_date: str = "today",
-):  # keep unused variable for api reference
+async def get_notification_builder():
     with open("app/static/notification-create.html") as f:
         return HTMLResponse(f.read())
