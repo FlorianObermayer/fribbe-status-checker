@@ -5,7 +5,7 @@ function getForDateFromUrl() {
 
 function getNotificationIdsFromUrl() {
     const params = new URLSearchParams(window.location.search);
-    return params.getAll('n_ids');
+    return params.getAll('notification_ids');
 }
 
 async function updateStatus() {
@@ -176,17 +176,10 @@ async function pollNotifications() {
     try {
         let notification_ids = getNotificationIdsFromUrl();
 
-
         if (notification_ids.length === 0) {
-            notification_ids = ["all_active"];
+            notification_ids = ["all_active"]
         }
 
-        console.log("notification_ids:", notification_ids)
-
-        // HACK: If specific notification is requested, show always
-        if (notification_ids.length === 1 && notification_ids[0] !== "all_active") {
-            localStorage.removeItem('notificationDismissedHash');
-        }
         const query = notification_ids.join("&n_ids=")
         const resp = await fetch(`/api/notifications?n_ids=${query}`);
         if (!resp.ok) {
