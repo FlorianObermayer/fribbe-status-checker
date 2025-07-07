@@ -60,3 +60,7 @@ class ApiKey(BaseModel):
 
 class ApiKeys(BaseModel):
     api_keys: List[ApiKey]
+
+
+class PostNotificationResponse(BaseModel):
+    notification_id: str

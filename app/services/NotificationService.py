@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from os import path
 import os
 from typing import Dict, List, Optional, Self
@@ -101,7 +101,14 @@ class NotificationService:
             requested_ids = {id for id in notification_ids if id.startswith("nid-")}
             result = [n for n in self._store.values() if n.id in requested_ids]
 
-        result.sort(key=lambda n: n.created, reverse=True)
+        result.sort(
+            key=lambda n: (
+                n.created.replace(tzinfo=timezone.utc)
+                if n.created.tzinfo is None
+                else n.created.astimezone(timezone.utc)
+            ),
+            reverse=True,
+        )
         return result
 
     def list_all(self) -> List[Notification]:
@@ -117,6 +124,7 @@ class NotificationService:
         self,
         nid: str,
         enabled: Optional[bool] = None,
+        valid_from: Optional[datetime] = None,
         valid_until: Optional[datetime] = None,
     ) -> bool:
         if nid not in self._store:
@@ -124,6 +132,8 @@ class NotificationService:
         notification = self._store[nid]
         if enabled is not None:
             notification.enabled = enabled
+        if valid_from is not None:
+            notification.valid_from = valid_from
         if valid_until is not None:
             notification.valid_until = valid_until
         self._store[nid] = notification
