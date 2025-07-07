@@ -15,14 +15,16 @@ services:
       - 8007:80
     volumes:
       - secrets-data:/code/secrets
+      - app-data:/code/app-data
     environment:
       - ROUTER_USERNAME=${ROUTER_USERNAME}
       - ROUTER_PASSWORD=${ROUTER_PASSWORD}
       - ROUTER_IP=${ROUTER_IP:-192.168.8.1}
       - API_KEYS_PATH=${API_KEYS_PATH:-/code/secrets/apikeys.json}
-      - LOCAL_DATA_PATH=${LOCAL_DATA_PATH:-/code/data/}
+      - LOCAL_DATA_PATH=${LOCAL_DATA_PATH:-/code/app-data/}
       - SESSION_SECRET_KEY=${SESSION_SECRET_KEY}
     restart: unless-stopped
 
 volumes:
   secrets-data:
+  app-data:

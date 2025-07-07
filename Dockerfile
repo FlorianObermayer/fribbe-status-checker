@@ -36,7 +36,7 @@ RUN adduser \
 
 # Ensure /code/secrets exists and is owned by appuser (UID 10001) for volume mount and write access in production.
 RUN mkdir -p /code/secrets && chown 10001:10001 /code/secrets
-RUN mkdir -p /code/data && chown 10001:10001 /code/data
+RUN mkdir -p /code/app-data && chown 10001:10001 /code/app-data
 
 # Switch to the non-privileged user to run the application.
 USER appuser
