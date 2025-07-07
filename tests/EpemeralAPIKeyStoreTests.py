@@ -7,7 +7,6 @@ from pydantic import ValidationError
 import pytest
 
 from app.api.EphemeralAPIKeyStore import EphemeralAPIKeyStore
-from app.api.EphemeralAPIKeyHeader import EphemeralAPIKeyHeader
 from app.api.Responses import ApiKey
 
 
@@ -35,12 +34,10 @@ def test_is_key_valid():
             expired_key,
         ]
     )
-    EphemeralAPIKeyHeader.refresh_api_keys()
-    header = EphemeralAPIKeyHeader()
-    assert header._is_key_valid("02552721-61c1-4535-979e-fb57c8f3c3f0-valid") is True  # type: ignore
-    assert header._is_key_valid("02552721-61c1-4535-979e-fb57c8f3c3f0-outdated") is False  # type: ignore
-    assert header._is_key_valid("02552721-61c1-4535-979e-fb57c8f3c3f0-notfound") is False  # type: ignore
-    assert header._is_key_valid("notfound") is False  # type: ignore
+    assert EphemeralAPIKeyStore.is_key_valid("02552721-61c1-4535-979e-fb57c8f3c3f0-valid") is True
+    assert EphemeralAPIKeyStore.is_key_valid("02552721-61c1-4535-979e-fb57c8f3c3f0-outdated") is False 
+    assert EphemeralAPIKeyStore.is_key_valid("02552721-61c1-4535-979e-fb57c8f3c3f0-notfound") is False
+    assert EphemeralAPIKeyStore.is_key_valid("notfound") is False
 
 
 def test_key_too_short():
