@@ -185,7 +185,7 @@ def details(_: str = Depends(HybridAuth())):
 
 
 @app.post(
-    "/api/internal/api_key/create",
+    "/api/internal/api_key",
     response_model=ApiKey,
     tags=["API Keys"],
     openapi_extra=requires_auth_extra(),
@@ -215,7 +215,7 @@ def create_api_key(
 
 
 @app.delete(
-    "/api/internal/api_key/delete",
+    "/api/internal/api_key",
     tags=["API Keys"],
     openapi_extra=requires_auth_extra(),
 )
@@ -244,7 +244,7 @@ def delete_api_key(
 
 
 @app.get(
-    "/api/internal/api_key/list",
+    "/api/internal/api_keys",
     response_model=ApiKeys,
     tags=["API Keys"],
     openapi_extra=requires_auth_extra(),
