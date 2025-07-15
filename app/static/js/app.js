@@ -246,7 +246,7 @@ function createNotificationsPreviewControls() {
     // Add click handlers
     enableBtn.addEventListener('click', async () => {
         const notificationIds = getNotificationIdsFromUrl();
-        if (!notificationIds.length || notificationIds[0] === 'all_active') {
+        if (notificationIds.length !== 1 || notificationIds[0] === 'all_active') {
             showStatus('Keine spezifische Notification ID gefunden', true);
             return;
         }
@@ -254,7 +254,9 @@ function createNotificationsPreviewControls() {
         try {
             await enableNotification(notificationIds[0]);
             showStatus('Notification erfolgreich aktiviert');
-            await pollNotifications(); // Refresh the preview
+            setTimeout(async () => {
+                await pollNotifications();  // Refresh the preview
+            }, 1500);
         } catch (error) {
             showStatus(`Fehler: ${error.message}`, true);
         }
@@ -262,7 +264,7 @@ function createNotificationsPreviewControls() {
 
     deleteBtn.addEventListener('click', async () => {
         const notificationIds = getNotificationIdsFromUrl();
-        if (!notificationIds.length || notificationIds[0] === 'all_active') {
+        if (notificationIds.length !== 1 || notificationIds[0] === 'all_active') {
             showStatus('Keine spezifische Notification ID gefunden', true);
             return;
         }
@@ -273,9 +275,6 @@ function createNotificationsPreviewControls() {
             await deleteNotification(notificationIds[0]);
             showStatus('Notification erfolgreich gelöscht');
             // Optional: Redirect to the main page after successful deletion
-            setTimeout(() => {
-                window.location.href = '/';
-            }, 1500);
         } catch (error) {
             showStatus(`Fehler: ${error.message}`, true);
         }
