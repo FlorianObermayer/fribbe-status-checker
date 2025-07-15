@@ -29,7 +29,7 @@ document.getElementById('submitBtn').addEventListener('click', async function ()
     const message = document.getElementById('message').value;
     const validFrom = document.getElementById('validFrom').value;
     const validUntil = document.getElementById('validUntil').value;
-    const enabled = document.getElementById('enabled').checked;
+    const enabled = false;
 
     const resultDiv = document.getElementById('result');
     resultDiv.className = '';
@@ -77,7 +77,7 @@ document.getElementById('submitBtn').addEventListener('click', async function ()
                 const notification_id = result["notification_id"];
                 resultDiv.innerHTML = `
     <div class="success-message">
-        Nachricht erfolgreich erstellt ${!!enabled ? "und LIVE geschaltet" : "(nur als Vorschau)"}!
+        Nachricht erfolgreich erstellt (nur als Vorschau)!
         <a href="${window.location.origin}/preview/notifications?n_ids=${notification_id}" 
            target="_blank" 
            class="preview-button">

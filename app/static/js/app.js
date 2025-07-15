@@ -8,6 +8,40 @@ function getNotificationIdsFromUrl() {
     return params.getAll('n_ids');
 }
 
+function isNotificationsPreview() {
+    const url = window.location.pathname
+    if (url.includes("preview/notifications")) {
+        return true;
+    }
+    return false;
+}
+
+async function enableNotification(notification_id) {
+    const response = await fetch(`/api/notifications/${notification_id}`, {
+        method: 'put',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ enabled: true })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`${errorData.detail || response.statusText}`);
+    }
+}
+
+async function deleteNotification(notification_id) {
+    const response = await fetch(`/api/notifications/${notification_id}`, {
+        method: 'delete'
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`${errorData.detail || response.statusText}`);
+    }
+}
+
 async function updateStatus() {
     const dateTimeOptions = {
         day: 'numeric',
@@ -172,6 +206,83 @@ function hashString(str) {
     return hash + "";
 }
 
+function createNotificationsPreviewControls() {
+    if (!isNotificationsPreview()) return;
+
+    // Remove existing controls if any
+    const existingControls = document.querySelector('.notification-controls');
+    if (existingControls) existingControls.remove();
+
+    const controls = document.createElement('div');
+    controls.className = 'notification-controls';
+
+    const enableBtn = document.createElement('button');
+    enableBtn.className = 'enable-btn';
+    enableBtn.textContent = 'Aktivieren';
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'delete-btn';
+    deleteBtn.textContent = 'Löschen';
+
+    controls.appendChild(enableBtn);
+    controls.appendChild(deleteBtn);
+
+    document.body.appendChild(controls);
+
+    let statusTimeout;
+
+    const showStatus = (message, isError = false) => {
+        const statusMsg = document.createElement('div');
+        statusMsg.className = `status-message ${isError ? 'error' : 'success'}`;
+        statusMsg.textContent = message;
+        controls.appendChild(statusMsg);
+
+        if (statusTimeout) clearTimeout(statusTimeout);
+        statusTimeout = setTimeout(() => {
+            statusMsg.remove();
+        }, 3000);
+    };
+
+    // Add click handlers
+    enableBtn.addEventListener('click', async () => {
+        const notificationIds = getNotificationIdsFromUrl();
+        if (!notificationIds.length || notificationIds[0] === 'all_active') {
+            showStatus('Keine spezifische Notification ID gefunden', true);
+            return;
+        }
+
+        try {
+            await enableNotification(notificationIds[0]);
+            showStatus('Notification erfolgreich aktiviert');
+            await pollNotifications(); // Refresh the preview
+        } catch (error) {
+            showStatus(`Fehler: ${error.message}`, true);
+        }
+    });
+
+    deleteBtn.addEventListener('click', async () => {
+        const notificationIds = getNotificationIdsFromUrl();
+        if (!notificationIds.length || notificationIds[0] === 'all_active') {
+            showStatus('Keine spezifische Notification ID gefunden', true);
+            return;
+        }
+
+        if (!confirm('Möchtest du diese Notification wirklich löschen?')) return;
+
+        try {
+            await deleteNotification(notificationIds[0]);
+            showStatus('Notification erfolgreich gelöscht');
+            // Optional: Redirect to the main page after successful deletion
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 1500);
+        } catch (error) {
+            showStatus(`Fehler: ${error.message}`, true);
+        }
+    });
+}
+
+// Modify pollNotifications to call createNotificationControls
 async function pollNotifications() {
     try {
         let notification_ids = getNotificationIdsFromUrl();
@@ -215,6 +326,7 @@ async function pollNotifications() {
             box.style.display = 'none';
             localStorage.removeItem('notificationDismissedHash');
         }
+        createNotificationsPreviewControls();
     } catch (e) {
         // ignore box on error
         document.getElementById('notification-box').style.display = 'none';
