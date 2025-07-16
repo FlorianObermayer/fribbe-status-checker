@@ -1,6 +1,8 @@
 import os
 import tempfile
 from typing import Dict, Any, List
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from app.services.PersistentCollections import (
     PersistentDict,
     PersistentList,
@@ -254,3 +256,85 @@ def test_persistentlist_with_dataclass():
         assert l2[1].bar == 20
         l2.clear()
         assert l2.to_list() == []
+
+
+def test_persistentdict_with_datetime():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = os.path.join(tmpdir, "datetime.json")
+        d = PersistentDict(path, datetime)
+
+        # Test with timezone-aware datetime
+        berlin_tz = ZoneInfo("Europe/Berlin")
+        now = datetime.now(berlin_tz)
+        d["now"] = now
+        d["tomorrow"] = now + timedelta(days=1)
+
+        # Reload and verify
+        d2 = PersistentDict(path, datetime)
+
+        d2_now = d2["now"]
+        d2_tomorrow = d2["tomorrow"]
+        assert d2_now == now
+        assert d2_tomorrow == now + timedelta(days=1)
+
+
+def test_persistentdict_with_naive_datetime():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = os.path.join(tmpdir, "naive_datetime.json")
+        d = PersistentDict(path, datetime)
+
+        # Test with naive datetime (no timezone)
+        naive_now = datetime.now()
+        d["naive"] = naive_now
+
+        # Reload and verify
+        d2 = PersistentDict(path, datetime)
+        assert d2["naive"] == naive_now
+
+
+def test_persistentlist_with_datetime():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = os.path.join(tmpdir, "datetime_list.json")
+        l = PersistentList(path, datetime)
+
+        berlin_tz = ZoneInfo("Europe/Berlin")
+        now = datetime.now(berlin_tz)
+        timestamps = [now, now + timedelta(hours=1), now + timedelta(days=1)]
+
+        # Add timestamps to list
+        for ts in timestamps:
+            l.append(ts)
+
+        # Verify immediate state
+        assert len(l) == 3
+        assert l[0] == timestamps[0]
+        assert l[1] == timestamps[1]
+        assert l[2] == timestamps[2]
+
+        # Reload and verify
+        l2 = PersistentList(path, datetime)
+        assert len(l2) == 3
+        for i, ts in enumerate(timestamps):
+            assert l2[i] == ts
+
+
+def test_persistentdict_with_mixed_datetime_formats():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = os.path.join(tmpdir, "mixed_datetime.json")
+        d = PersistentDict(path, datetime)
+
+        berlin_tz = ZoneInfo("Europe/Berlin")
+        utc_tz = ZoneInfo("UTC")
+
+        # Test various datetime formats
+        d["berlin"] = datetime.now(berlin_tz)
+        d["utc"] = datetime.now(utc_tz)
+        d["naive"] = datetime.now()
+
+        # Reload and verify
+        d2 = PersistentDict(path, datetime)
+
+        # Naive should be interpreted as Berlin time
+        assert d2["berlin"] == d["berlin"]
+        assert d2["utc"] == d["utc"]
+        assert d2["naive"] == d["naive"]
