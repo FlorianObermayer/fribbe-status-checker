@@ -19,6 +19,8 @@ from typing import (
 
 import json
 import os
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 V = TypeVar("V")
 
@@ -41,7 +43,7 @@ class PersistentDict(MutableMapping[str, V], Generic[V]):
         if not self._is_type_supported(value_type):
             raise TypeError(
                 f"PersistentDict: Type {value_type} is not supported. "
-                "Must be a primitive type, DictSerializable, or a container "
+                "Must be a primitive type, datetime, DictSerializable, or a container "
                 "of supported types."
             )
 
@@ -87,7 +89,7 @@ class PersistentDict(MutableMapping[str, V], Generic[V]):
         return False
 
     def _is_primitive(self, t: Type[V] | Type[Any]) -> bool:
-        return t in (int, float, str, bool, type(None))
+        return t in (int, float, str, bool, type(None), datetime)
 
     def _is_primitive_type(self, t: Optional[Type[V]] = None) -> bool:
         t = t or self._value_type
@@ -108,6 +110,17 @@ class PersistentDict(MutableMapping[str, V], Generic[V]):
     def _deserialize(self, value: Any, expected_type: Type[V] | Type[Any]) -> Any:
         if value is None:
             return None
+
+        if expected_type is datetime:
+            if isinstance(value, str):
+                try:
+                    # Try parsing with timezone info
+                    return datetime.fromisoformat(value)
+                except ValueError:
+                    # If no timezone info, assume Europe/Berlin
+                    dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+                    return dt.astimezone(ZoneInfo("Europe/Berlin"))
+            return value
 
         if self._is_primitive(expected_type):
             if expected_type is int:
@@ -167,6 +180,9 @@ class PersistentDict(MutableMapping[str, V], Generic[V]):
     def _serialize(self, value: Any) -> Any:
         if value is None:
             return None
+
+        if isinstance(value, datetime):
+            return value.isoformat()
 
         if isinstance(value, (int, float, str, bool)):
             return value
