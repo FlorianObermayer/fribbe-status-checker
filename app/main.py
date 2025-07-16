@@ -12,7 +12,7 @@ from fastapi import (
     Request,
     Response,
 )
-from fastapi.responses import HTMLResponse, FileResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, FileResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from zoneinfo import ZoneInfo
 
@@ -100,8 +100,29 @@ async def favicon():
 
 @app.get("/robots.txt", response_class=PlainTextResponse, include_in_schema=False)
 def robots():
-    data = """User-agent: *\nDisallow: /"""
+    data = """User-agent: *
+Allow: /$
+Allow: /sitemap.xml
+Disallow: /api/
+Disallow: /preview/
+Disallow: /notification-create
+Disallow: /static/
+
+Sitemap: https://status.fribbe-beach.de/sitemap.xml"""
     return data
+
+
+@app.get("/sitemap.xml", response_class=Response, include_in_schema=False)
+def sitemap():
+    xml = """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+        <loc>https://status.fribbe-beach.de/</loc>
+        <changefreq>always</changefreq>
+        <priority>1.0</priority>
+    </url>
+</urlset>"""
+    return Response(content=xml, media_type="application/xml")
 
 
 @app.get("/", response_class=HTMLResponse, tags=["HTML"])
