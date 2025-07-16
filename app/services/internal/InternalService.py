@@ -43,6 +43,14 @@ class InternalService:
             )
         )
 
+        if len(self._persistent_device_timestamps) == 0:
+            self._persistent_device_timestamps[
+                InternalService._first_device_on_site_key
+            ] = None
+            self._persistent_device_timestamps[
+                InternalService._last_device_on_site_key
+            ] = None
+
         self._rwlock = rwlock.RWLockFair()
 
     def get_last_service_started(self):
