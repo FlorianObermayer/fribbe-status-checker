@@ -237,6 +237,10 @@ class PersistentDict(MutableMapping[str, V], Generic[V]):
     def __len__(self) -> int:
         return len(self._data)
 
+    def reload(self) -> None:
+        """Reload the data from disk."""
+        self._load()
+
 
 class PersistentList(Generic[V]):
 
@@ -286,3 +290,152 @@ class PersistentList(Generic[V]):
 
     def to_list(self):
         return self._get_items()
+
+
+class PersistentObject(Generic[V]):
+    """A persistent storage for a single object of type V.
+
+    Similar to PersistentList but only stores and manages a single value.
+    The value is stored under a fixed key in a PersistentDict.
+    """
+
+    _VALUE_KEY = "value"
+
+    def __init__(self, path: str, value_type: Type[V], default_value: V | None = None):
+        """Initialize a new PersistentObject.
+
+        Args:
+            path: The file path where the object should be stored
+            value_type: The type of the value to store
+            default_value: Optional default value if no value exists yet
+        """
+        self._dict: PersistentDict[V] = PersistentDict(path, value_type)
+        if (
+            default_value is not None
+            and self._dict.get(PersistentObject._VALUE_KEY) is None
+        ):
+            self._dict[PersistentObject._VALUE_KEY] = default_value
+
+    def get(self) -> V | None:
+        """Get the stored value or None if no value is stored."""
+        # Reload the dictionary to get the latest value
+        self._dict.reload()
+        return self._dict.get(PersistentObject._VALUE_KEY)
+
+    def set(self, value: V | None) -> None:
+        """Set a new value or None to clear the stored value."""
+        if value is None:
+            if PersistentObject._VALUE_KEY in self._dict:
+                del self._dict[PersistentObject._VALUE_KEY]
+        else:
+            self._dict[PersistentObject._VALUE_KEY] = value
+
+    def clear(self) -> None:
+        """Clear the stored value."""
+        self.set(None)
+
+
+@runtime_checkable
+class PersistentPathProvider(Protocol):
+    """Protocol for classes that can provide a path for persistence.
+    
+    Classes using @persistent properties must implement this protocol.
+    """
+    def get_path(self) -> str:
+        """Get the base path where persistent properties should be stored.
+        
+        Returns:
+            The absolute path to the directory where persistent files should be stored.
+            Individual properties will be stored as separate files in this directory.
+        """
+        ...
+
+
+def persistent(field_type: Type[V]) -> Any:
+    """Decorator to make a property persistent.
+    
+    The decorated property will be automatically persisted to disk.
+    The class must implement PersistentPathProvider to specify where to store the data.
+    
+    Args:
+        field_type: The type of the field (must be supported by PersistentDict)
+        
+    Example:
+        @dataclass
+        class MyConfig(PersistentPathProvider):
+            def get_path(self) -> str:
+                return "/path/to/config/dir"
+                
+            name: str = persistent(str)("name", "")
+            count: int = persistent(int)("count", 0)
+    """
+    def _make_descriptor(name: str, default_value: V) -> Any:
+        storage_attr = f"_persistent_{name}_storage"
+
+        class PersistentDescriptor:
+            def __init__(self):
+                self.name = name
+                self.default = default_value
+
+            def _get_storage(self, instance: Any) -> PersistentObject[V]:
+                if not isinstance(instance, PersistentPathProvider):
+                    raise TypeError(
+                        f"Class {instance.__class__.__name__} must implement PersistentPathProvider"
+                    )
+
+                # Create storage if it doesn't exist
+                if not hasattr(instance, storage_attr):
+                    base_path = instance.get_path()
+                    file_path = os.path.join(base_path, f"{name}.json")
+                    setattr(
+                        instance,
+                        storage_attr,
+                        PersistentObject(file_path, field_type, default_value)
+                    )
+
+                return getattr(instance, storage_attr)
+
+            def __get__(self, instance: Any, owner: Any) -> V:
+                if instance is None:
+                    return self.default
+                storage = self._get_storage(instance)
+                value = storage.get()
+                return value if value is not None else self.default
+
+            def __set__(self, instance: Any, value: V) -> None:
+                if instance is not None:
+                    storage = self._get_storage(instance)
+                    storage.set(value)
+
+        return PersistentDescriptor()
+
+    return _make_descriptor
+
+
+class PersistentBase:
+    """Base class for creating persistent objects with direct property access.
+
+    Example:
+        class MyConfig(PersistentBase):
+            def __init__(self, path: str):
+                super().__init__(path)
+                self._obj = PersistentObject(path, dict[str, Any])
+
+            @property
+            def name(self) -> str:
+                return self._obj.get().get("name") if self._obj.get() else ""
+
+            @name.setter
+            def name(self, value: str) -> None:
+                current = self._obj.get() or {}
+                current["name"] = value
+                self._obj.set(current)
+    """
+
+    def __init__(self, path: str):
+        """Initialize the persistent base object.
+
+        Args:
+            path: The file path where the object should be stored
+        """
+        self._path = path

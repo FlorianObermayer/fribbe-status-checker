@@ -36,6 +36,7 @@
         "parseable",
         "persistentdict",
         "persistentlist",
+        "persistentobject",
         "pytest",
         "PYTHONDONTWRITEBYTECODE",
         "PYTHONUNBUFFERED",

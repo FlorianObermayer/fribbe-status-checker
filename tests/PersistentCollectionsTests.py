@@ -6,7 +6,10 @@ from zoneinfo import ZoneInfo
 from app.services.PersistentCollections import (
     PersistentDict,
     PersistentList,
+    PersistentObject,
     DictSerializable,
+    PersistentPathProvider,
+    persistent,
 )
 from dataclasses import dataclass, asdict
 import pytest
@@ -338,3 +341,129 @@ def test_persistentdict_with_mixed_datetime_formats():
         assert d2["berlin"] == d["berlin"]
         assert d2["utc"] == d["utc"]
         assert d2["naive"] == d["naive"]
+
+
+def test_persistentobject_with_int():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = os.path.join(tmpdir, "object.json")
+        obj = PersistentObject(path, int, default_value=42)
+        assert obj.get() == 42
+
+        # Test setting a new value
+        obj.set(123)
+        assert obj.get() == 123
+
+        # Test clearing the value
+        obj.clear()
+        assert obj.get() is None
+
+        # Test setting None explicitly
+        obj.set(456)
+        obj.set(None)
+        assert obj.get() is None
+
+
+def test_persistentobject_with_class():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = os.path.join(tmpdir, "object_class.json")
+        # Test without default value
+        obj = PersistentObject(path, MyClass)
+        assert obj.get() is None
+
+        test_obj = MyClass("test", 123)
+        obj.set(test_obj)
+        assert obj.get().foo == "test"  # type: ignore
+        assert obj.get().bar == 123  # type: ignore
+
+        # Reload from file
+        obj2 = PersistentObject(path, MyClass)
+        assert obj2.get().foo == "test"  # type: ignore
+        assert obj2.get().bar == 123  # type: ignore
+
+
+def test_persistentobject_with_dataclass():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = os.path.join(tmpdir, "object_dataclass.json")
+        default_value = MyDataClass("default", 0)
+        obj = PersistentObject(path, MyDataClass, default_value=default_value)
+
+        # Test default value
+        assert obj.get().foo == "default"  # type: ignore
+        assert obj.get().bar == 0  # type: ignore
+
+        # Test setting new value
+        new_value = MyDataClass("new", 42)
+        obj.set(new_value)
+
+        # Reload and verify
+        obj2 = PersistentObject(path, MyDataClass)
+        assert obj2.get().foo == "new"  # type: ignore
+        assert obj2.get().bar == 42  # type: ignore
+
+
+def test_persistentobject_with_datetime():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = os.path.join(tmpdir, "object_datetime.json")
+        berlin_tz = ZoneInfo("Europe/Berlin")
+        now = datetime.now(berlin_tz)
+
+        obj = PersistentObject(path, datetime, default_value=now)
+        assert obj.get() == now
+
+        # Test with new datetime
+        tomorrow = now + timedelta(days=1)
+        obj.set(tomorrow)
+        assert obj.get() == tomorrow
+
+        # Reload and verify
+        obj2 = PersistentObject(path, datetime)
+        assert obj2.get() == tomorrow
+
+        # Test clearing
+        obj2.clear()
+        assert obj2.get() is None
+
+
+class DecoratedConfig(PersistentPathProvider):
+    def __init__(self, base_path: str):
+        self._base_path = base_path
+
+    def get_path(self) -> str:
+        return self._base_path
+
+    name: str = persistent(str)("name", "default")
+    count: int = persistent(int)("count", 0)
+    data: MyDataClass = persistent(MyDataClass)("data", MyDataClass("default", 42))
+
+
+def test_persistent_decorator():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Create and set properties
+        config = DecoratedConfig(tmpdir)
+        assert config.name == "default"  # Default value
+        assert config.count == 0  # Default value
+        assert config.data.foo == "default"  # Default value
+        assert config.data.bar == 42
+
+        # Update values
+        config.name = "test"
+        config.count = 123
+        config.data = MyDataClass("updated", 456)
+
+        # Create new instance and verify persistence
+        config2 = DecoratedConfig(tmpdir)
+        assert config2.name == "test"
+        assert config2.count == 123
+        assert config2.data.foo == "updated"
+        assert config2.data.bar == 456
+
+        # Update in second instance
+        config2.name = "changed"
+
+        # First instance sees the update
+        assert config.name == "changed"
+
+        # Test nested updates
+        config2.data = MyDataClass("nested", 789)
+        assert config.data.foo == "nested"
+        assert config.data.bar == 789
