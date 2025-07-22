@@ -1,4 +1,5 @@
 import asyncio
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from os import path
 import os
@@ -12,44 +13,41 @@ import logging
 from readerwriterlock import rwlock
 
 from app.services.MacAddressHelper import should_ignore_device
-from app.services.PersistentCollections import PersistentDict
+from app.services.PersistentCollections import PersistentPathProvider, persistent
 from app.services.internal.Model import Warden, Wardens
 
 logger = logging.getLogger("uvicorn.error")
 
 
-class InternalService:
+@dataclass
+class InternalPersistentData(PersistentPathProvider):
+    first_device_on_site: datetime | None = persistent(datetime)(
+        "first_device_on_site", None
+    )
+    last_device_on_site: datetime | None = persistent(datetime)(
+        "last_device_on_site", None
+    )
+    active_devices_ct: int = persistent(int)("active_devices_ct", 0)
+    wardens_on_site: List[Warden] = persistent(List[Warden])(
+        "wardens_on_site", field(default_factory=list)
+    )
 
-    _first_device_on_site_key = "first_device_on_site"
-    _last_device_on_site_key = "last_device_on_site"
+    def get_path(self) -> str:
+        return path.join(os.environ["LOCAL_DATA_PATH"], "internal")
+
+
+class InternalService:
 
     def __init__(self):
         self._last_service_started: datetime = datetime.now(
             tz=ZoneInfo("Europe/Berlin")
         )
+
+        self._internal_data = InternalPersistentData()
         self._last_updated : datetime | None =  None
         self._interval_thread = None
         self._stop_event = threading.Event()
         self._last_error: Exception | None = None
-        self._active_devices_ct: int = 0
-        self._wardens_on_site: List[Warden] = []
-
-        self._persistent_device_timestamps: PersistentDict[datetime | None] = (
-            PersistentDict(
-                path.join(
-                    os.environ["LOCAL_DATA_PATH"], "persistent_device_timestamps.json"
-                ),
-                value_type=datetime,
-            )
-        )
-
-        if len(self._persistent_device_timestamps) == 0:
-            self._persistent_device_timestamps[
-                InternalService._first_device_on_site_key
-            ] = None
-            self._persistent_device_timestamps[
-                InternalService._last_device_on_site_key
-            ] = None
 
         self._rwlock = rwlock.RWLockFair()
 
@@ -66,63 +64,51 @@ class InternalService:
 
     def get_active_devices_ct(self):
         with self._rwlock.gen_rlock():
-            return self._active_devices_ct
+            return self._internal_data.active_devices_ct
 
     def get_wardens_on_site(self):
         with self._rwlock.gen_rlock():
-            return self._wardens_on_site
+            return self._internal_data.wardens_on_site
 
     def get_first_device_on_site(self):
         with self._rwlock.gen_rlock():
-            return self._persistent_device_timestamps[
-                InternalService._first_device_on_site_key
-            ]
+            return self._internal_data.first_device_on_site
 
     def get_last_device_on_site(self):
         with self._rwlock.gen_rlock():
-            return self._persistent_device_timestamps[
-                InternalService._last_device_on_site_key
-            ]
+            return self._internal_data.last_device_on_site
 
-    def _update_device_statistics(self, new_active_devices_ct: int):
+    def _update_device_statistics(
+        self, old_active_devices_ct: int, new_active_devices_ct: int
+    ):
+        """Updates the first and last device timestamps based on device count changes.
+
+        The day resets at 5 AM, meaning:
+        - At 5 AM, both first and last device timestamps are reset to None
+        - First device: Set when we see devices > 0 for the first time after reset
+        - Last device: Set when the last devices leave (count goes from > 0 to 0)
+        """
         now = datetime.now(tz=ZoneInfo("Europe/Berlin"))
 
-        # reset at 5am
+        # Reset timestamps at 5am if we crossed the virtual day boundary
         reset_hour = 5
         if self._last_updated:
             last_virtual_day = (self._last_updated - timedelta(hours=reset_hour)).date()
             now_virtual_day = (now - timedelta(hours=reset_hour)).date()
             if last_virtual_day < now_virtual_day:
-                self._persistent_device_timestamps[
-                    InternalService._first_device_on_site_key
-                ] = None
-                self._persistent_device_timestamps[
-                    InternalService._last_device_on_site_key
-                ] = None
+                self._internal_data.first_device_on_site = None
+                self._internal_data.last_device_on_site = None
 
-        if self._persistent_device_timestamps[
-            InternalService._first_device_on_site_key
-        ] is None and (new_active_devices_ct > 0 or self._active_devices_ct > 9):
-            self._persistent_device_timestamps[
-                InternalService._first_device_on_site_key
-            ] = now
-
+        # Set first device timestamp when we see the first activity after reset
         if (
-            self._active_devices_ct == 0
+            self._internal_data.first_device_on_site is None
             and new_active_devices_ct > 0
-            and self._persistent_device_timestamps[
-                InternalService._first_device_on_site_key
-            ]
-            is None
         ):
-            self._persistent_device_timestamps[
-                InternalService._first_device_on_site_key
-            ] = now
+            self._internal_data.first_device_on_site = now
 
-        if self._active_devices_ct > 0 and new_active_devices_ct == 0:
-            self._persistent_device_timestamps[
-                InternalService._last_device_on_site_key
-            ] = now
+        # Set last device timestamp when everyone leaves
+        if old_active_devices_ct > 0 and new_active_devices_ct == 0:
+            self._internal_data.last_device_on_site = now
 
     async def _run_internal_query(self, router_ip: str, username: str, password: str):
         try:
@@ -146,13 +132,17 @@ class InternalService:
                     ]
                     # Filter out None and deduplicate by warden name
                     seen_names: set[str] = set()
-                    self._wardens_on_site = []
+                    wardens_on_site: List[Warden] = []
                     for warden in wardens:
                         if warden and warden.name not in seen_names:
-                            self._wardens_on_site.append(warden)
+                            wardens_on_site.append(warden)
                             seen_names.add(warden.name)
-                    self._active_devices_ct = active_member_devices_ct
-                    self._update_device_statistics(active_member_devices_ct)
+
+                    self._internal_data.wardens_on_site = wardens_on_site
+                    self._update_device_statistics(
+                        self._internal_data.active_devices_ct, active_member_devices_ct
+                    )
+                    self._internal_data.active_devices_ct = active_member_devices_ct
                     self._last_updated = datetime.now(tz=ZoneInfo("Europe/Berlin"))
                     self._last_error = None
             logger.info(f"Refresh Internal... DONE)")
