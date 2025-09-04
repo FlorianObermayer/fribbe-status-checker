@@ -43,7 +43,11 @@ class Wardens:
                 "aa:1a:9e:2e:aa:eb",  # Samsung Galaxy S24+
             ],
         ),
-        Warden("Schnapsi", device_names=["dodelido"]),
+        Warden("Schnapsi", [
+            "B2:38:95:80:29:D7",
+            "74:60:FA:A2:94:E3"
+            ]
+        ),
         Warden("Kika", ["5a:5f:6e:2e:d3:ce"]),
         Warden("Jannik"),
     ]
