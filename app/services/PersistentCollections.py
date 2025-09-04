@@ -21,6 +21,7 @@ import json
 import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from readerwriterlock import rwlock
 
 V = TypeVar("V")
 
@@ -34,6 +35,20 @@ class DictSerializable(Protocol):
     def from_dict(cls, d: Dict[str, str]) -> Self: ...
 
 
+class ConversionHelper():
+        @staticmethod
+        def list_to_range(lst: List[int]):
+            if len(lst) == 1:
+                return range(lst[0], lst[0] + 1)
+            
+            step = lst[1] - lst[0]
+            for i in range(2, len(lst)):
+                if lst[i] - lst[i-1] != step:
+                    raise ValueError("List is not evenly spaced, cannot convert to range")
+            
+            return range(lst[0], lst[-1] + step, step)
+
+
 class PersistentDict(MutableMapping[str, V], Generic[V]):
     def __init__(self, path: str, value_type: Type[V]):
         self._path = path
@@ -43,7 +58,7 @@ class PersistentDict(MutableMapping[str, V], Generic[V]):
         if not self._is_type_supported(value_type):
             raise TypeError(
                 f"PersistentDict: Type {value_type} is not supported. "
-                "Must be a primitive type, datetime, DictSerializable, or a container "
+                "Must be a primitive type, range, datetime, DictSerializable, or a container "
                 "of supported types."
             )
 
@@ -66,6 +81,12 @@ class PersistentDict(MutableMapping[str, V], Generic[V]):
         if hasattr(t, "from_dict") and hasattr(t, "to_dict"):
             return True
 
+        if t is range:
+            return True
+        
+        if t is datetime:
+            return True
+        
         # Handle generic containers
         origin = get_origin(t)
         if origin is None:
@@ -89,7 +110,7 @@ class PersistentDict(MutableMapping[str, V], Generic[V]):
         return False
 
     def _is_primitive(self, t: Type[V] | Type[Any]) -> bool:
-        return t in (int, float, str, bool, type(None), datetime)
+        return t in (int, float, str, bool, type(None))
 
     def _is_primitive_type(self, t: Optional[Type[V]] = None) -> bool:
         t = t or self._value_type
@@ -133,6 +154,10 @@ class PersistentDict(MutableMapping[str, V], Generic[V]):
                 return str(value)
             return value
 
+
+        if expected_type is range:
+            return ConversionHelper.list_to_range(value)
+        
         origin = get_origin(expected_type) or expected_type
 
         if isinstance(origin, type) and issubclass(origin, DictSerializable):
@@ -196,6 +221,9 @@ class PersistentDict(MutableMapping[str, V], Generic[V]):
         if isinstance(value, dict):
             return {str(k): self._serialize(v) for k, v in value.items()}  # type: ignore
 
+        if isinstance(value, range):
+            return list(value)
+        
         return str(value)
 
     def _load(self):
@@ -351,14 +379,58 @@ class PersistentPathProvider(Protocol):
         ...
 
 
-def persistent(field_type: Type[V]) -> Any:
-    """Decorator to make a property persistent.
+class PersistentDescriptor(Generic[V]):
+    def __init__(self, name: str, field_type: Type[V], default_value: V, storage_attr: str, lock: rwlock.RWLockFair):
+        self._name = name
+        self._field_type = field_type
+        self._default_value = default_value
+        self._lock = lock
+        self._storage_attr = storage_attr
+
+    def _get_storage(self, instance: Any) -> PersistentObject[V]:
+        with self._lock.gen_rlock():
+            if not isinstance(instance, PersistentPathProvider):
+                raise TypeError(
+                    f"Class {instance.__class__.__name__} must implement PersistentPathProvider"
+                )
+
+            # Create storage if it doesn't exist
+            if not hasattr(instance, self._storage_attr):
+                base_path = instance.get_path()
+                file_path = os.path.join(base_path, f"{self._name}.json")
+                setattr(
+                    instance,
+                    self._storage_attr,
+                    PersistentObject(file_path,  self._field_type,  self._default_value)
+                )
+
+            return getattr(instance, self._storage_attr)
+
+    def __get__(self, instance: Any, owner: Any) -> V:
+        with self._lock.gen_rlock():
+            if instance is None:
+                return self._default_value
+            storage = self._get_storage(instance)
+            value = storage.get()
+            return value if value is not None else self._default_value
+
+    def __set__(self, instance: Any, value: V) -> None:
+        with self._lock.gen_rlock():
+            if instance is not None:
+                storage = self._get_storage(instance)
+                storage.set(value)
+
+def persistent(field_type: Type[V], name: str, default_value: V) -> PersistentDescriptor[V]:
+    """Create a persistent field descriptor.
     
-    The decorated property will be automatically persisted to disk.
+    Creates a descriptor that automatically persists the field value to disk.
     The class must implement PersistentPathProvider to specify where to store the data.
+    Can be used with dataclass fields or as a property decorator.
     
     Args:
         field_type: The type of the field (must be supported by PersistentDict)
+        name: Name of the field
+        default_value: Default value for the field
         
     Example:
         @dataclass
@@ -366,76 +438,16 @@ def persistent(field_type: Type[V]) -> Any:
             def get_path(self) -> str:
                 return "/path/to/config/dir"
                 
-            name: str = persistent(str)("name", "")
-            count: int = persistent(int)("count", 0)
-    """
-    def _make_descriptor(name: str, default_value: V) -> Any:
-        storage_attr = f"_persistent_{name}_storage"
-
-        class PersistentDescriptor:
-            def __init__(self):
-                self.name = name
-                self.default = default_value
-
-            def _get_storage(self, instance: Any) -> PersistentObject[V]:
-                if not isinstance(instance, PersistentPathProvider):
-                    raise TypeError(
-                        f"Class {instance.__class__.__name__} must implement PersistentPathProvider"
-                    )
-
-                # Create storage if it doesn't exist
-                if not hasattr(instance, storage_attr):
-                    base_path = instance.get_path()
-                    file_path = os.path.join(base_path, f"{name}.json")
-                    setattr(
-                        instance,
-                        storage_attr,
-                        PersistentObject(file_path, field_type, default_value)
-                    )
-
-                return getattr(instance, storage_attr)
-
-            def __get__(self, instance: Any, owner: Any) -> V:
-                if instance is None:
-                    return self.default
-                storage = self._get_storage(instance)
-                value = storage.get()
-                return value if value is not None else self.default
-
-            def __set__(self, instance: Any, value: V) -> None:
-                if instance is not None:
-                    storage = self._get_storage(instance)
-                    storage.set(value)
-
-        return PersistentDescriptor()
-
-    return _make_descriptor
-
-
-class PersistentBase:
-    """Base class for creating persistent objects with direct property access.
-
-    Example:
-        class MyConfig(PersistentBase):
-            def __init__(self, path: str):
-                super().__init__(path)
-                self._obj = PersistentObject(path, dict[str, Any])
-
+            # Use as field descriptor
+            name: str = persistent(str, "name", "")
+            count: int = persistent(int, "count", 0)
+            
+            # Or use as property decorator
+            @persistent(int, "value", 0)
             @property
-            def name(self) -> str:
-                return self._obj.get().get("name") if self._obj.get() else ""
-
-            @name.setter
-            def name(self, value: str) -> None:
-                current = self._obj.get() or {}
-                current["name"] = value
-                self._obj.set(current)
+            def value(self) -> int:
+                return self._value
     """
-
-    def __init__(self, path: str):
-        """Initialize the persistent base object.
-
-        Args:
-            path: The file path where the object should be stored
-        """
-        self._path = path
+    _rwlock = rwlock.RWLockFair()
+    storage_attr = f"_persistent_{name}_storage"
+    return PersistentDescriptor(name, field_type, default_value, storage_attr, _rwlock)

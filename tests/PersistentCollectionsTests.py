@@ -4,6 +4,7 @@ from typing import Dict, Any, List
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from app.services.PersistentCollections import (
+    PersistentDescriptor,
     PersistentDict,
     PersistentList,
     PersistentObject,
@@ -431,9 +432,9 @@ class DecoratedConfig(PersistentPathProvider):
     def get_path(self) -> str:
         return self._base_path
 
-    name: str = persistent(str)("name", "default")
-    count: int = persistent(int)("count", 0)
-    data: MyDataClass = persistent(MyDataClass)("data", MyDataClass("default", 42))
+    name: PersistentDescriptor[str] = persistent(str, "name", "default")
+    count: PersistentDescriptor[int] = persistent(int, "count", 0)
+    data: PersistentDescriptor[MyDataClass] = persistent(MyDataClass, "data", MyDataClass("default", 42))
 
 
 def test_persistent_decorator():

@@ -1,6 +1,5 @@
 import asyncio
 from datetime import datetime
-from enum import Enum
 import threading
 from zoneinfo import ZoneInfo
 from huawei_lte_api.Client import Client
@@ -10,36 +9,10 @@ import logging
 from readerwriterlock import rwlock
 
 from app.services.MacAddressHelper import should_ignore_device
+from app.services.PresenceLevel import PresenceLevel
+from app.services.PresenceThresholds import PresenceThresholds
 
 logger = logging.getLogger("uvicorn.error")
-
-
-class PresenceLevel(str, Enum):
-    EMPTY = "empty"
-    FEW = "few"
-    MANY = "many"
-
-
-class PresenceThresholds:
-    EMPTY = range(0, 3)  # 0-2 devices
-    FEW = range(3, 10)  # 3-10 devices
-    MANY = range(10, 100)  # 10+ devices
-
-    THRESHOLDS: dict[PresenceLevel, int] = {
-        PresenceLevel.EMPTY: EMPTY[-1],
-        PresenceLevel.FEW: FEW[0],
-        PresenceLevel.MANY: MANY[0],
-    }
-
-    @staticmethod
-    def get_presence_level(devices_ct: int) -> PresenceLevel:
-        match devices_ct:
-            case ct if ct in PresenceThresholds.EMPTY:
-                return PresenceLevel.EMPTY
-            case ct if ct in PresenceThresholds.FEW:
-                return PresenceLevel.FEW
-            case _:
-                return PresenceLevel.MANY
 
 
 class PresenceLevelService:
@@ -51,6 +24,7 @@ class PresenceLevelService:
         self._presence_level: PresenceLevel = PresenceLevel.EMPTY
 
         self._rwlock = rwlock.RWLockFair()
+        self._thresholds = PresenceThresholds()
 
     def get_level(self):
         with self._rwlock.gen_rlock():
@@ -84,7 +58,7 @@ class PresenceLevelService:
                     f"active member devices: {active_member_devices_ct}", exc_info=True
                 )
                 with self._rwlock.gen_wlock():
-                    self._presence_level = PresenceThresholds.get_presence_level(
+                    self._presence_level = self._thresholds.get_presence_level(
                         active_member_devices_ct
                     )
                     self._last_updated = datetime.now(tz=ZoneInfo("Europe/Berlin"))
