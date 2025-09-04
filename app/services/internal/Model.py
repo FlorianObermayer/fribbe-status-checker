@@ -43,7 +43,11 @@ class Wardens:
                 "REDACTED_MAC",  # Samsung Galaxy S24+
             ],
         ),
-        Warden("REDACTED_NAME", device_names=["REDACTED_DEVICE_NAME"]),
+        Warden("REDACTED_NAME", [
+            "REDACTED_MAC",
+            "REDACTED_MAC"
+            ]
+        ),
         Warden("REDACTED_NAME", ["REDACTED_MAC"]),
         Warden("REDACTED_NAME"),
     ]
