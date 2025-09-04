@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Dict, List, Self
 from pydantic import BaseModel, Field
-from app.services.PresenceLevelService import PresenceLevel
+from app.services.PresenceLevel import PresenceLevel
 from app.services.occupancy.Model import Occupancy, OccupancySource, OccupancyType
 
 
