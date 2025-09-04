@@ -31,11 +31,11 @@ from app.api.Responses import (
     ApiKey,
 )
 from app.api.Schema import requires_auth_extra, update_openapi_schema
+from app.services.PresenceThresholds import PresenceThresholds
 from app.services.internal.InternalService import InternalService
 from app.services.MessageService import MessageService
 from app.services.PresenceLevelService import (
     PresenceLevelService,
-    PresenceThresholds,
 )
 from app.services.occupancy.OccupancyService import OccupancyService
 from app.services.occupancy.Model import OccupancyType
@@ -174,14 +174,13 @@ async def get_status(for_date: str = "today"):
         last_updated=presence_last_updated,
         message=presence_message,
         last_error=presence_last_error and str(presence_last_error),
-        thresholds=PresenceThresholds.THRESHOLDS,
+        thresholds=PresenceThresholds().get_thresholds(),
     )
 
     return StatusResponse(
         occupancy=occupancy_response,
         presence=presence_response,
     )
-
 
 @app.get(
     "/api/internal/details",
@@ -390,5 +389,24 @@ async def get_notification_builder():
     with open("app/static/notification-create.html") as f:
         return HTMLResponse(f.read())
 
+@app.patch(
+        "/internal/config",
+        response_class=HTMLResponse,
+        tags=["Config"],
+        openapi_extra=requires_auth_extra()
+)
+async def config(threshold_min_non_empty_ct: int = Body(None, gt= 0), threshold_min_many_ct: int = Body(None, gt= 1)):
+    if not any((threshold_min_non_empty_ct, threshold_min_many_ct)):
+        return Response(status_code= 304) # ^= Not Modified
+    
+    thresholds = PresenceThresholds()
+
+    if threshold_min_non_empty_ct:
+        thresholds.min_non_empty_ct = threshold_min_non_empty_ct
+    
+    if threshold_min_many_ct:
+        thresholds.min_many_ct = threshold_min_many_ct
+    
+    return Response()
 
 update_openapi_schema(app)

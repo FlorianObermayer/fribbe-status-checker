@@ -1,7 +1,7 @@
 from datetime import datetime
 import random
 from zoneinfo import ZoneInfo
-from app.services.PresenceLevelService import PresenceLevel
+from app.services.PresenceLevel import PresenceLevel
 from app.services.occupancy.Model import OccupancyType
 
 

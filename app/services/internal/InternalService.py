@@ -1,5 +1,5 @@
 import asyncio
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from os import path
 import os
@@ -21,16 +21,13 @@ logger = logging.getLogger("uvicorn.error")
 
 @dataclass
 class InternalPersistentData(PersistentPathProvider):
-    first_device_on_site: datetime | None = persistent(datetime)(
-        "first_device_on_site", None
-    )
-    last_device_on_site: datetime | None = persistent(datetime)(
-        "last_device_on_site", None
-    )
-    active_devices_ct: int = persistent(int)("active_devices_ct", 0)
-    wardens_on_site: List[Warden] = persistent(List[Warden])(
-        "wardens_on_site", field(default_factory=list)
-    )
+    first_device_on_site = persistent(datetime, "first_device_on_site", None)
+    
+    last_device_on_site = persistent(datetime, "last_device_on_site", None)
+    
+    active_devices_ct = persistent(int, "active_devices_ct", 0)
+    
+    wardens_on_site = persistent(List[Warden], "wardens_on_site", list())
 
     def get_path(self) -> str:
         return path.join(os.environ["LOCAL_DATA_PATH"], "internal")
