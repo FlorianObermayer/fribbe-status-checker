@@ -135,12 +135,14 @@ class NotificationService:
         return result
 
     def list_all(self) -> List[Notification]:
-        return list(self._store.values())
+        with self._rwlock.gen_rlock():
+            return list(self._store.values())
 
     def delete(self, nid: str) -> bool:
         with self._rwlock.gen_wlock():
             if nid in self._store:
                 del self._store[nid]
+                self._store.reload
                 return True
             return False
 
@@ -170,13 +172,19 @@ class NotificationService:
     async def _run_clean_old_notifications(self):
         try:
             logger.info(f"Cleaning old notifications...")
-            with self._rwlock.gen_wlock():
-               for notification in [n for n in self.list_all() if n.is_outdated(1)]:
-                   self.delete(notification.id)
-            logger.info(f"Cleaning old notifications.. DONE")
+            to_delete = [n for n in self.list_all() if n.is_outdated(1)]
+            if len(to_delete) > 0:
+                logger.info(f"{len(to_delete)} old notifications found, deleting...")
+                for notification in to_delete:
+                    id = notification.id
+                    if self.delete(id):
+                        logger.debug(f"deleted notification {id}")
+                    else:
+                        logger.warning(f"deleting notification {id} failed!")
+                else:
+                   logger.info(f"No old notifications found.")
+            logger.info(f"Cleaning old notifications... DONE")
         except Exception as e:
-            with self._rwlock.gen_wlock():
-                self._last_error = e
             logger.error(f"Error during occupancy check: {e}", exc_info=True)
 
     def _occupancy_loop(self, interval: int):
