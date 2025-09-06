@@ -91,7 +91,11 @@ internal_service.start_polling(
 
 message_service = MessageService()
 notification_service = NotificationService()
+notification_service.start_cleanup_job()
 
+@app.get("/api/version")
+async def version():
+    return {"version": app.version}
 
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():

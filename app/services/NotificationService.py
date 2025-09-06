@@ -1,12 +1,19 @@
+import asyncio
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+import logging
 from os import path
 import os
+import threading
+import time
 from typing import Dict, List, Optional, Self
 import uuid
 from zoneinfo import ZoneInfo
+from readerwriterlock import rwlock
 
 from app.services.PersistentCollections import PersistentDict
+
+logger = logging.getLogger("uvicorn.error")
 
 
 @dataclass
@@ -29,6 +36,12 @@ class Notification:
                 self.valid_until is None
                 or datetime.now(self.valid_until.tzinfo) < self.valid_until
             )
+        )
+    
+    def is_outdated(self, days:int):
+        return (
+            self.valid_until is not None
+            and datetime.now(self.valid_until.tzinfo) > self.valid_until + timedelta(days=days)
         )
 
     def to_dict(self) -> Dict[str, str | bool]:
@@ -74,21 +87,25 @@ class NotificationService:
             path.join(os.environ["LOCAL_DATA_PATH"], "notifications.json"),
             value_type=Notification,
         )
+        self._interval_thread: threading.Thread | None = None
+        self._stop_event = threading.Event()
+        self._rwlock = rwlock.RWLockFair()
 
     def add(
         self, message: str, valid_from: datetime, valid_until: datetime, enabled: bool
     ) -> str:
-        nid = str(f"nid-{uuid.uuid4()}")
-        notification = Notification(
-            created=datetime.now(tz=ZoneInfo("Europe/Berlin")),
-            id=nid,
-            message=message,
-            valid_from=valid_from,
-            valid_until=valid_until,
-            enabled=enabled,
-        )
-        self._store[nid] = notification
-        return nid
+        with self._rwlock.gen_wlock():
+            nid = str(f"nid-{uuid.uuid4()}")
+            notification = Notification(
+                created=datetime.now(tz=ZoneInfo("Europe/Berlin")),
+                id=nid,
+                message=message,
+                valid_from=valid_from,
+                valid_until=valid_until,
+                enabled=enabled,
+            )
+            self._store[nid] = notification
+            return nid
 
     def get(self, notification_ids: List[str] = ["all_active"]) -> List[Notification]:
         result: List[Notification] = []
@@ -121,10 +138,11 @@ class NotificationService:
         return list(self._store.values())
 
     def delete(self, nid: str) -> bool:
-        if nid in self._store:
-            del self._store[nid]
-            return True
-        return False
+        with self._rwlock.gen_wlock():
+            if nid in self._store:
+                del self._store[nid]
+                return True
+            return False
 
     def update(
         self,
@@ -132,18 +150,48 @@ class NotificationService:
         enabled: Optional[bool] = None,
         valid_from: Optional[datetime] = None,
         valid_until: Optional[datetime] = None,
-    ) -> bool:
-        if nid not in self._store:
-            return False
-        notification = self._store[nid]
-        if enabled is not None:
-            notification.enabled = enabled
-        if valid_from is not None:
-            notification.valid_from = valid_from
-        if valid_until is not None:
-            notification.valid_until = valid_until
-        self._store[nid] = notification
-        return True
+    ) -> bool: 
+        with self._rwlock.gen_wlock():
+            if nid not in self._store:
+                return False
+            notification = self._store[nid]
+            if enabled is not None:
+                notification.enabled = enabled
+            if valid_from is not None:
+                notification.valid_from = valid_from
+            if valid_until is not None:
+                notification.valid_until = valid_until
+            self._store[nid] = notification
+            return True
 
     def get_by_id(self, nid: str) -> Optional[Notification]:
         return self._store.get(nid)
+    
+    async def _run_clean_old_notifications(self):
+        try:
+            logger.info(f"Cleaning old notifications...")
+            with self._rwlock.gen_wlock():
+               for notification in [n for n in self.list_all() if n.is_outdated(1)]:
+                   self.delete(notification.id)
+            logger.info(f"Cleaning old notifications.. DONE")
+        except Exception as e:
+            with self._rwlock.gen_wlock():
+                self._last_error = e
+            logger.error(f"Error during occupancy check: {e}", exc_info=True)
+
+    def _occupancy_loop(self, interval: int):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        while not self._stop_event.is_set():
+            loop.run_until_complete(self._run_clean_old_notifications())
+            time.sleep(interval)
+
+    def start_cleanup_job(self, interval: int = 3600) -> None:
+        if self._interval_thread is None or not self._interval_thread.is_alive():
+            self._stop_event.clear()
+            self._interval_thread = threading.Thread(
+                target=self._occupancy_loop,
+                args=[interval],
+                daemon=True,
+            )
+            self._interval_thread.start()
