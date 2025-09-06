@@ -181,8 +181,8 @@ class NotificationService:
                         logger.debug(f"deleted notification {id}")
                     else:
                         logger.warning(f"deleting notification {id} failed!")
-                else:
-                   logger.info(f"No old notifications found.")
+            else:
+                logger.info(f"No old notifications found.")
             logger.info(f"Cleaning old notifications... DONE")
         except Exception as e:
             logger.error(f"Error during occupancy check: {e}", exc_info=True)
