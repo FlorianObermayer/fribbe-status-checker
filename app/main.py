@@ -17,6 +17,7 @@ from fastapi import (
     Request,
     Response,
 )
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from secure import ContentSecurityPolicy, Secure
@@ -429,6 +430,11 @@ async def get_notification_preview(
 async def get_notification_builder():
     with open("app/static/notification-create.html") as f:
         return HTMLResponse(f.read())
+
+
+@app.get("/internal/config", response_class=JSONResponse, tags=["Config"], openapi_extra=requires_auth_extra())
+async def get_config(_: str = Depends(HybridAuth())):
+    return jsonable_encoder(PresenceThresholds)
 
 
 @app.patch("/internal/config", response_class=HTMLResponse, tags=["Config"], openapi_extra=requires_auth_extra())
