@@ -22,43 +22,19 @@ jobs:
       LOCAL_DATA_PATH: ${{ github.workspace }}/dev-data
       SESSION_SECRET_KEY: github-actions-test-key
     steps:
-      - uses: actions/checkout@v3
-
+      - uses: actions/checkout@v5
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-
+          python-version: '3.x'
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install -r dev-requirements.txt
-          pip install pytest-github-actions-annotate-failures
-
-      - name: Run tests
+      - name: Test with pytest
         run: |
-          # Load test environment variables
-          if [ -f .env.test ]; then
-            export $(cat .env.test | grep -v '^#' | xargs)
-          fi
-          # Run pytest with JUnit XML report
-          pytest tests/ --junitxml=junit/test-results.xml --verbose
-
-      - name: Upload test results
-        if: always()  # Run even if tests fail
-        uses: actions/upload-artifact@v4
-        with:
-          name: pytest-results
-          path: junit/test-results.xml
-
-      - name: Publish Test Report
-        uses: mikepenz/action-junit-report@v3
-        if: always()  # Run even if tests fail
-        with:
-          report_paths: 'junit/test-results.xml'
-          detailed_summary: true
-          include_passed: true
+          pip install pytest pytest-cov
+          pytest tests.py --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
 
   build-and-push:
     needs: test
