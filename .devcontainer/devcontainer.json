@@ -19,6 +19,7 @@
                 "ms-python.vscode-pylance",
                 "ms-python.python",
                 "ms-python.debugpy",
+                "ms-python.autopep8",
                 "streetsidesoftware.code-spell-checker",
                 "streetsidesoftware.code-spell-checker-german"
             ]
