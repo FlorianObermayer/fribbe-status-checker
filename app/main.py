@@ -85,16 +85,22 @@ presence_service.start_polling(
     os.environ["ROUTER_IP"],
     os.environ["ROUTER_USERNAME"],
     os.environ["ROUTER_PASSWORD"],
+    int(os.environ["PRESENCE_POLLING_INTERVAL_SECONDS"]),
+    int(os.environ["PRESENCE_POLLING_DELAY_SECONDS"]),
 )
 
 occupancy_service = OccupancyService()
-occupancy_service.start_polling()
+occupancy_service.start_polling(
+    int(os.environ["OCCUPANCY_POLLING_INTERVAL_SECONDS"])
+)
 
 internal_service = InternalService()
 internal_service.start_polling(
     os.environ["ROUTER_IP"],
     os.environ["ROUTER_USERNAME"],
     os.environ["ROUTER_PASSWORD"],
+    int(os.environ["INTERNAL_POLLING_INTERVAL_SECONDS"]),
+    int(os.environ["INTERNAL_POLLING_DELAY_SECONDS"]),
 )
 
 message_service = MessageService()
