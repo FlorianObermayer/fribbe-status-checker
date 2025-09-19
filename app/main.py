@@ -43,11 +43,13 @@ from app.services.NotificationService import NotificationService
 from fastapi.responses import JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
 
+from secure import Secure
+
 import markdown
 
 
 app = FastAPI()
-
+secure_headers = Secure.with_default_headers()
 
 app.add_middleware(
     SessionMiddleware,
@@ -56,6 +58,12 @@ app.add_middleware(
     max_age=60 * 60 * 24 * 7,  # 7 Days or until api key expires
     # path=os.path.join(os.environ["LOCAL_DATA_PATH"],"session" )
 )
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next: Callable[[Request], Awaitable[Response]]):
+    response = await call_next(request)
+    await secure_headers.set_headers_async(response) # type: ignore
+    return response
 
 
 @app.middleware("http")
@@ -77,16 +85,22 @@ presence_service.start_polling(
     os.environ["ROUTER_IP"],
     os.environ["ROUTER_USERNAME"],
     os.environ["ROUTER_PASSWORD"],
+    int(os.environ["PRESENCE_POLLING_INTERVAL_SECONDS"]),
+    int(os.environ["PRESENCE_POLLING_DELAY_SECONDS"]),
 )
 
 occupancy_service = OccupancyService()
-occupancy_service.start_polling()
+occupancy_service.start_polling(
+    int(os.environ["OCCUPANCY_POLLING_INTERVAL_SECONDS"])
+)
 
 internal_service = InternalService()
 internal_service.start_polling(
     os.environ["ROUTER_IP"],
     os.environ["ROUTER_USERNAME"],
     os.environ["ROUTER_PASSWORD"],
+    int(os.environ["INTERNAL_POLLING_INTERVAL_SECONDS"]),
+    int(os.environ["INTERNAL_POLLING_DELAY_SECONDS"]),
 )
 
 message_service = MessageService()
