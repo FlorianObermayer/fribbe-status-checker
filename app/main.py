@@ -46,9 +46,10 @@ from starlette.middleware.sessions import SessionMiddleware
 from secure import Secure
 
 import markdown
+from app.version import VERSION
 
 
-app = FastAPI()
+app = FastAPI(version=VERSION)
 secure_headers = Secure.with_default_headers()
 
 app.add_middleware(
