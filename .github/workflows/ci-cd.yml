@@ -1,5 +1,9 @@
 name: CI/CD Pipeline
 
+# Define environment variables available to all jobs
+env:
+  APP_NAME: fribbe-status-checker
+  PYTHON_VERSION: '3.11'
 on:
   push:
     branches: [ "main" ]
@@ -10,6 +14,13 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # Job-level environment variables
+    env:
+      TEST_ENV: 'testing'
+      DEBUG: 'true'
+      # Test-specific overrides
+      LOCAL_DATA_PATH: ${{ github.workspace }}/dev-data
+      SESSION_SECRET_KEY: github-actions-test-key
     steps:
       - uses: actions/checkout@v3
 
@@ -22,10 +33,15 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest
+          pip install -r dev-requirements.txt
 
       - name: Run tests
         run: |
+          # Load test environment variables
+          if [ -f .env.test ]; then
+            export $(cat .env.test | grep -v '^#' | xargs)
+          fi
+          # CI/CD environment variables will override .env.test values
           pytest tests/
 
   build-and-push:
@@ -51,7 +67,11 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/fribbe-status-checker:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/fribbe-status-checker:${{ github.sha }}
-          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/fribbe-status-checker:buildcache
-          cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/fribbe-status-checker:buildcache,mode=max
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.APP_NAME }}:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.APP_NAME }}:${{ github.sha }}
+          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/${{ env.APP_NAME }}:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/${{ env.APP_NAME }}:buildcache,mode=max
+          # Pass build args to Dockerfile
+          build-args: |
+            APP_ENV=production
+            BUILD_VERSION=${{ github.sha }}
