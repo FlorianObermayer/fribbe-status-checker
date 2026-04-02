@@ -7,9 +7,7 @@ def parse_event_times(date: date | str, time_str: str) -> tuple[datetime, dateti
     # Parse time
     if "-" in time_str:
         # e.g. "12:00 - 16:00", "16:30 - 18:30"
-        start_str, end_str = [
-            t.strip().replace(" Uhr", "") for t in time_str.split("-")
-        ]
+        start_str, end_str = [t.strip().replace(" Uhr", "") for t in time_str.split("-")]
     elif time_str.lower() in ["ganztags", "ganztägig"]:
         start_str, end_str = "00:00", "23:59"
     elif time_str.lower() in ["vormittags"]:
@@ -34,22 +32,16 @@ def parse_event_times(date: date | str, time_str: str) -> tuple[datetime, dateti
             languages=["de"],
             settings={
                 "TIMEZONE": "Europe/Berlin",
-                "RELATIVE_BASE": datetime.strptime(f"{date} 00:00","%Y-%m-%d %H:%M")
+                "RELATIVE_BASE": datetime.strptime(f"{date} 00:00", "%Y-%m-%d %H:%M"),
             },
         )
         try:
-            start_str = (
-                parsed.strftime("%H:%M")
-                if parsed
-                else time_str.replace(" Uhr", "").strip()
-            )
-            end_str = (
-                datetime.strptime(start_str, "%H:%M") + timedelta(hours=2)
-            ).strftime("%H:%M")
+            start_str = parsed.strftime("%H:%M") if parsed else time_str.replace(" Uhr", "").strip()
+            end_str = (datetime.strptime(start_str, "%H:%M") + timedelta(hours=2)).strftime("%H:%M")
 
-            if(parsed):
+            if parsed:
                 date = parsed.date()
-        except:
+        except Exception:
             start_str, end_str = "00:00", "23:59"
 
     start_time: datetime | None = None

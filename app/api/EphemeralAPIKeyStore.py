@@ -1,7 +1,6 @@
-from datetime import datetime
 import logging
 import os
-from typing import List
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from app.api.Responses import ApiKey
@@ -17,11 +16,11 @@ class EphemeralAPIKeyStore:
         return result
 
     @staticmethod
-    def load() -> List[ApiKey]:
+    def load() -> list[ApiKey]:
         return PersistentList(EphemeralAPIKeyStore._get_path(), ApiKey).to_list()
 
     @staticmethod
-    def save(keys: List[ApiKey]):
+    def save(keys: list[ApiKey]):
         try:
             persistent_list = PersistentList(EphemeralAPIKeyStore._get_path(), ApiKey)
             persistent_list.clear()
@@ -39,12 +38,11 @@ class EphemeralAPIKeyStore:
         log_key = key[:4] if key is not None else None
 
         if key is None:
-            logger.info(
-                f"EphemeralAPIKeyStore::is_key_valid(api_key={log_key}...) - key is None)"
-            )
+            logger.info(f"EphemeralAPIKeyStore::is_key_valid(api_key={log_key}...) - key is None)")
             return False
         now = datetime.now(tz=ZoneInfo("Europe/Berlin"))
-        for entry in EphemeralAPIKeyStore.load():
+        entries = EphemeralAPIKeyStore.load()
+        for entry in entries:
             if entry.key != key:
                 continue
 
@@ -58,27 +56,17 @@ class EphemeralAPIKeyStore:
                 )
                 return False
             try:
-                now_with_tz = (
-                    now
-                    if valid_until.tzinfo is None
-                    else datetime.now(valid_until.tzinfo)
-                )
+                now_with_tz = now if valid_until.tzinfo is None else datetime.now(valid_until.tzinfo)
                 if valid_until >= now_with_tz:
-                    logger.info(
-                        f"EphemeralAPIKeyStore::is_key_valid(api_key={log_key}...) - key is valid"
-                    )
+                    logger.info(f"EphemeralAPIKeyStore::is_key_valid(api_key={log_key}...) - key is valid")
                     return True
 
-                logger.warning(
-                    f"EphemeralAPIKeyStore::is_key_valid(api_key={log_key}...) - key is outdated"
-                )
+                logger.warning(f"EphemeralAPIKeyStore::is_key_valid(api_key={log_key}...) - key is outdated")
                 return False
             except Exception as e:
                 logger.warning(
                     f"EphemeralAPIKeyStore::is_key_valid(api_key={log_key}...) - failed to compare datetime objects: {e}"
                 )
                 return False
-        logger.warning(
-            f"EphemeralAPIKeyStore::is_key_valid(api_key={log_key}...) - key not found in registered keys"
-        )
+        logger.warning(f"EphemeralAPIKeyStore::is_key_valid(api_key={log_key}...) - key not found in registered keys")
         return False

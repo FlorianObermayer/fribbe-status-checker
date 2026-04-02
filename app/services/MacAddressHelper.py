@@ -5,4 +5,3 @@ def should_ignore_device(mac: str) -> bool:
     }
 
     return mac.lower() in [mac.lower() for mac in device_macs_to_ignore]
-

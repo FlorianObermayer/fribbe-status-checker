@@ -1,41 +1,32 @@
 from datetime import datetime, timedelta
-from typing import List, Literal
+from typing import Literal
 from zoneinfo import ZoneInfo
+
 from bs4 import Tag
 
 from app.services.DatetimeParser import parse_event_times
-from app.services.occupancy.Model import Occupancy
-from app.services.occupancy.Model import OccupancySource
-from app.services.occupancy.Model import OccupancyType
+from app.services.occupancy.Model import Occupancy, OccupancySource, OccupancyType
 
-Weekday = Literal[
-    "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"
-]
+Weekday = Literal["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"]
 
 
 def _verify_table_headers(table: Tag, *headers: str):
     actual_headers = [th.get_text(strip=True) for th in table.find("tr").find_all("th")]
     if list(headers) != actual_headers:
-        raise Exception(
-            f"Table headers do not match expected.\nexpected: {list(headers)}\nactual: {actual_headers}"
-        )
+        raise Exception(f"Table headers do not match expected.\nexpected: {list(headers)}\nactual: {actual_headers}")
 
 
-def parse_weekly_plan(weekly_plan_table: Tag) -> List[Occupancy]:
+def parse_weekly_plan(weekly_plan_table: Tag) -> list[Occupancy]:
     _verify_table_headers(weekly_plan_table, "Veranstaltung", "Zeit", "Ort / Felder")
 
-    occupancies: List[Occupancy] = []
+    occupancies: list[Occupancy] = []
     current_day: Weekday | None = None
     for row in weekly_plan_table.find_all("tr"):
         cells = row.find_all("td")
         if not cells:
             continue
         # Check for day row (colspan=3)
-        if (
-            len(cells) == 1
-            and cells[0].has_attr("colspan")
-            and cells[0]["colspan"] == "3"
-        ):
+        if len(cells) == 1 and cells[0].has_attr("colspan") and cells[0]["colspan"] == "3":
             day_text = cells[0].get_text(strip=True)
             if day_text:
                 current_day = day_text
@@ -50,15 +41,11 @@ def parse_weekly_plan(weekly_plan_table: Tag) -> List[Occupancy]:
             location_field = str(cells[2].get_text(strip=True))
             if event == "" or location_field == "":
                 continue
-            occupancies.append(
-                _parse_weekly_plan_data(current_day, time_str, event, location_field)
-            )
+            occupancies.append(_parse_weekly_plan_data(current_day, time_str, event, location_field))
     return occupancies
 
 
-def _parse_weekly_plan_data(
-    day: Weekday, time: str, event_name: str, location_field: str
-) -> Occupancy:
+def _parse_weekly_plan_data(day: Weekday, time: str, event_name: str, location_field: str) -> Occupancy:
     weekday_map: dict[Weekday, int] = {
         "Montag": 0,
         "Dienstag": 1,
@@ -94,11 +81,9 @@ def _parse_weekly_plan_data(
     )
 
 
-def parse_event_calendar(event_calendar_table: Tag) -> List[Occupancy]:
-    occupancies: List[Occupancy] = []
-    _verify_table_headers(
-        event_calendar_table, "Datum", "Veranstaltung", "Zeit", "Ort / Felder"
-    )
+def parse_event_calendar(event_calendar_table: Tag) -> list[Occupancy]:
+    occupancies: list[Occupancy] = []
+    _verify_table_headers(event_calendar_table, "Datum", "Veranstaltung", "Zeit", "Ort / Felder")
     for row in event_calendar_table.find_all("tr"):
         cells = row.find_all("td")
         if len(cells) != 4:
@@ -124,10 +109,7 @@ def parse_event_calendar(event_calendar_table: Tag) -> List[Occupancy]:
         # Occupancy type
         if not location_field or location_field == "-":
             occupancy_type = OccupancyType.NONE
-        elif (
-            location_field.lower().startswith("feld")
-            or "feld" in location_field.lower()
-        ):
+        elif location_field.lower().startswith("feld") or "feld" in location_field.lower():
             occupancy_type = OccupancyType.PARTIALLY
         elif location_field.lower().startswith("hütten"):
             occupancy_type = OccupancyType.PARTIALLY

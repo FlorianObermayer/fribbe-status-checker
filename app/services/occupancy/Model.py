@@ -1,15 +1,15 @@
-from enum import Enum
 from dataclasses import dataclass
 from datetime import datetime
+from enum import StrEnum
 
 
-class OccupancyType(str, Enum):
+class OccupancyType(StrEnum):
     NONE = "none"
     PARTIALLY = "partially"
     FULLY = "fully"
 
 
-class OccupancySource(str, Enum):
+class OccupancySource(StrEnum):
     WEEKLY_PLAN = "weekly_plan"
     EVENT_CALENDAR = "event_calendar"
 

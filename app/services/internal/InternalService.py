@@ -1,20 +1,20 @@
 import asyncio
+import logging
+import os
+import threading
+import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from os import path
-import os
-import threading
-from typing import List
 from zoneinfo import ZoneInfo
+
 from huawei_lte_api.Client import Client
 from huawei_lte_api.Connection import Connection
-import time
-import logging
 from readerwriterlock import rwlock
 
+from app.services.internal.Model import Warden, Wardens
 from app.services.MacAddressHelper import should_ignore_device
 from app.services.PersistentCollections import PersistentPathProvider, persistent
-from app.services.internal.Model import Warden, Wardens
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -22,26 +22,23 @@ logger = logging.getLogger("uvicorn.error")
 @dataclass
 class InternalPersistentData(PersistentPathProvider):
     first_device_on_site = persistent(datetime, "first_device_on_site", None)
-    
+
     last_device_on_site = persistent(datetime, "last_device_on_site", None)
-    
+
     active_devices_ct = persistent(int, "active_devices_ct", 0)
-    
-    wardens_on_site = persistent(List[Warden], "wardens_on_site", list())
+
+    wardens_on_site = persistent(list[Warden], "wardens_on_site", list())
 
     def get_path(self) -> str:
         return path.join(os.environ["LOCAL_DATA_PATH"], "internal")
 
 
 class InternalService:
-
     def __init__(self):
-        self._last_service_started: datetime = datetime.now(
-            tz=ZoneInfo("Europe/Berlin")
-        )
+        self._last_service_started: datetime = datetime.now(tz=ZoneInfo("Europe/Berlin"))
 
         self._internal_data = InternalPersistentData()
-        self._last_updated : datetime | None =  None
+        self._last_updated: datetime | None = None
         self._interval_thread = None
         self._stop_event = threading.Event()
         self._last_error: Exception | None = None
@@ -75,9 +72,7 @@ class InternalService:
         with self._rwlock.gen_rlock():
             return self._internal_data.last_device_on_site
 
-    def _update_device_statistics(
-        self, old_active_devices_ct: int, new_active_devices_ct: int
-    ):
+    def _update_device_statistics(self, old_active_devices_ct: int, new_active_devices_ct: int):
         """Updates the first and last device timestamps based on device count changes.
 
         The day resets at 5 AM, meaning:
@@ -97,10 +92,7 @@ class InternalService:
                 self._internal_data.last_device_on_site = None
 
         # Set first device timestamp when we see the first activity after reset
-        if (
-            self._internal_data.first_device_on_site is None
-            and new_active_devices_ct > 0
-        ):
+        if self._internal_data.first_device_on_site is None and new_active_devices_ct > 0:
             self._internal_data.first_device_on_site = now
 
         # Set last device timestamp when everyone leaves
@@ -109,10 +101,8 @@ class InternalService:
 
     async def _run_internal_query(self, router_ip: str, username: str, password: str):
         try:
-            logger.info(f"Refresh Internal...")
-            with Connection(
-                f"http://{router_ip}", username, password, login_on_demand=True
-            ) as connection:
+            logger.info("Refresh Internal...")
+            with Connection(f"http://{router_ip}", username, password, login_on_demand=True) as connection:
                 client = Client(connection)
                 active_member_devices = [
                     device
@@ -129,34 +119,28 @@ class InternalService:
                     ]
                     # Filter out None and deduplicate by warden name
                     seen_names: set[str] = set()
-                    wardens_on_site: List[Warden] = []
+                    wardens_on_site: list[Warden] = []
                     for warden in wardens:
                         if warden and warden.name not in seen_names:
                             wardens_on_site.append(warden)
                             seen_names.add(warden.name)
 
                     self._internal_data.wardens_on_site = wardens_on_site
-                    self._update_device_statistics(
-                        self._internal_data.active_devices_ct, active_member_devices_ct
-                    )
+                    self._update_device_statistics(self._internal_data.active_devices_ct, active_member_devices_ct)
                     self._internal_data.active_devices_ct = active_member_devices_ct
                     self._last_updated = datetime.now(tz=ZoneInfo("Europe/Berlin"))
                     self._last_error = None
-            logger.info(f"Refresh Internal... DONE)")
+            logger.info("Refresh Internal... DONE)")
         except Exception as e:
             logger.error(f"Error during Internal refresh: {e}", exc_info=True)
             with self._rwlock.gen_wlock():
                 self._last_error = e
 
-    def _internal_query_loop(
-        self, interval: int, router_ip: str, username: str, password: str
-    ):
+    def _internal_query_loop(self, interval: int, router_ip: str, username: str, password: str):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         while not self._stop_event.is_set():
-            loop.run_until_complete(
-                self._run_internal_query(router_ip, username, password)
-            )
+            loop.run_until_complete(self._run_internal_query(router_ip, username, password))
             time.sleep(interval)
 
     def start_polling(
