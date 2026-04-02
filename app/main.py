@@ -49,12 +49,12 @@ from app.version import VERSION
 app = FastAPI(version=VERSION)
 _csp = (
     ContentSecurityPolicy()
-    .default_src("'self'")
-    .script_src("'self'")
-    .style_src("'self'", "https://fonts.googleapis.com")
-    .font_src("'self'", "https://fonts.gstatic.com")
+    .default_src("'self'", "https://*.fribbe-beach.de")
+    .script_src("'self'", "https://*.fribbe-beach.de")
+    .style_src("'self'", "https://*.fribbe-beach.de", "https://fonts.googleapis.com")
+    .font_src("'self'", "https://*.fribbe-beach.de", "https://fonts.gstatic.com")
     .object_src("'none'")
-    .img_src("'self'", "data:")
+    .img_src("'self'", "https://*.fribbe-beach.de", "data:")
 )
 secure_headers = Secure(csp=_csp)
 
