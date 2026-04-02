@@ -5,7 +5,6 @@ from app.api.EphemeralAPIKeyStore import EphemeralAPIKeyStore
 
 
 class HybridAuth:
-
     def __init__(
         self,
         *,

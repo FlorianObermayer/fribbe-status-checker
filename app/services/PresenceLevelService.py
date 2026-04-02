@@ -1,11 +1,12 @@
 import asyncio
-from datetime import datetime
+import logging
 import threading
+import time
+from datetime import datetime
 from zoneinfo import ZoneInfo
+
 from huawei_lte_api.Client import Client
 from huawei_lte_api.Connection import Connection
-import time
-import logging
 from readerwriterlock import rwlock
 
 from app.services.MacAddressHelper import should_ignore_device
@@ -38,14 +39,10 @@ class PresenceLevelService:
         with self._rwlock.gen_rlock():
             return self._last_error
 
-    async def _run_presence_detection(
-        self, router_ip: str, username: str, password: str
-    ):
+    async def _run_presence_detection(self, router_ip: str, username: str, password: str):
         try:
-            logger.info(f"Refresh Presence Level...")
-            with Connection(
-                f"http://{router_ip}", username, password, login_on_demand=True
-            ) as connection:
+            logger.info("Refresh Presence Level...")
+            with Connection(f"http://{router_ip}", username, password, login_on_demand=True) as connection:
                 client = Client(connection)
                 active_member_devices_ct = len(
                     [
@@ -54,13 +51,9 @@ class PresenceLevelService:
                         if not should_ignore_device(device["MacAddress"])
                     ]
                 )
-                logger.debug(
-                    f"active member devices: {active_member_devices_ct}", exc_info=True
-                )
+                logger.debug(f"active member devices: {active_member_devices_ct}", exc_info=True)
                 with self._rwlock.gen_wlock():
-                    self._presence_level = self._thresholds.get_presence_level(
-                        active_member_devices_ct
-                    )
+                    self._presence_level = self._thresholds.get_presence_level(active_member_devices_ct)
                     self._last_updated = datetime.now(tz=ZoneInfo("Europe/Berlin"))
                     self._last_error = None
             logger.info(f"Refresh Presence Level... DONE ({self._presence_level})")
@@ -70,15 +63,11 @@ class PresenceLevelService:
                 self._presence_level = PresenceLevel.EMPTY
                 self._last_error = e
 
-    def _presence_detection_loop(
-        self, interval: int, router_ip: str, username: str, password: str
-    ):
+    def _presence_detection_loop(self, interval: int, router_ip: str, username: str, password: str):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         while not self._stop_event.is_set():
-            loop.run_until_complete(
-                self._run_presence_detection(router_ip, username, password)
-            )
+            loop.run_until_complete(self._run_presence_detection(router_ip, username, password))
             time.sleep(interval)
 
     def start_polling(

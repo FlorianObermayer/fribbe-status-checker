@@ -1,0 +1,46 @@
+[project]
+name = "fribbe-status-checker"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "huawei-lte-api>=1.11.0",
+    "fastapi[standard]>=0.115.12",
+    "beautifulsoup4>=4.13.4",
+    "dateparser>=1.2.1",
+    "readerwriterlock>=1.0.9",
+    "markdown>=3.8.2",
+    "starlette-session>=0.4.3",
+    "secure>=1.0.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+    "pytest-cov>=6.2.1",
+    "pytest-asyncio>=1.0.0",
+    "ruff>=0.9.0",
+]
+
+[tool.uv.scripts]
+dev = "uvicorn app.main:app --reload"
+
+[tool.pytest.ini_options]
+python_files = ["*Test.py", "*Tests.py", "*_test.py", "*_tests.py"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+]
+ignore = [
+    "E501", # line too long (handled by formatter)
+    "B008", # FastAPI uses Depends/Body/Query as argument defaults by design
+]

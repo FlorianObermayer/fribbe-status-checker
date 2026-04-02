@@ -1,8 +1,10 @@
 from datetime import date, datetime
-from typing import Dict, List, Self
+from typing import Self
+
 from pydantic import BaseModel, Field
-from app.services.PresenceLevel import PresenceLevel
+
 from app.services.occupancy.Model import Occupancy, OccupancySource, OccupancyType
+from app.services.PresenceLevel import PresenceLevel
 
 
 class BaseResponse(BaseModel):
@@ -19,8 +21,8 @@ class PresenceResponse(BaseResponse):
 class OccupancyResponse(BaseResponse):
     type: OccupancyType
     source: OccupancySource
-    messages: List[str]
-    events: List[Occupancy]
+    messages: list[str]
+    events: list[Occupancy]
     for_date: date
 
 
@@ -30,7 +32,7 @@ class StatusResponse(BaseModel):
 
 
 class DetailsResponse(BaseResponse):
-    wardens_on_site: List[str]
+    wardens_on_site: list[str]
     active_devices: int
     first_device_on_site: datetime | None
     last_device_on_site: datetime | None
@@ -43,14 +45,14 @@ class ApiKey(BaseModel):
     valid_until: datetime
 
     @classmethod
-    def from_dict(cls, d: Dict[str, str]) -> Self:
+    def from_dict(cls, d: dict[str, str]) -> Self:
         return cls(
             key=d["key"],
             comment=d["comment"],
             valid_until=datetime.fromisoformat(d["valid_until"]),
         )
 
-    def to_dict(self) -> Dict[str, str]:
+    def to_dict(self) -> dict[str, str]:
         return {
             "key": self.key,
             "comment": self.comment,
@@ -59,7 +61,7 @@ class ApiKey(BaseModel):
 
 
 class ApiKeys(BaseModel):
-    api_keys: List[ApiKey]
+    api_keys: list[ApiKey]
 
 
 class PostNotificationResponse(BaseModel):

@@ -1,56 +1,62 @@
 #!/usr/bin/env python3
 import logging
 import os
+import secrets
+from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
-from typing import Annotated, Awaitable, Callable, Optional
+from typing import Annotated
+from zoneinfo import ZoneInfo
+
+import markdown
 from fastapi import (
-    FastAPI,
-    Depends,
     Body,
+    Depends,
+    FastAPI,
     HTTPException,
     Query,
     Request,
     Response,
 )
-from fastapi.responses import HTMLResponse, FileResponse, PlainTextResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
-from zoneinfo import ZoneInfo
-
-import secrets
+from secure import ContentSecurityPolicy, Secure
+from starlette.middleware.sessions import SessionMiddleware
 
 from app.api.EphemeralAPIKeyStore import EphemeralAPIKeyStore
 from app.api.HybridAuth import HybridAuth
-from app.api.Requests import NotificationQuery
+from app.api.Requests import NOTIFICATION_FILTERS, NotificationQuery
 from app.api.Responses import (
+    ApiKey,
     ApiKeys,
+    DetailsResponse,
+    OccupancyResponse,
     PostNotificationResponse,
     PresenceResponse,
     StatusResponse,
-    DetailsResponse,
-    OccupancyResponse,
-    ApiKey,
 )
 from app.api.Schema import requires_auth_extra, update_openapi_schema
-from app.services.PresenceThresholds import PresenceThresholds
 from app.services.internal.InternalService import InternalService
 from app.services.MessageService import MessageService
+from app.services.NotificationService import NotificationService
+from app.services.occupancy.Model import OccupancyType
+from app.services.occupancy.OccupancyService import OccupancyService
 from app.services.PresenceLevelService import (
     PresenceLevelService,
 )
-from app.services.occupancy.OccupancyService import OccupancyService
-from app.services.occupancy.Model import OccupancyType
-from app.services.NotificationService import NotificationService
-from fastapi.responses import JSONResponse
-from starlette.middleware.sessions import SessionMiddleware
-
-from secure import Secure
-
-import markdown
+from app.services.PresenceThresholds import PresenceThresholds
 from app.version import VERSION
 
-
 app = FastAPI(version=VERSION)
-secure_headers = Secure.with_default_headers()
+_csp = (
+    ContentSecurityPolicy()
+    .default_src("'self'")
+    .script_src("'self'")
+    .style_src("'self'", "https://fonts.googleapis.com")
+    .font_src("'self'", "https://fonts.gstatic.com")
+    .object_src("'none'")
+    .img_src("'self'", "data:")
+)
+secure_headers = Secure(csp=_csp)
 
 app.add_middleware(
     SessionMiddleware,
@@ -60,17 +66,17 @@ app.add_middleware(
     # path=os.path.join(os.environ["LOCAL_DATA_PATH"],"session" )
 )
 
+
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next: Callable[[Request], Awaitable[Response]]):
     response = await call_next(request)
-    await secure_headers.set_headers_async(response) # type: ignore
+    if request.url.path not in ("/docs", "/redoc", "/openapi.json"):
+        await secure_headers.set_headers_async(response)  # type: ignore
     return response
 
 
 @app.middleware("http")
-async def log_requests(
-    request: Request, call_next: Callable[[Request], Awaitable[Response]]
-) -> Response:
+async def log_requests(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
     logger = logging.getLogger("uvicorn.error")
     api_key = request.headers.get("api_key")
     if api_key:
@@ -91,9 +97,7 @@ presence_service.start_polling(
 )
 
 occupancy_service = OccupancyService()
-occupancy_service.start_polling(
-    int(os.environ["OCCUPANCY_POLLING_INTERVAL_SECONDS"])
-)
+occupancy_service.start_polling(int(os.environ["OCCUPANCY_POLLING_INTERVAL_SECONDS"]))
 
 internal_service = InternalService()
 internal_service.start_polling(
@@ -108,9 +112,11 @@ message_service = MessageService()
 notification_service = NotificationService()
 notification_service.start_cleanup_job()
 
+
 @app.get("/api/version")
 async def version():
     return {"version": app.version}
+
 
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
@@ -175,11 +181,7 @@ async def get_status(for_date: str = "today"):
 
     # Get the time_str of the first "fully occupying event", if any
     time_str = next(
-        (
-            event.time_str
-            for event in occ_events
-            if event.occupancy_type == OccupancyType.FULLY
-        ),
+        (event.time_str for event in occ_events if event.occupancy_type == OccupancyType.FULLY),
         None,
     )
 
@@ -200,6 +202,7 @@ async def get_status(for_date: str = "today"):
         occupancy=occupancy_response,
         presence=presence_response,
     )
+
 
 @app.get(
     "/api/internal/details",
@@ -232,7 +235,7 @@ def details(_: str = Depends(HybridAuth())):
 def create_api_key(
     comment: str = Body("", embed=True),
     valid_until: datetime = Body(None, embed=True),
-    _: Optional[str] = Depends(HybridAuth(bypass_on_empty_api_key_list=True)),
+    _: str | None = Depends(HybridAuth(bypass_on_empty_api_key_list=True)),
 ) -> ApiKey:
     """
     Create a new API key, store it in the JSON file, and return it. Requires valid API key to create or no API keys to begin with at all (admin setup mode)
@@ -241,9 +244,9 @@ def create_api_key(
     """
     # Generate a new key
     new_key = secrets.token_urlsafe(48)
-    valid_until = (
-        valid_until or datetime.now(tz=ZoneInfo("Europe/Berlin")) + timedelta(days=180)
-    ).replace(microsecond=0)
+    valid_until = (valid_until or datetime.now(tz=ZoneInfo("Europe/Berlin")) + timedelta(days=180)).replace(
+        microsecond=0
+    )
     new_api_key = ApiKey(key=new_key, comment=comment, valid_until=valid_until)
     keys = EphemeralAPIKeyStore.load()
     if not keys:
@@ -266,17 +269,13 @@ def delete_api_key(
     Deletes an API key by its value or prefix (at least 5 characters). Only deletes if there is a unique match.
     """
     if len(key) < 5:
-        raise HTTPException(
-            status_code=400, detail="Key prefix must be at least 5 characters long"
-        )
+        raise HTTPException(status_code=400, detail="Key prefix must be at least 5 characters long")
     keys = EphemeralAPIKeyStore.load()
     matches = [k for k in keys if k.key.startswith(key)]
     if len(matches) == 0:
         raise HTTPException(status_code=404, detail="Api key not found")
     if len(matches) > 1:
-        raise HTTPException(
-            status_code=409, detail="Ambiguous key prefix: multiple matches found"
-        )
+        raise HTTPException(status_code=409, detail="Ambiguous key prefix: multiple matches found")
     key_to_delete = matches[0].key
     keys = [k for k in keys if not (k.key == key_to_delete)]
     EphemeralAPIKeyStore.save(keys)
@@ -288,7 +287,7 @@ def delete_api_key(
     tags=["API Keys"],
     openapi_extra=requires_auth_extra(),
 )
-def list_api_keys(_: Optional[str] = Depends(HybridAuth())):
+def list_api_keys(_: str | None = Depends(HybridAuth())):
     """
     Returns all API keys as a list. Requires a valid API key for authentication.
     """
@@ -309,9 +308,7 @@ async def post_notification(
     enabled: bool = Body(True),
     _: str = Depends(HybridAuth()),
 ):
-    notification_id = notification_service.add(
-        message, valid_from, valid_until, enabled
-    )
+    notification_id = notification_service.add(message, valid_from, valid_until, enabled)
     return {"notification_id": notification_id}
 
 
@@ -323,7 +320,7 @@ async def post_notification(
 )
 async def get_notifications_as_html(
     request: Annotated[NotificationQuery, Query()],
-    api_key: Optional[str] = Depends(HybridAuth(auto_error=False)),
+    api_key: str | None = Depends(HybridAuth(auto_error=False)),
 ):
 
     # Without an API Key, only allow "public" queries
@@ -340,13 +337,23 @@ async def get_notifications_as_html(
     img {
         max-width: 100%;
         height: auto;
-       
+
     }
 </style>
 """ + "\n<hr/>".join(
-        [f"<div>{markdown.markdown(n.message)}</div>" for n in notifications]
+        [f'<div data-notification-id="{n.id}">{markdown.markdown(n.message)}</div>' for n in notifications]
     )
     return HTMLResponse(html)
+
+
+@app.get(
+    "/api/notifications/filters",
+    response_class=JSONResponse,
+    tags=["Notifications"],
+    openapi_extra=requires_auth_extra(),
+)
+async def get_notification_filters(_: str = Depends(HybridAuth())):
+    return JSONResponse(NOTIFICATION_FILTERS)
 
 
 @app.get(
@@ -370,6 +377,21 @@ async def delete_notification(notification_id: str, _: str = Depends(HybridAuth(
         raise HTTPException(status_code=404, detail="Notification not found")
 
 
+@app.delete(
+    "/api/notifications",
+    tags=["Notifications"],
+    openapi_extra=requires_auth_extra(),
+)
+async def delete_notifications(
+    request: Annotated[NotificationQuery, Query()],
+    _: str = Depends(HybridAuth()),
+):
+    count = notification_service.delete_many(request.n_ids)
+    if count == 0:
+        raise HTTPException(status_code=404, detail="No matching notifications found")
+    return JSONResponse({"deleted": count})
+
+
 @app.put(
     "/api/notifications/{notification_id}",
     tags=["Notifications"],
@@ -382,9 +404,7 @@ async def update_notification(
     valid_until: datetime = Body(None),
     _: str = Depends(HybridAuth()),
 ):
-    if not notification_service.update(
-        notification_id, enabled, valid_from, valid_until
-    ):
+    if not notification_service.update(notification_id, enabled, valid_from, valid_until):
         raise HTTPException(status_code=404, detail="Notification not found")
 
 
@@ -401,31 +421,26 @@ async def get_notification_preview(
         return HTMLResponse(f.read())
 
 
-@app.get(
-    "/notification-create", response_class=HTMLResponse, tags=["Notifications", "HTML"]
-)
+@app.get("/notification-create", response_class=HTMLResponse, tags=["Notifications", "HTML"])
 async def get_notification_builder():
     with open("app/static/notification-create.html") as f:
         return HTMLResponse(f.read())
 
-@app.patch(
-        "/internal/config",
-        response_class=HTMLResponse,
-        tags=["Config"],
-        openapi_extra=requires_auth_extra()
-)
-async def config(threshold_min_non_empty_ct: int = Body(None, gt= 0), threshold_min_many_ct: int = Body(None, gt= 1)):
+
+@app.patch("/internal/config", response_class=HTMLResponse, tags=["Config"], openapi_extra=requires_auth_extra())
+async def config(threshold_min_non_empty_ct: int = Body(None, gt=0), threshold_min_many_ct: int = Body(None, gt=1)):
     if not any((threshold_min_non_empty_ct, threshold_min_many_ct)):
-        return Response(status_code= 304) # ^= Not Modified
-    
+        return Response(status_code=304)  # ^= Not Modified
+
     thresholds = PresenceThresholds()
 
     if threshold_min_non_empty_ct:
         thresholds.min_non_empty_ct = threshold_min_non_empty_ct
-    
+
     if threshold_min_many_ct:
         thresholds.min_many_ct = threshold_min_many_ct
-    
+
     return Response()
+
 
 update_openapi_schema(app)

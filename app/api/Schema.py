@@ -1,8 +1,9 @@
-from typing import Any, Dict
+from typing import Any
+
 from fastapi import FastAPI
 
 
-def requires_auth_extra() -> Dict[str, Any]:
+def requires_auth_extra() -> dict[str, Any]:
     return {"security": [{"APIKeyHeader": []}, {"SessionCookie": []}]}
 
 

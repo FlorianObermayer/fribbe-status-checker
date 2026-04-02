@@ -1,6 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
-class PresenceLevel(str, Enum):
+
+class PresenceLevel(StrEnum):
     EMPTY = "empty"
     FEW = "few"
     MANY = "many"

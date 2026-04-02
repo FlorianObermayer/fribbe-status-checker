@@ -1,17 +1,29 @@
-from typing import Any, List
+from typing import Any
+
 from fastapi import Query
 from pydantic import BaseModel, field_validator
 
-_protected_ids = ["all", "all_enabled"]
-_default_ids = ["all_active", "latest_active"]
-_examples = [
-    *_protected_ids,
-    *_default_ids,
-    "nid-<...>",
+# Single source of truth for all keyword filter options.
+# Order here determines the order in the UI selector.
+NOTIFICATION_FILTERS: list[dict[str, str]] = [
+    {"value": "all_active", "label": "Aktive"},
+    {"value": "latest_active", "label": "Neueste aktive"},
+    {"value": "all_enabled", "label": "Alle aktivierten"},
+    {"value": "all_inactive", "label": "Inaktive"},
+    {"value": "all", "label": "Alle"},
 ]
-class NotificationQuery(BaseModel):
 
-    n_ids: List[str] = Query(
+# Keyword IDs that require an authenticated request
+_protected_ids = ["all", "all_enabled", "all_inactive"]
+# Keyword IDs allowed for unauthenticated requests
+_default_ids = ["all_active", "latest_active"]
+
+_keyword_ids = [f["value"] for f in NOTIFICATION_FILTERS]
+_examples = [*_keyword_ids, "nid-<...>"]
+
+
+class NotificationQuery(BaseModel):
+    n_ids: list[str] = Query(
         examples=[*_examples],
     )
 
@@ -26,12 +38,6 @@ class NotificationQuery(BaseModel):
         if isinstance(value, str):  # Handle single values (e.g., ?q=all_active)
             value = [value]
         for n_id in value:
-            if not (
-                n_id in _protected_ids
-                or n_id in _default_ids
-                or n_id.startswith("nid-")
-            ):
-                raise ValueError(
-                    f"Invalid ID: '{n_id}'. Must be any or multiple of: [{', '.join(_examples)}]"
-                )
+            if not (n_id in _keyword_ids or n_id.startswith("nid-")):
+                raise ValueError(f"Invalid ID: '{n_id}'. Must be any or multiple of: [{', '.join(_examples)}]")
         return value

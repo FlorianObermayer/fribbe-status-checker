@@ -1,8 +1,9 @@
-from datetime import datetime
 import random
+from datetime import datetime
 from zoneinfo import ZoneInfo
-from app.services.PresenceLevel import PresenceLevel
+
 from app.services.occupancy.Model import OccupancyType
+from app.services.PresenceLevel import PresenceLevel
 
 
 class MessageService:
@@ -197,10 +198,7 @@ class MessageService:
     ) -> str:
 
         if occupancy == OccupancyType.FULLY:
-            formatted_occ_messages = [
-                message.format(ftime=occupancy_time_str)
-                for message in self.occupied_messages
-            ]
+            formatted_occ_messages = [message.format(ftime=occupancy_time_str) for message in self.occupied_messages]
             return random.choice(formatted_occ_messages)
 
         # 20% chance for a combo message
@@ -216,10 +214,7 @@ class MessageService:
                 return random.choice(self.time_messages[daytime][level])
 
             season = self.get_season(for_datetime)
-            if (
-                season in self.seasonal_messages
-                and level in self.seasonal_messages[season]
-            ):
+            if season in self.seasonal_messages and level in self.seasonal_messages[season]:
                 return random.choice(self.seasonal_messages[season][level])
 
         # Fallback to base messages (40% chance)
