@@ -1,19 +1,21 @@
 import os
 import tempfile
-from typing import Dict, Any, List
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
+from typing import Any
 from zoneinfo import ZoneInfo
+
+import pytest
+
 from app.services.PersistentCollections import (
+    DictSerializable,
     PersistentDescriptor,
     PersistentDict,
     PersistentList,
     PersistentObject,
-    DictSerializable,
     PersistentPathProvider,
     persistent,
 )
-from dataclasses import dataclass, asdict
-import pytest
 
 
 def test_persistentdict_write_to_non_existing_subfolder():
@@ -72,11 +74,11 @@ class MyClass(DictSerializable):
         self.foo = foo
         self.bar = bar
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {"foo": self.foo, "bar": self.bar}
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]):
+    def from_dict(cls, d: dict[str, Any]):
         return cls(d["foo"], d["bar"])
 
 
@@ -86,11 +88,11 @@ class MyDataClass(DictSerializable):
     foo: str
     bar: int
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]):
+    def from_dict(cls, d: dict[str, Any]):
         return cls(**d)
 
 
@@ -109,11 +111,11 @@ def test_persistentdict_with_class():
 def test_persistentdict_with_class_in_list():
     with tempfile.TemporaryDirectory() as tmpdir:
         path = os.path.join(tmpdir, "class_in_list.json")
-        d = PersistentDict[List[MyClass]](path, value_type=List[MyClass])
+        d = PersistentDict[list[MyClass]](path, value_type=list[MyClass])
         d["a"] = [MyClass("hello", 123)]
         d["b"] = [MyClass("world", 456)]
         # Reload
-        d2 = PersistentDict[List[MyClass]](path, value_type=List[MyClass])
+        d2 = PersistentDict[list[MyClass]](path, value_type=list[MyClass])
         assert d2["a"][0].foo == "hello"
         assert d2["b"][0].bar == 456
 
@@ -138,21 +140,17 @@ class MyDataClassWithoutProtocol:
 
 def test_persistentdict_with_dataclass_omitting_protocol_expect_type_error():
     with pytest.raises(TypeError):
-        _ = PersistentDict[MyDataClassWithoutProtocol](
-            "my_path", value_type=MyDataClassWithoutProtocol
-        )
+        _ = PersistentDict[MyDataClassWithoutProtocol]("my_path", value_type=MyDataClassWithoutProtocol)
 
 
 # Nested DictSerializable class for testing
 class NestedClass(DictSerializable):
-    def __init__(
-        self, name: str, values: List[int], child: "None | NestedClass" = None
-    ):
+    def __init__(self, name: str, values: list[int], child: "None | NestedClass" = None):
         self.name = name
         self.values = values
         self.child = child
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "values": self.values,
@@ -160,7 +158,7 @@ class NestedClass(DictSerializable):
         }
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]):
+    def from_dict(cls, d: dict[str, Any]):
         child = cls.from_dict(d["child"]) if d["child"] else None
         return cls(d["name"], d["values"], child)
 
@@ -183,23 +181,21 @@ def test_persistentdict_nested_dictserializable():
 def test_persistentdict_nested_dict():
     with tempfile.TemporaryDirectory() as tmpdir:
         path = os.path.join(tmpdir, "nested_dict.json")
-        nested_dict: Dict[str, Dict[int, Dict[str, int]]] = {"a": {1: {"b": 1}}}
-        d = PersistentDict(path, value_type=Dict[str, Dict[int, Dict[str, int]]])
+        nested_dict: dict[str, dict[int, dict[str, int]]] = {"a": {1: {"b": 1}}}
+        d = PersistentDict(path, value_type=dict[str, dict[int, dict[str, int]]])
         d["nested"] = nested_dict
-        d2 = PersistentDict(path, value_type=Dict[str, Dict[int, Dict[str, int]]])
+        d2 = PersistentDict(path, value_type=dict[str, dict[int, dict[str, int]]])
         assert d2["nested"]["a"][1]["b"] == 1
 
 
 def test_persistentdict_nested_dict_any_type_not_supported():
     with pytest.raises(TypeError):
-        _ = PersistentDict[Dict[str, Any]]("my_path", value_type=Dict[str, Any])
+        _ = PersistentDict[dict[str, Any]]("my_path", value_type=dict[str, Any])
 
 
 def test_persistentdict_nested_list_any_type_not_supported():
     with pytest.raises(TypeError):
-        _ = PersistentDict[List[List[List[Any]]]](
-            "my_path", value_type=List[List[List[Any]]]
-        )
+        _ = PersistentDict[list[list[list[Any]]]]("my_path", value_type=list[list[list[Any]]])
 
 
 def test_persistentdict_nested_list():
@@ -220,11 +216,11 @@ def test_persistentlist_with_union_types_not_supported():
 def test_persistentlist_with_int():
     with tempfile.TemporaryDirectory() as tmpdir:
         path = os.path.join(tmpdir, "list.json")
-        l = PersistentList(path, int)
-        l.append(1)
-        l.append(2)
-        l.append(3)
-        assert l.to_list() == [1, 2, 3]
+        lst = PersistentList(path, int)
+        lst.append(1)
+        lst.append(2)
+        lst.append(3)
+        assert lst.to_list() == [1, 2, 3]
         # Reload
         l2 = PersistentList(path, int)
         assert l2.to_list() == [1, 2, 3]
@@ -235,11 +231,11 @@ def test_persistentlist_with_int():
 def test_persistentlist_with_class():
     with tempfile.TemporaryDirectory() as tmpdir:
         path = os.path.join(tmpdir, "list.json")
-        l = PersistentList(path, MyClass)
-        l.append(MyClass("a", 1))
-        l.append(MyClass("b", 2))
-        assert l[0].foo == "a"
-        assert l[1].bar == 2
+        lst = PersistentList(path, MyClass)
+        lst.append(MyClass("a", 1))
+        lst.append(MyClass("b", 2))
+        assert lst[0].foo == "a"
+        assert lst[1].bar == 2
         # Reload
         l2 = PersistentList(path, MyClass)
         assert l2[0].foo == "a"
@@ -249,11 +245,11 @@ def test_persistentlist_with_class():
 def test_persistentlist_with_dataclass():
     with tempfile.TemporaryDirectory() as tmpdir:
         path = os.path.join(tmpdir, "list.json")
-        l = PersistentList(path, MyDataClass)
-        l.append(MyDataClass("x", 10))
-        l.append(MyDataClass("y", 20))
-        assert l[0].foo == "x"
-        assert l[1].bar == 20
+        lst = PersistentList(path, MyDataClass)
+        lst.append(MyDataClass("x", 10))
+        lst.append(MyDataClass("y", 20))
+        assert lst[0].foo == "x"
+        assert lst[1].bar == 20
         # Reload
         l2 = PersistentList(path, MyDataClass)
         assert l2[0].foo == "x"
@@ -299,7 +295,7 @@ def test_persistentdict_with_naive_datetime():
 def test_persistentlist_with_datetime():
     with tempfile.TemporaryDirectory() as tmpdir:
         path = os.path.join(tmpdir, "datetime_list.json")
-        l = PersistentList(path, datetime)
+        lst = PersistentList(path, datetime)
 
         berlin_tz = ZoneInfo("Europe/Berlin")
         now = datetime.now(berlin_tz)
@@ -307,13 +303,13 @@ def test_persistentlist_with_datetime():
 
         # Add timestamps to list
         for ts in timestamps:
-            l.append(ts)
+            lst.append(ts)
 
         # Verify immediate state
-        assert len(l) == 3
-        assert l[0] == timestamps[0]
-        assert l[1] == timestamps[1]
-        assert l[2] == timestamps[2]
+        assert len(lst) == 3
+        assert lst[0] == timestamps[0]
+        assert lst[1] == timestamps[1]
+        assert lst[2] == timestamps[2]
 
         # Reload and verify
         l2 = PersistentList(path, datetime)

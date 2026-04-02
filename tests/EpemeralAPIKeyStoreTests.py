@@ -3,8 +3,8 @@ import tempfile
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from pydantic import ValidationError
 import pytest
+from pydantic import ValidationError
 
 from app.api.EphemeralAPIKeyStore import EphemeralAPIKeyStore
 from app.api.Responses import ApiKey
@@ -35,7 +35,7 @@ def test_is_key_valid():
         ]
     )
     assert EphemeralAPIKeyStore.is_key_valid("02552721-61c1-4535-979e-fb57c8f3c3f0-valid") is True
-    assert EphemeralAPIKeyStore.is_key_valid("02552721-61c1-4535-979e-fb57c8f3c3f0-outdated") is False 
+    assert EphemeralAPIKeyStore.is_key_valid("02552721-61c1-4535-979e-fb57c8f3c3f0-outdated") is False
     assert EphemeralAPIKeyStore.is_key_valid("02552721-61c1-4535-979e-fb57c8f3c3f0-notfound") is False
     assert EphemeralAPIKeyStore.is_key_valid("notfound") is False
 

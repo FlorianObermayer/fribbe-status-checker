@@ -1,16 +1,15 @@
-from zoneinfo import ZoneInfo
-import pytest
 from datetime import date, datetime, timedelta
 from unittest.mock import MagicMock, patch
+from zoneinfo import ZoneInfo
 
-from app.services.occupancy.OccupancyService import OccupancyService
-from app.services.occupancy.Model import OccupancySource
-from app.services.occupancy.Model import OccupancyType
+import pytest
+
+from app.services.occupancy.Model import OccupancySource, OccupancyType
 from app.services.occupancy.OccupancyParser import (
     parse_event_calendar,
     parse_weekly_plan,
 )
-
+from app.services.occupancy.OccupancyService import OccupancyService
 from tests.test_utils import get_calendar_mock_table, get_weekly_mock_table
 
 
@@ -32,9 +31,7 @@ async def test_run_get_latest_occupancy_sets_week_occupancy(
 
 def test_get_todays_occupancy_no_occupancy():
     s = service()
-    for_date, msgs, events, occupancy, _, last_updated, last_error = s.get_occupancy(
-        "today"
-    )
+    for_date, msgs, events, occupancy, _, last_updated, last_error = s.get_occupancy("today")
     assert len(msgs) == 0
     assert len(events) == 0
     assert occupancy is OccupancyType.NONE
@@ -47,14 +44,12 @@ def test_get_todays_occupancy_no_occupancy():
 def test_get_todays_week_occupancy_with_occupancy():
     s = service()
     occ = parse_weekly_plan(get_weekly_mock_table())
-    occ[0].begin = (
-        datetime.now()
-    )  # HACK: Don't use Datetime with timezone as we can't compare it to the mock data then...
+    occ[
+        0
+    ].begin = datetime.now()  # HACK: Don't use Datetime with timezone as we can't compare it to the mock data then...
     occ[0].end = occ[0].begin + timedelta(hours=4)
     s._week_occupancy = occ  # type: ignore
-    for_date, msgs, events, occupancy, source, last_updated, last_error = (
-        s.get_occupancy("today")
-    )
+    for_date, msgs, events, occupancy, source, last_updated, last_error = s.get_occupancy("today")
     assert len(msgs) > 0
     assert len(events) > 0
     assert len(msgs) == len(events)
@@ -71,9 +66,7 @@ def test_get_todays_calendar_occupancy_with_occupancy():
     occ[0].begin = datetime.now(tz=ZoneInfo("Europe/Berlin"))
     occ[0].end = occ[0].begin + timedelta(hours=4)
     s._event_occupancy = occ  # type: ignore
-    for_date, msgs, events, occupancy, source, last_updated, last_error = (
-        s.get_occupancy("today")
-    )
+    for_date, msgs, events, occupancy, source, last_updated, last_error = s.get_occupancy("today")
     assert len(msgs) > 0
     assert len(events) > 0
     assert len(msgs) == len(events)

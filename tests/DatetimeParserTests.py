@@ -1,6 +1,9 @@
-import pytest
 from datetime import date, datetime
+
+import pytest
+
 from app.services.DatetimeParser import parse_event_times
+
 
 @pytest.mark.parametrize(
     "date_input, time_str, expected",
@@ -176,7 +179,7 @@ from app.services.DatetimeParser import parse_event_times
                 datetime(2024, 6, 26, 23, 59),
             ),
         ),
-         # natürliche Sprache
+        # natürliche Sprache
         (
             date(2024, 6, 26),
             "übermorgen",
@@ -185,7 +188,7 @@ from app.services.DatetimeParser import parse_event_times
                 datetime(2024, 6, 28, 2, 0),
             ),
         ),
-         # natürliche Sprache
+        # natürliche Sprache
         (
             date(2024, 6, 26),
             "übermorgen um 17:00 Uhr",
@@ -194,8 +197,8 @@ from app.services.DatetimeParser import parse_event_times
                 datetime(2024, 6, 28, 19, 0),
             ),
         ),
-    ]
+    ],
 )
-def test_parameterized(date_input: str | date, time_str:str, expected:tuple[datetime,datetime]):
+def test_parameterized(date_input: str | date, time_str: str, expected: tuple[datetime, datetime]):
     actual = parse_event_times(date_input, time_str)
     assert actual == expected

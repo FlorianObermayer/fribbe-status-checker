@@ -1,4 +1,4 @@
-from typing import Dict, List, Self
+from typing import Self
 
 from app.services.PersistentCollections import DictSerializable
 
@@ -9,20 +9,20 @@ class Warden(DictSerializable):
         return self._name
 
     @property
-    def device_macs(self) -> List[str]:
+    def device_macs(self) -> list[str]:
         return self._device_macs
 
     @property
-    def device_names(self) -> List[str]:
+    def device_names(self) -> list[str]:
         return self._device_names
 
-    def __init__(self, name: str, device_macs:List[str] = [], device_names: List[str] = []):
+    def __init__(self, name: str, device_macs: list[str] | None = None, device_names: list[str] | None = None):
         self._name = name
-        self._device_macs = [mac.lower() for mac in device_macs]
-        self._device_names = [name.lower() for name in device_names]
+        self._device_macs = [mac.lower() for mac in (device_macs or [])]
+        self._device_names = [name.lower() for name in (device_names or [])]
 
     @classmethod
-    def from_dict(cls, d: Dict[str, str]) -> Self:
+    def from_dict(cls, d: dict[str, str]) -> Self:
         warden = Wardens.by_name(d["name"])
         return cls(
             name=warden.name,
@@ -30,12 +30,12 @@ class Warden(DictSerializable):
             device_names=warden.device_names,
         )
 
-    def to_dict(self) -> Dict[str, str]:
+    def to_dict(self) -> dict[str, str]:
         return {"name": self.name}
 
 
 class Wardens:
-    _team: List[Warden] = [
+    _team: list[Warden] = [
         Warden(
             "Flo",
             [
@@ -43,11 +43,7 @@ class Wardens:
                 "aa:1a:9e:2e:aa:eb",  # Samsung Galaxy S24+
             ],
         ),
-        Warden("Schnapsi", [
-            "B2:38:95:80:29:D7",
-            "74:60:FA:A2:94:E3"
-            ]
-        ),
+        Warden("Schnapsi", ["B2:38:95:80:29:D7", "74:60:FA:A2:94:E3"]),
         Warden("Kika", ["5a:5f:6e:2e:d3:ce"]),
         Warden("Jannik"),
     ]

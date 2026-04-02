@@ -1,26 +1,20 @@
+import json
+import os
+from collections.abc import MutableMapping
+from datetime import datetime
 from inspect import isclass
 from typing import (
-    List,
-    Optional,
+    Any,
+    Generic,
     Protocol,
     Self,
-    Set,
-    Tuple,
     TypeVar,
-    Dict,
-    Any,
-    Type,
-    MutableMapping,
-    Generic,
     get_args,
     get_origin,
     runtime_checkable,
 )
-
-import json
-import os
-from datetime import datetime
 from zoneinfo import ZoneInfo
+
 from readerwriterlock import rwlock
 
 V = TypeVar("V")
@@ -28,32 +22,31 @@ V = TypeVar("V")
 
 @runtime_checkable
 class DictSerializable(Protocol):
-
-    def to_dict(self) -> Dict[str, str]: ...
+    def to_dict(self) -> dict[str, str]: ...
 
     @classmethod
-    def from_dict(cls, d: Dict[str, str]) -> Self: ...
+    def from_dict(cls, d: dict[str, str]) -> Self: ...
 
 
-class ConversionHelper():
-        @staticmethod
-        def list_to_range(lst: List[int]):
-            if len(lst) == 1:
-                return range(lst[0], lst[0] + 1)
-            
-            step = lst[1] - lst[0]
-            for i in range(2, len(lst)):
-                if lst[i] - lst[i-1] != step:
-                    raise ValueError("List is not evenly spaced, cannot convert to range")
-            
-            return range(lst[0], lst[-1] + step, step)
+class ConversionHelper:
+    @staticmethod
+    def list_to_range(lst: list[int]):
+        if len(lst) == 1:
+            return range(lst[0], lst[0] + 1)
+
+        step = lst[1] - lst[0]
+        for i in range(2, len(lst)):
+            if lst[i] - lst[i - 1] != step:
+                raise ValueError("List is not evenly spaced, cannot convert to range")
+
+        return range(lst[0], lst[-1] + step, step)
 
 
 class PersistentDict(MutableMapping[str, V], Generic[V]):
-    def __init__(self, path: str, value_type: Type[V]):
+    def __init__(self, path: str, value_type: type[V]):
         self._path = path
         self._value_type = value_type
-        self._data: Dict[str, V] = {}
+        self._data: dict[str, V] = {}
 
         if not self._is_type_supported(value_type):
             raise TypeError(
@@ -64,10 +57,10 @@ class PersistentDict(MutableMapping[str, V], Generic[V]):
 
         self._load()
 
-    def _is_type_supported(self, t: Type[V]) -> bool:
+    def _is_type_supported(self, t: type[V]) -> bool:
         """Check if the type can be serialized/deserialized"""
         # Handle None/Any
-        if t is type(None) or t is Type[Any]:
+        if t is type(None) or t is type[Any]:
             return True
 
         # Check for primitive types
@@ -83,36 +76,34 @@ class PersistentDict(MutableMapping[str, V], Generic[V]):
 
         if t is range:
             return True
-        
+
         if t is datetime:
             return True
-        
+
         # Handle generic containers
         origin = get_origin(t)
         if origin is None:
             return False
 
         # Check container types (list, dict, etc.)
-        if origin in (list, List, dict, Dict, tuple, Tuple, set, Set):
+        if origin in (list, list, dict, dict, tuple, tuple, set, set):
             args = get_args(t)
             if not args:  # Unparameterized container (e.g. just 'list')
                 return True
             # Recursively check element types
-            if origin in (list, List, tuple, Tuple, set, Set):
+            if origin in (list, list, tuple, tuple, set, set):
                 return self._is_type_supported(args[0])
-            elif origin in (dict, Dict):
-                return self._is_type_supported(
-                    args[0]
-                ) and self._is_type_supported(  # key type
+            elif origin in (dict, dict):
+                return self._is_type_supported(args[0]) and self._is_type_supported(  # key type
                     args[1]
                 )  # value type
 
         return False
 
-    def _is_primitive(self, t: Type[V] | Type[Any]) -> bool:
+    def _is_primitive(self, t: type[V] | type[Any]) -> bool:
         return t in (int, float, str, bool, type(None))
 
-    def _is_primitive_type(self, t: Optional[Type[V]] = None) -> bool:
+    def _is_primitive_type(self, t: type[V] | None = None) -> bool:
         t = t or self._value_type
         if self._is_primitive(t):
             return True
@@ -121,14 +112,14 @@ class PersistentDict(MutableMapping[str, V], Generic[V]):
         if origin is None:
             return False
 
-        if origin in (list, List, tuple, Tuple, set, Set, dict, Dict):
+        if origin in (list, list, tuple, tuple, set, set, dict, dict):
             args = get_args(t)
             if not args:
                 return True
             return all(self._is_primitive_type(arg) for arg in args)
         return False
 
-    def _deserialize(self, value: Any, expected_type: Type[V] | Type[Any]) -> Any:
+    def _deserialize(self, value: Any, expected_type: type[V] | type[Any]) -> Any:
         if value is None:
             return None
 
@@ -154,51 +145,34 @@ class PersistentDict(MutableMapping[str, V], Generic[V]):
                 return str(value)
             return value
 
-
         if expected_type is range:
             return ConversionHelper.list_to_range(value)
-        
+
         origin = get_origin(expected_type) or expected_type
 
         if isinstance(origin, type) and issubclass(origin, DictSerializable):
             return origin.from_dict(value)
 
-        if origin in (list, List):
-            element_type = (
-                get_args(expected_type)[0] if get_args(expected_type) else Type[Any]
-            )
+        if origin in (list, list):
+            element_type = get_args(expected_type)[0] if get_args(expected_type) else type[Any]
             return [self._deserialize(item, element_type) for item in value]
 
-        elif origin in (tuple, Tuple):
+        elif origin in (tuple, tuple):
             element_types = get_args(expected_type)
             if not element_types:
                 return tuple(value)
             if len(element_types) == 2 and element_types[1] is ...:
-                return tuple(
-                    self._deserialize(item, element_types[0]) for item in value
-                )
+                return tuple(self._deserialize(item, element_types[0]) for item in value)
             else:
-                return tuple(
-                    self._deserialize(item, typ)
-                    for item, typ in zip(value, element_types)
-                )
+                return tuple(self._deserialize(item, typ) for item, typ in zip(value, element_types, strict=False))
 
-        elif origin in (set, Set):
-            element_type = (
-                get_args(expected_type)[0] if get_args(expected_type) else Type[Any]
-            )
+        elif origin in (set, set):
+            element_type = get_args(expected_type)[0] if get_args(expected_type) else type[Any]
             return {self._deserialize(item, element_type) for item in value}
 
-        elif origin in (dict, Dict):
-            key_type, val_type = (
-                get_args(expected_type)
-                if get_args(expected_type)
-                else (Type[Any], Type[Any])
-            )
-            return {
-                self._deserialize(k, key_type): self._deserialize(v, val_type)
-                for k, v in value.items()
-            }
+        elif origin in (dict, dict):
+            key_type, val_type = get_args(expected_type) if get_args(expected_type) else (type[Any], type[Any])
+            return {self._deserialize(k, key_type): self._deserialize(v, val_type) for k, v in value.items()}
 
         return value
 
@@ -223,17 +197,15 @@ class PersistentDict(MutableMapping[str, V], Generic[V]):
 
         if isinstance(value, range):
             return list(value)
-        
+
         return str(value)
 
     def _load(self):
         if os.path.exists(self._path):
-            with open(self._path, "r", encoding="utf-8") as f:
+            with open(self._path, encoding="utf-8") as f:
                 raw_data = json.load(f)
 
-            self._data = {
-                k: self._deserialize(v, self._value_type) for k, v in raw_data.items()
-            }
+            self._data = {k: self._deserialize(v, self._value_type) for k, v in raw_data.items()}
         else:
             self._data = {}
 
@@ -271,16 +243,15 @@ class PersistentDict(MutableMapping[str, V], Generic[V]):
 
 
 class PersistentList(Generic[V]):
-
-    def __init__(self, path: str, value_type: Type[V]):
-        self._dict: PersistentDict[List[V]] = PersistentDict(path, List[value_type])
+    def __init__(self, path: str, value_type: type[V]):
+        self._dict: PersistentDict[list[V]] = PersistentDict(path, list[value_type])
         if self._dict.get("items") is None:
             self._dict["items"] = []
 
     def _get_items(self):
         return [*self._dict["items"]]
 
-    def _set_items(self, new_items: List[V]):
+    def _set_items(self, new_items: list[V]):
         self._dict["items"] = new_items
 
     def append(self, value: V):
@@ -288,7 +259,7 @@ class PersistentList(Generic[V]):
         items.append(value)
         self._set_items(items)
 
-    def extend(self, values: List[V]):
+    def extend(self, values: list[V]):
         items = self._get_items()
         items.extend(values)
         self._set_items(items)
@@ -329,7 +300,7 @@ class PersistentObject(Generic[V]):
 
     _VALUE_KEY = "value"
 
-    def __init__(self, path: str, value_type: Type[V], default_value: V | None = None):
+    def __init__(self, path: str, value_type: type[V], default_value: V | None = None):
         """Initialize a new PersistentObject.
 
         Args:
@@ -338,10 +309,7 @@ class PersistentObject(Generic[V]):
             default_value: Optional default value if no value exists yet
         """
         self._dict: PersistentDict[V] = PersistentDict(path, value_type)
-        if (
-            default_value is not None
-            and self._dict.get(PersistentObject._VALUE_KEY) is None
-        ):
+        if default_value is not None and self._dict.get(PersistentObject._VALUE_KEY) is None:
             self._dict[PersistentObject._VALUE_KEY] = default_value
 
     def get(self) -> V | None:
@@ -366,12 +334,13 @@ class PersistentObject(Generic[V]):
 @runtime_checkable
 class PersistentPathProvider(Protocol):
     """Protocol for classes that can provide a path for persistence.
-    
+
     Classes using @persistent properties must implement this protocol.
     """
+
     def get_path(self) -> str:
         """Get the base path where persistent properties should be stored.
-        
+
         Returns:
             The absolute path to the directory where persistent files should be stored.
             Individual properties will be stored as separate files in this directory.
@@ -380,7 +349,7 @@ class PersistentPathProvider(Protocol):
 
 
 class PersistentDescriptor(Generic[V]):
-    def __init__(self, name: str, field_type: Type[V], default_value: V, storage_attr: str, lock: rwlock.RWLockFair):
+    def __init__(self, name: str, field_type: type[V], default_value: V, storage_attr: str, lock: rwlock.RWLockFair):
         self._name = name
         self._field_type = field_type
         self._default_value = default_value
@@ -390,18 +359,14 @@ class PersistentDescriptor(Generic[V]):
     def _get_storage(self, instance: Any) -> PersistentObject[V]:
         with self._lock.gen_rlock():
             if not isinstance(instance, PersistentPathProvider):
-                raise TypeError(
-                    f"Class {instance.__class__.__name__} must implement PersistentPathProvider"
-                )
+                raise TypeError(f"Class {instance.__class__.__name__} must implement PersistentPathProvider")
 
             # Create storage if it doesn't exist
             if not hasattr(instance, self._storage_attr):
                 base_path = instance.get_path()
                 file_path = os.path.join(base_path, f"{self._name}.json")
                 setattr(
-                    instance,
-                    self._storage_attr,
-                    PersistentObject(file_path,  self._field_type,  self._default_value)
+                    instance, self._storage_attr, PersistentObject(file_path, self._field_type, self._default_value)
                 )
 
             return getattr(instance, self._storage_attr)
@@ -420,28 +385,29 @@ class PersistentDescriptor(Generic[V]):
                 storage = self._get_storage(instance)
                 storage.set(value)
 
-def persistent(field_type: Type[V], name: str, default_value: V) -> PersistentDescriptor[V]:
+
+def persistent(field_type: type[V], name: str, default_value: V) -> PersistentDescriptor[V]:
     """Create a persistent field descriptor.
-    
+
     Creates a descriptor that automatically persists the field value to disk.
     The class must implement PersistentPathProvider to specify where to store the data.
     Can be used with dataclass fields or as a property decorator.
-    
+
     Args:
         field_type: The type of the field (must be supported by PersistentDict)
         name: Name of the field
         default_value: Default value for the field
-        
+
     Example:
         @dataclass
         class MyConfig(PersistentPathProvider):
             def get_path(self) -> str:
                 return "/path/to/config/dir"
-                
+
             # Use as field descriptor
             name: str = persistent(str, "name", "")
             count: int = persistent(int, "count", 0)
-            
+
             # Or use as property decorator
             @persistent(int, "value", 0)
             @property
