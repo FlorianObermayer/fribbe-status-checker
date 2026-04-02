@@ -42,6 +42,60 @@ async function deleteNotification(notification_id) {
     }
 }
 
+async function deleteNotifications(notification_ids) {
+    const query = notification_ids.map(id => `n_ids=${encodeURIComponent(id)}`).join('&');
+    const response = await fetch(`/api/notifications?${query}`, {
+        method: 'delete'
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`${errorData.detail || response.statusText}`);
+    }
+}
+
+async function copyTextToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return;
+    }
+
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-9999px';
+    textArea.style.top = '-9999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+
+    const successful = document.execCommand('copy');
+    document.body.removeChild(textArea);
+
+    if (!successful) {
+        throw new Error('Copy command failed');
+    }
+}
+
+let _toastTimeout = null;
+function showToast(message, type = 'success') {
+    let toast = document.getElementById('copy-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'copy-toast';
+        toast.className = 'copy-toast';
+        document.body.appendChild(toast);
+    }
+
+    toast.textContent = message;
+    toast.classList.remove('success', 'error', 'visible');
+    toast.classList.add(type);
+    requestAnimationFrame(() => toast.classList.add('visible'));
+
+    if (_toastTimeout) clearTimeout(_toastTimeout);
+    _toastTimeout = setTimeout(() => toast.classList.remove('visible'), 1800);
+}
+
 async function updateStatus() {
     const dateTimeOptions = {
         day: 'numeric',
@@ -206,7 +260,7 @@ function hashString(str) {
     return hash + "";
 }
 
-function createNotificationsPreviewControls() {
+async function createNotificationsPreviewControls() {
     if (!isNotificationsPreview()) return;
 
     // Remove existing controls if any
@@ -216,6 +270,36 @@ function createNotificationsPreviewControls() {
     const controls = document.createElement('div');
     controls.className = 'notification-controls';
 
+    const filterSelect = document.createElement('select');
+    filterSelect.className = 'filter-select';
+
+    let filterOptions = [];
+    try {
+        const resp = await fetch('/api/notifications/filters');
+        if (resp.ok) filterOptions = await resp.json();
+    } catch { /* leave empty on error */ }
+
+    filterOptions.forEach(({ value, label }) => {
+        const opt = document.createElement('option');
+        opt.value = value;
+        opt.textContent = label;
+        filterSelect.appendChild(opt);
+    });
+    // Set current selection from URL, defaulting to all_active
+    const currentIds = getNotificationIdsFromUrl();
+    if (currentIds.length === 1 && filterOptions.some(o => o.value === currentIds[0])) {
+        filterSelect.value = currentIds[0];
+    } else {
+        filterSelect.value = 'all_active';
+    }
+    filterSelect.addEventListener('change', () => {
+        const params = new URLSearchParams(window.location.search);
+        params.delete('n_ids');
+        params.append('n_ids', filterSelect.value);
+        window.history.replaceState({}, '', window.location.pathname + '?' + params.toString());
+        pollNotifications();
+    });
+
     const enableBtn = document.createElement('button');
     enableBtn.className = 'enable-btn';
     enableBtn.textContent = 'Aktivieren';
@@ -224,6 +308,7 @@ function createNotificationsPreviewControls() {
     deleteBtn.className = 'delete-btn';
     deleteBtn.textContent = 'Löschen';
 
+    controls.appendChild(filterSelect);
     controls.appendChild(enableBtn);
     controls.appendChild(deleteBtn);
 
@@ -264,17 +349,16 @@ function createNotificationsPreviewControls() {
 
     deleteBtn.addEventListener('click', async () => {
         const notificationIds = getNotificationIdsFromUrl();
-        if (notificationIds.length !== 1 || notificationIds[0] === 'all_active') {
-            showStatus('Keine spezifische Notification ID gefunden', true);
+        if (notificationIds.length === 0) {
+            showStatus('Keine Notification IDs gefunden', true);
             return;
         }
 
-        if (!confirm('Möchtest du diese Notification wirklich löschen?')) return;
+        if (!confirm('Möchtest du diese Notification(s) wirklich löschen?')) return;
 
         try {
-            await deleteNotification(notificationIds[0]);
-            showStatus('Notification erfolgreich gelöscht');
-            // Optional: Redirect to the main page after successful deletion
+            await deleteNotifications(notificationIds);
+            showStatus('Notification(s) erfolgreich gelöscht');
         } catch (error) {
             showStatus(`Fehler: ${error.message}`, true);
         }
@@ -325,7 +409,43 @@ async function pollNotifications() {
             box.style.display = 'none';
             localStorage.removeItem('notificationDismissedHash');
         }
-        createNotificationsPreviewControls();
+        await createNotificationsPreviewControls();
+        if (isNotificationsPreview()) {
+            htmlDiv.querySelectorAll('[data-notification-id]').forEach(div => {
+                div.style.position = 'relative';
+
+                const container = document.createElement('div');
+                container.className = 'notification-id-controls';
+
+                const badge = document.createElement('span');
+                badge.className = 'notification-id-badge';
+                badge.textContent = div.dataset.notificationId;
+                const nid = div.dataset.notificationId;
+                const currentIds = getNotificationIdsFromUrl();
+                const isSelected = currentIds.length === 1 && currentIds[0] === nid;
+                badge.title = isSelected ? 'Klicken zum Kopieren' : 'Klicken zum Auswählen';
+                if (isSelected) badge.classList.add('selected');
+                badge.addEventListener('click', async () => {
+                    if (isSelected) {
+                        try {
+                            await copyTextToClipboard(nid);
+                            showToast('ID kopiert');
+                        } catch {
+                            showToast('Fehler beim Kopieren', 'error');
+                        }
+                    } else {
+                        const params = new URLSearchParams(window.location.search);
+                        params.delete('n_ids');
+                        params.append('n_ids', nid);
+                        window.history.replaceState({}, '', window.location.pathname + '?' + params.toString());
+                        await pollNotifications();
+                    }
+                });
+
+                container.appendChild(badge);
+                div.prepend(container);
+            });
+        }
     } catch (e) {
         // ignore box on error
         document.getElementById('notification-box').style.display = 'none';

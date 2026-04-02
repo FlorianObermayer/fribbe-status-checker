@@ -4,6 +4,7 @@
         "adduser",
         "appuser",
         "asyncio",
+        "autopep",
         "autouse",
         "beachfeld",
         "Beachwart",
@@ -13,6 +14,8 @@
         "chillrunde",
         "chromecast",
         "dateparser",
+        "debugpy",
+        "devcontainers",
         "dictserializable",
         "fastapi",
         "feld",
@@ -37,6 +40,7 @@
         "persistentdict",
         "persistentlist",
         "persistentobject",
+        "pylance",
         "pytest",
         "PYTHONDONTWRITEBYTECODE",
         "PYTHONUNBUFFERED",
@@ -59,5 +63,6 @@
         "tests"
     ],
     "python.testing.unittestEnabled": false,
-    "python.testing.pytestEnabled": true
+    "python.testing.pytestEnabled": true,
+    "python.terminal.useEnvFile": true
 }
