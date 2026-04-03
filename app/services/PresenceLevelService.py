@@ -39,9 +39,12 @@ class PresenceLevelService:
         with self._rwlock.gen_rlock():
             return self._last_error
 
-    async def _run_presence_detection(self, router_ip: str, username: str, password: str):
+    async def _run_presence_detection(self, router_ip: str | None, username: str | None, password: str | None):
         try:
             logger.info("Refresh Presence Level...")
+            if not router_ip or not username or not password:
+                logger.warning("Router credentials not fully set — skipping presence detection")
+                return
             with Connection(f"http://{router_ip}", username, password, login_on_demand=True) as connection:
                 client = Client(connection)
                 active_member_devices_ct = len(
@@ -63,7 +66,9 @@ class PresenceLevelService:
                 self._presence_level = PresenceLevel.EMPTY
                 self._last_error = e
 
-    def _presence_detection_loop(self, interval: int, router_ip: str, username: str, password: str):
+    def _presence_detection_loop(
+        self, interval: int, router_ip: str | None, username: str | None, password: str | None
+    ):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         while not self._stop_event.is_set():
@@ -72,9 +77,9 @@ class PresenceLevelService:
 
     def start_polling(
         self,
-        router_ip: str,
-        username: str,
-        password: str,
+        router_ip: str | None,
+        username: str | None,
+        password: str | None,
         interval: int = 60,
         delay_to_first_poll: int = 0,
     ):

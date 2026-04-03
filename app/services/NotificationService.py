@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import os
 import threading
 import time
 import uuid
@@ -12,6 +11,7 @@ from zoneinfo import ZoneInfo
 
 from readerwriterlock import rwlock
 
+import app.env as env
 from app.services.PersistentCollections import PersistentDict
 
 logger = logging.getLogger("uvicorn.error")
@@ -69,7 +69,7 @@ class Notification:
 class NotificationService:
     def __init__(self):
         self._store: PersistentDict[Notification] = PersistentDict(
-            path.join(os.environ["LOCAL_DATA_PATH"], "notifications.json"),
+            path.join(env.LOCAL_DATA_PATH, "notifications.json"),
             value_type=Notification,
         )
         self._interval_thread: threading.Thread | None = None

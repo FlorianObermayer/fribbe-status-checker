@@ -2,7 +2,6 @@
 import html
 import json
 import logging
-import os
 import secrets
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
@@ -25,6 +24,7 @@ from fastapi.staticfiles import StaticFiles
 from secure import ContentSecurityPolicy, Secure
 from starlette.middleware.sessions import SessionMiddleware
 
+import app.env as env
 from app.api.EphemeralAPIKeyStore import EphemeralAPIKeyStore
 from app.api.HybridAuth import AuthRedirectException, HybridAuth, PageAuth
 from app.api.Requests import NOTIFICATION_FILTERS, NotificationQuery
@@ -67,10 +67,10 @@ secure_headers = Secure(csp=_csp)
 
 app.add_middleware(
     SessionMiddleware,
-    secret_key=os.environ["SESSION_SECRET_KEY"],
+    secret_key=env.SESSION_SECRET_KEY,
     session_cookie="session_cookie",
     max_age=60 * 60 * 24 * 7,  # 7 Days or until api key expires
-    https_only=os.environ.get("HTTPS_ONLY", "true").lower() == "true",
+    https_only=env.HTTPS_ONLY,
 )
 
 
@@ -102,23 +102,23 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 presence_service = PresenceLevelService()
 presence_service.start_polling(
-    os.environ["ROUTER_IP"],
-    os.environ["ROUTER_USERNAME"],
-    os.environ["ROUTER_PASSWORD"],
-    int(os.environ["PRESENCE_POLLING_INTERVAL_SECONDS"]),
-    int(os.environ["PRESENCE_POLLING_DELAY_SECONDS"]),
+    env.ROUTER_IP,
+    env.ROUTER_USERNAME,
+    env.ROUTER_PASSWORD,
+    env.PRESENCE_POLLING_INTERVAL_SECONDS,
+    env.PRESENCE_POLLING_DELAY_SECONDS,
 )
 
 occupancy_service = OccupancyService()
-occupancy_service.start_polling(int(os.environ["OCCUPANCY_POLLING_INTERVAL_SECONDS"]))
+occupancy_service.start_polling(env.OCCUPANCY_POLLING_INTERVAL_SECONDS)
 
 internal_service = InternalService()
 internal_service.start_polling(
-    os.environ["ROUTER_IP"],
-    os.environ["ROUTER_USERNAME"],
-    os.environ["ROUTER_PASSWORD"],
-    int(os.environ["INTERNAL_POLLING_INTERVAL_SECONDS"]),
-    int(os.environ["INTERNAL_POLLING_DELAY_SECONDS"]),
+    env.ROUTER_IP,
+    env.ROUTER_USERNAME,
+    env.ROUTER_PASSWORD,
+    env.INTERNAL_POLLING_INTERVAL_SECONDS,
+    env.INTERNAL_POLLING_DELAY_SECONDS,
 )
 
 message_service = MessageService()

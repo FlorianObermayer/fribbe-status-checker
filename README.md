@@ -10,7 +10,39 @@ A FastAPI-based status checker for [Fribbe Beach](https://fribbebeach.de), runni
 - **REST API** — JSON API with API key + session-cookie hybrid authentication
 - **Web UI** — Static HTML/CSS/JS frontend served directly by the app
 
+## Development
 
+### Prerequisites
+
+- [uv](https://docs.astral.sh/uv/) — used for dependency management and running scripts
+
+### Install dependencies
+
+```sh
+uv sync
+```
+
+### Run the app locally
+
+The app expects several environment variables. Check the `.env.template` file for the minimal set for local development:
+
+```sh
+uv run fastapi dev app/main.py
+```
+
+The API and UI are then available at <http://localhost:8000>.
+
+### Run tests
+
+```sh
+uv run pytest
+```
+
+### Lint and format
+
+```sh
+uv run lint
+```
 
 ## License
 

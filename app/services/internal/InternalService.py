@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import os
 import threading
 import time
 from dataclasses import dataclass
@@ -12,6 +11,7 @@ from huawei_lte_api.Client import Client
 from huawei_lte_api.Connection import Connection
 from readerwriterlock import rwlock
 
+import app.env as env
 from app.services.internal.Model import Warden, Wardens
 from app.services.MacAddressHelper import should_ignore_device
 from app.services.PersistentCollections import PersistentPathProvider, persistent
@@ -30,7 +30,7 @@ class InternalPersistentData(PersistentPathProvider):
     wardens_on_site = persistent(list[Warden], "wardens_on_site", [])
 
     def get_path(self) -> str:
-        return path.join(os.environ["LOCAL_DATA_PATH"], "internal")
+        return path.join(env.LOCAL_DATA_PATH, "internal")
 
 
 class InternalService:
@@ -99,9 +99,12 @@ class InternalService:
         if old_active_devices_ct > 0 and new_active_devices_ct == 0:
             self._internal_data.last_device_on_site = now
 
-    async def _run_internal_query(self, router_ip: str, username: str, password: str):
+    async def _run_internal_query(self, router_ip: str | None, username: str | None, password: str | None):
         try:
             logger.info("Refresh Internal...")
+            if not router_ip or not username or not password:
+                logger.warning("Router credentials not fully set — skipping internal query")
+                return
             with Connection(f"http://{router_ip}", username, password, login_on_demand=True) as connection:
                 client = Client(connection)
                 active_member_devices = [
@@ -136,7 +139,7 @@ class InternalService:
             with self._rwlock.gen_wlock():
                 self._last_error = e
 
-    def _internal_query_loop(self, interval: int, router_ip: str, username: str, password: str):
+    def _internal_query_loop(self, interval: int, router_ip: str | None, username: str | None, password: str | None):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         while not self._stop_event.is_set():
@@ -145,9 +148,9 @@ class InternalService:
 
     def start_polling(
         self,
-        router_ip: str,
-        username: str,
-        password: str,
+        router_ip: str | None,
+        username: str | None,
+        password: str | None,
         interval: int = 60,
         delay_to_first_poll: int = 30,
     ):

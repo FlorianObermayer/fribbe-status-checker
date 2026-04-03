@@ -1,5 +1,6 @@
 import os
 
+import app.env as env
 from app.services.PersistentCollections import PersistentPathProvider, persistent
 from app.services.PresenceLevel import PresenceLevel
 
@@ -10,7 +11,7 @@ class PresenceThresholds(PersistentPathProvider):
         self._min_many_storage = persistent(int, "min_many_ct", 10)
 
     def get_path(self) -> str:
-        return os.path.join(os.environ["LOCAL_DATA_PATH"], "presence_thresholds")
+        return os.path.join(env.LOCAL_DATA_PATH, "presence_thresholds")
 
     @property
     def min_non_empty_ct(self) -> int:
