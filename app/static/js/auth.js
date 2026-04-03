@@ -5,7 +5,7 @@
     if (signedIn) {
         const wantsSignout = window.confirm('Du bist bereits angemeldet. Möchtest du dich abmelden?');
         if (!wantsSignout) {
-            window.location.href = '/';
+            window.location.href = next;
             return;
         }
         await fetch('/signout', { method: 'POST' });
