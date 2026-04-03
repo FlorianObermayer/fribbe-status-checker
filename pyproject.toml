@@ -1,3 +1,7 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "fribbe-status-checker"
 version = "0.1.0"
@@ -12,6 +16,9 @@ dependencies = [
     "starlette-session>=0.4.3",
     "secure>=1.0.1",
 ]
+
+[project.scripts]
+lint = "scripts.lint:main"
 
 [dependency-groups]
 dev = [
@@ -46,6 +53,12 @@ ignore = [
     "B008", # FastAPI uses Depends/Body/Query as argument defaults by design
     "S101", # assert is used in tests
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["app", "scripts"]
+
+[tool.uv]
+package = true
 
 [tool.pyright]
 pythonVersion = "3.12"
