@@ -1,4 +1,4 @@
-from typing import Self
+from typing import ClassVar, Self
 
 from app.services.PersistentCollections import DictSerializable
 
@@ -35,7 +35,7 @@ class Warden(DictSerializable):
 
 
 class Wardens:
-    _team: list[Warden] = [
+    _team: ClassVar[list[Warden]] = [
         Warden(
             "Flo",
             [

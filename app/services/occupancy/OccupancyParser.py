@@ -101,7 +101,7 @@ def parse_event_calendar(event_calendar_table: Tag) -> list[Occupancy]:
             # fallback: try to parse from date_str (e.g. "01.05.")
             try:
                 event_date = f"{datetime.now(tz=ZoneInfo('Europe/Berlin')).year}-{date_str[3:5]}-{date_str[0:2]}"
-            except Exception:
+            except Exception:  # noqa: S112
                 continue
 
         start_time, end_time = parse_event_times(event_date, time_str)

@@ -199,23 +199,23 @@ class MessageService:
 
         if occupancy == OccupancyType.FULLY:
             formatted_occ_messages = [message.format(ftime=occupancy_time_str) for message in self.occupied_messages]
-            return random.choice(formatted_occ_messages)
+            return random.choice(formatted_occ_messages)  # noqa: S311
 
         # 20% chance for a combo message
-        if random.random() < 0.2:
-            return random.choice(self.combo_messages)
+        if random.random() < 0.2:  # noqa: S311
+            return random.choice(self.combo_messages)  # noqa: S311
 
         for_datetime = datetime.now(tz=ZoneInfo("Europe/Berlin"))
 
         # 40% chance for saisonal or daytime-dependant messages
-        if random.random() < 0.4:
+        if random.random() < 0.4:  # noqa: S311
             daytime = self.get_daytime(for_datetime)
             if daytime in self.time_messages and level in self.time_messages[daytime]:
-                return random.choice(self.time_messages[daytime][level])
+                return random.choice(self.time_messages[daytime][level])  # noqa: S311
 
             season = self.get_season(for_datetime)
             if season in self.seasonal_messages and level in self.seasonal_messages[season]:
-                return random.choice(self.seasonal_messages[season][level])
+                return random.choice(self.seasonal_messages[season][level])  # noqa: S311
 
         # Fallback to base messages (40% chance)
-        return random.choice(self.base_messages[level])
+        return random.choice(self.base_messages[level])  # noqa: S311
