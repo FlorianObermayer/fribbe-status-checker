@@ -43,13 +43,6 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
-    # Job-level environment variables
-    env:
-      TEST_ENV: 'testing'
-      DEBUG: 'true'
-      # Test-specific overrides
-      LOCAL_DATA_PATH: ${{ github.workspace }}/dev-data
-      SESSION_SECRET_KEY: github-actions-test-key
     steps:
       - uses: actions/checkout@v5
       - name: Set up Python

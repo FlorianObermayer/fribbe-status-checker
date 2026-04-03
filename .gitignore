@@ -56,5 +56,5 @@ venv.bak/
 .DS_Store
 
 # Test files
-apikeys.dev.json
 dev-data/
+test-data/

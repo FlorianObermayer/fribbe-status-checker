@@ -65,7 +65,9 @@
         "wlock"
     ],
     "python.testing.pytestArgs": [
-        "tests"
+        "tests",
+        "--envfile=.env.test",
+        "--override-env-vars-with-env-files"
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
