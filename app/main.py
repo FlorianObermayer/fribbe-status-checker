@@ -427,10 +427,15 @@ async def get_notification_preview(
         return HTMLResponse(f.read())
 
 
+def sanitize_next(next_url: str) -> str:
+    if not next_url.startswith("/") or next_url.startswith("//"):
+        return "/"
+    return next_url
+
+
 @app.get("/auth", response_class=HTMLResponse, include_in_schema=False)
 async def get_auth_page(request: Request, next: str = "/"):
-    if not next.startswith("/") or next.startswith("//"):
-        next = "/"
+    next = sanitize_next(next)
     api_key = request.session.get("api_key")
     signed_in = EphemeralAPIKeyStore.is_key_valid(api_key)
     with open("app/static/auth.html") as f:
@@ -443,8 +448,7 @@ async def get_auth_page(request: Request, next: str = "/"):
 
 @app.post("/auth", include_in_schema=False)
 async def post_auth(request: Request, token: str = Body(...), next: str = Body("/")):
-    if not next.startswith("/") or next.startswith("//"):
-        next = "/"
+    next = sanitize_next(next)
     if not EphemeralAPIKeyStore.is_key_valid(token):
         raise HTTPException(status_code=401, detail="Invalid token")
     request.session["api_key"] = token
