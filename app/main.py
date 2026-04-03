@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import html
 import json
 import logging
 import os
@@ -434,7 +435,8 @@ async def get_auth_page(request: Request, next: str = "/"):
     signed_in = EphemeralAPIKeyStore.is_key_valid(api_key)
     with open("app/static/auth.html") as f:
         content = f.read()
-    content = content.replace("__NEXT_DATA__", next)
+    safe_next = html.escape(next, quote=True)
+    content = content.replace("__NEXT_DATA__", safe_next)
     content = content.replace("__SIGNED_IN__", json.dumps(signed_in))
     return HTMLResponse(content)
 
