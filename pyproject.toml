@@ -19,6 +19,8 @@ dependencies = [
 
 [project.scripts]
 lint = "scripts.lint:main"
+dev = "scripts.dev:main"
+watch = "scripts.watch:main"
 
 [dependency-groups]
 dev = [
