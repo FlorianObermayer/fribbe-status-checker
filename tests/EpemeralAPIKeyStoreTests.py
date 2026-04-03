@@ -19,12 +19,12 @@ def set_env():
 def test_is_key_valid():
     now = datetime.now(tz=ZoneInfo("Europe/Berlin"))
     valid_key = ApiKey(
-        key="02552721-61c1-4535-979e-fb57c8f3c3f0-valid",
+        key="4w69446-02552721-61c1-4535-979e-fb57c8f3c3f0-valid",
         comment="",
         valid_until=(now + timedelta(days=1)).replace(microsecond=0),
     )
     expired_key = ApiKey(
-        key="02552721-61c1-4535-979e-fb57c8f3c3f0-outdated",
+        key="4w69446-02552721-61c1-4535-979e-fb57c8f3c3f0-outdated",
         comment="",
         valid_until=(now - timedelta(days=1)).replace(microsecond=0),
     )
@@ -34,9 +34,9 @@ def test_is_key_valid():
             expired_key,
         ]
     )
-    assert EphemeralAPIKeyStore.is_key_valid("02552721-61c1-4535-979e-fb57c8f3c3f0-valid") is True
-    assert EphemeralAPIKeyStore.is_key_valid("02552721-61c1-4535-979e-fb57c8f3c3f0-outdated") is False
-    assert EphemeralAPIKeyStore.is_key_valid("02552721-61c1-4535-979e-fb57c8f3c3f0-notfound") is False
+    assert EphemeralAPIKeyStore.is_key_valid("4w69446-02552721-61c1-4535-979e-fb57c8f3c3f0-valid") is True
+    assert EphemeralAPIKeyStore.is_key_valid("4w69446-02552721-61c1-4535-979e-fb57c8f3c3f0-outdated") is False
+    assert EphemeralAPIKeyStore.is_key_valid("4w69446-02552721-61c1-4535-979e-fb57c8f3c3f0-notfound") is False
     assert EphemeralAPIKeyStore.is_key_valid("notfound") is False
 
 
