@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import json
 import logging
 import os
 import secrets
@@ -17,7 +18,7 @@ from fastapi import (
     Request,
     Response,
 )
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from secure import ContentSecurityPolicy, Secure
 from starlette.middleware.sessions import SessionMiddleware
@@ -425,8 +426,39 @@ async def get_notification_preview(
         return HTMLResponse(f.read())
 
 
+@app.get("/auth", response_class=HTMLResponse, include_in_schema=False)
+async def get_auth_page(request: Request, next: str = "/"):
+    if not next.startswith("/") or next.startswith("//"):
+        next = "/"
+    api_key = request.session.get("api_key")
+    signed_in = EphemeralAPIKeyStore.is_key_valid(api_key)
+    with open("app/static/auth.html") as f:
+        content = f.read()
+    content = content.replace("__NEXT_DATA__", next)
+    content = content.replace("__SIGNED_IN__", json.dumps(signed_in))
+    return HTMLResponse(content)
+
+
+@app.post("/auth", include_in_schema=False)
+async def post_auth(request: Request, token: str = Body(...), next: str = Body("/")):
+    if not next.startswith("/") or next.startswith("//"):
+        next = "/"
+    if not EphemeralAPIKeyStore.is_key_valid(token):
+        raise HTTPException(status_code=401, detail="Invalid token")
+    request.session["api_key"] = token
+    return JSONResponse({"redirect": next})
+
+
+@app.post("/signout", include_in_schema=False)
+async def signout(request: Request):
+    request.session.clear()
+    return JSONResponse({"redirect": "/"})
+
+
 @app.get("/notification-create", response_class=HTMLResponse, tags=["Notifications", "HTML"])
-async def get_notification_builder():
+async def get_notification_builder(api_key: str | None = Depends(HybridAuth(auto_error=False))):
+    if api_key is None:
+        return RedirectResponse(url="/auth?next=/notification-create", status_code=302)
     with open("app/static/notification-create.html") as f:
         return HTMLResponse(f.read())
 
