@@ -1,7 +1,12 @@
 import pytest
 
 from app.services.occupancy.Model import OccupancyType
-from app.services.occupancy.OccupancyParser import Weekday, _parse_weekly_plan_data, parse_weekly_plan  # type: ignore
+from app.services.occupancy.OccupancyParser import (  # type: ignore
+    Weekday,
+    _parse_event_calendar_row,  # pyright: ignore[reportPrivateUsage]
+    _parse_weekly_plan_row,  # pyright: ignore[reportPrivateUsage]
+    parse_weekly_plan,
+)
 from tests.test_utils import get_weekly_mock_table
 
 
@@ -32,6 +37,7 @@ from tests.test_utils import get_weekly_mock_table
             "irgendwas mit Medien",
             OccupancyType.FULLY,
         ),
+        ("Dienstag", "13:30 - 16:00", "P-Seminar MT", "tbd", OccupancyType.PARTIALLY),
     ],
 )
 def test_parse_weekly_plan_data(
@@ -41,7 +47,7 @@ def test_parse_weekly_plan_data(
     location_field: str,
     expected: OccupancyType,
 ):
-    assert _parse_weekly_plan_data(day, time, event_name, location_field).occupancy_type == expected
+    assert _parse_weekly_plan_row(day, time, event_name, location_field).occupancy_type == expected
 
 
 def test_parse_table_returns_occupancies():
@@ -49,6 +55,7 @@ def test_parse_table_returns_occupancies():
     occupancies = parse_weekly_plan(table)  # type: ignore
     assert len(occupancies) > 0
     assert any(o.event_name == "Hobbygruppe" for o in occupancies)
+    assert any(o.occupied_str == "tbd" for o in occupancies)
 
 
 def test_parse_table_skips_empty_events():
@@ -56,3 +63,37 @@ def test_parse_table_skips_empty_events():
     occupancies = parse_weekly_plan(table)
     assert not any(o.begin.weekday == 1 for o in occupancies)
     assert not any(o.end and o.end.weekday == 1 for o in occupancies)
+
+
+@pytest.mark.parametrize(
+    "event_date,event_name,time_str,location_field,expected",
+    [
+        ("2026-05-01", "Turnier", "10:00 - 18:00", "Feld 1, 2, 3", OccupancyType.PARTIALLY),
+        ("2026-05-01", "Turnier", "10:00 - 18:00", "Feld 4", OccupancyType.PARTIALLY),
+        ("2026-05-01", "Turnier", "10:00 - 18:00", "Hauptfeld", OccupancyType.PARTIALLY),
+        ("2026-05-01", "Turnier", "10:00 - 18:00", "Sonderfeld Mitte", OccupancyType.PARTIALLY),
+        ("2026-05-01", "Turnier", "10:00 - 18:00", "komplett", OccupancyType.FULLY),
+        ("2026-05-01", "Turnier", "10:00 - 18:00", "Komplett", OccupancyType.FULLY),
+        ("2026-05-01", "Turnier", "10:00 - 18:00", "hütten", OccupancyType.PARTIALLY),
+        ("2026-05-01", "Turnier", "10:00 - 18:00", "Hütten Nord", OccupancyType.PARTIALLY),
+        ("2026-05-01", "Turnier", "10:00 - 18:00", "-", OccupancyType.NONE),
+        ("2026-05-01", "Turnier", "10:00 - 18:00", "", OccupancyType.NONE),
+    ],
+)
+def test_parse_event_calendar_row(
+    event_date: str,
+    event_name: str,
+    time_str: str,
+    location_field: str,
+    expected: OccupancyType,
+):
+    result = _parse_event_calendar_row(event_date, event_name, time_str, location_field)
+    assert result.occupancy_type == expected
+    assert result.event_name == event_name
+
+
+def test_parse_event_calendar_row_propagates_fields():
+    result = _parse_event_calendar_row("2026-06-15", "Sommerfest", "14:00 - 20:00", "Feld 1")
+    assert result.event_name == "Sommerfest"
+    assert result.occupied_str == "Feld 1"
+    assert result.time_str == "14:00 - 20:00"
