@@ -62,6 +62,10 @@ def test_reset_at_5am(service: InternalService):
     assert service._internal_data.last_device_on_site is None  # type: ignore
 
 
+@pytest.mark.skipif(
+    datetime.now(tz=ZoneInfo("Europe/Berlin")).hour >= 5 and datetime.now(tz=ZoneInfo("Europe/Berlin")).hour < 6,
+    reason="Test is not reliable during the hour after 5am due to time-based reset logic",
+)
 def test_no_reset_if_same_virtual_day(service: InternalService):
     now = datetime.now(tz=ZoneInfo("Europe/Berlin"))
     service._last_updated = now - timedelta(hours=1)  # type: ignore
