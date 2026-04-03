@@ -1,4 +1,9 @@
+import json
+import os
+import threading
 from typing import ClassVar, Self
+
+from readerwriterlock import rwlock
 
 from app.services.PersistentCollections import DictSerializable
 
@@ -19,11 +24,11 @@ class Warden(DictSerializable):
     def __init__(self, name: str, device_macs: list[str] | None = None, device_names: list[str] | None = None):
         self._name = name
         self._device_macs = [mac.lower() for mac in (device_macs or [])]
-        self._device_names = [name.lower() for name in (device_names or [])]
+        self._device_names = [n.lower() for n in (device_names or [])]
 
     @classmethod
     def from_dict(cls, d: dict[str, str]) -> Self:
-        warden = Wardens.by_name(d["name"])
+        warden = WardenStore.get_instance().by_name(d["name"])
         return cls(
             name=warden.name,
             device_macs=warden.device_macs,
@@ -34,32 +39,97 @@ class Warden(DictSerializable):
         return {"name": self.name}
 
 
-class Wardens:
-    _team: ClassVar[list[Warden]] = [
-        Warden(
-            "Flo",
-            [
-                "26:2d:12:cd:58:23",  # MacBook
-                "aa:1a:9e:2e:aa:eb",  # Samsung Galaxy S24+
-            ],
-        ),
-        Warden("Schnapsi", ["B2:38:95:80:29:D7", "74:60:FA:A2:94:E3"]),
-        Warden("Kika", ["5a:5f:6e:2e:d3:ce"]),
-        Warden("Jannik"),
-    ]
+class WardenStore:
+    _instance: ClassVar["WardenStore | None"] = None
+    _instance_lock: ClassVar[threading.Lock] = threading.Lock()
 
+    def __init__(self, path: str):
+        self._path = path
+        self._lock = rwlock.RWLockFair()
+        self._wardens: list[Warden] = []
+        self._load()
+
+    @classmethod
+    def get_instance(cls) -> "WardenStore":
+        if cls._instance is None:
+            with cls._instance_lock:
+                if cls._instance is None:
+                    path = os.path.join(os.environ["LOCAL_DATA_PATH"], "internal", "wardens.json")
+                    cls._instance = cls(path)
+        return cls._instance
+
+    def _warden_to_raw(self, w: Warden) -> dict[str, str | list[str]]:
+        return {"name": w.name, "device_macs": w.device_macs, "device_names": w.device_names}
+
+    def _load(self) -> None:
+        if os.path.exists(self._path):
+            with open(self._path, encoding="utf-8") as f:
+                data: dict[str, list[dict[str, str | list[str]]]] = json.load(f)
+            self._wardens = [
+                Warden(
+                    str(w["name"]),
+                    [str(m) for m in w.get("device_macs", [])],  # type: ignore[union-attr]
+                    [str(n) for n in w.get("device_names", [])],  # type: ignore[union-attr]
+                )
+                for w in data.get("wardens", [])
+            ]
+
+    def _save(self) -> None:
+        os.makedirs(os.path.dirname(self._path), exist_ok=True)
+        with open(self._path, "w", encoding="utf-8") as f:
+            json.dump({"wardens": [self._warden_to_raw(w) for w in self._wardens]}, f, indent=2, ensure_ascii=False)
+
+    def get_all(self) -> list[Warden]:
+        with self._lock.gen_rlock():
+            return [*self._wardens]
+
+    def by_name(self, name: str) -> Warden:
+        with self._lock.gen_rlock():
+            for warden in self._wardens:
+                if warden.name.lower() == name.lower():
+                    return warden
+        raise ValueError(f"No warden found with name '{name}'")
+
+    def first_or_none(self, device_mac: str | None, device_name: str | None) -> Warden | None:
+        with self._lock.gen_rlock():
+            for warden in self._wardens:
+                if (device_mac and device_mac.lower() in warden.device_macs) or (
+                    device_name and device_name.lower() in warden.device_names
+                ):
+                    return warden
+        return None
+
+    def add(self, warden: Warden) -> None:
+        with self._lock.gen_wlock():
+            for w in self._wardens:
+                if w.name.lower() == warden.name.lower():
+                    raise ValueError(f"Warden with name '{warden.name}' already exists")
+            self._wardens.append(warden)
+            self._save()
+
+    def update(self, name: str, updated: Warden) -> Warden:
+        with self._lock.gen_wlock():
+            for i, w in enumerate(self._wardens):
+                if w.name.lower() == name.lower():
+                    self._wardens[i] = updated
+                    self._save()
+                    return updated
+        raise ValueError(f"No warden found with name '{name}'")
+
+    def delete(self, name: str) -> None:
+        with self._lock.gen_wlock():
+            original_len = len(self._wardens)
+            self._wardens = [w for w in self._wardens if w.name.lower() != name.lower()]
+            if len(self._wardens) == original_len:
+                raise ValueError(f"No warden found with name '{name}'")
+            self._save()
+
+
+class Wardens:
     @staticmethod
     def first_or_none(device_mac: str | None, device_name: str | None) -> Warden | None:
-        for warden in Wardens._team:
-            if (device_mac and device_mac.lower() in warden.device_macs) or (
-                device_name and device_name.lower() in warden.device_names
-            ):
-                return warden
-        return None
+        return WardenStore.get_instance().first_or_none(device_mac, device_name)
 
     @staticmethod
     def by_name(name: str) -> Warden:
-        for warden in Wardens._team:
-            if warden.name.lower() == name.lower():
-                return warden
-        raise ValueError(f"No warden found with name {name}")
+        return WardenStore.get_instance().by_name(name)
