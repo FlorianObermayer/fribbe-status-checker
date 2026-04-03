@@ -157,9 +157,13 @@ def sitemap():
 
 
 @app.get("/", response_class=HTMLResponse, tags=["HTML"])
-async def get_html(for_date: str = "today"):  # keep unused variable for api reference
+async def get_html(request: Request, for_date: str = "today"):  # keep unused variable for api reference
+    api_key = request.session.get("api_key")
+    signed_in = EphemeralAPIKeyStore.is_key_valid(api_key)
     with open("app/static/index.html") as f:
-        return HTMLResponse(f.read())
+        content = f.read()
+    content = content.replace("__SIGNED_IN__", json.dumps(signed_in))
+    return HTMLResponse(content)
 
 
 @app.get("/api/status", response_model=StatusResponse, tags=["Status"])
@@ -424,7 +428,9 @@ async def get_notification_preview(
     __: str = Depends(HybridAuth()),
 ):  # keep unused variable for api reference
     with open("app/static/index.html") as f:
-        return HTMLResponse(f.read())
+        content = f.read()
+    content = content.replace("__SIGNED_IN__", json.dumps(True))
+    return HTMLResponse(content)
 
 
 def sanitize_next(next_url: str) -> str:
