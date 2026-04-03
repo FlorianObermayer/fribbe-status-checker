@@ -4,7 +4,7 @@ A FastAPI-based status checker for [Fribbe Beach](https://fribbebeach.de), runni
 
 ## Features
 
-- **Presence detection** — Polls a router connection data to count connected devices and report a presence level (`empty` / `few` / `many`)
+- **Presence detection** — Polls router connection data to count connected devices and report a presence level (`empty` / `few` / `many`)
 - **Occupancy parsing** — Scrapes the Fribbe Beach weekly plan and event calendar to determine booking status for any given date
 - **Notifications** — Create and manage Markdown-formatted notifications with optional validity windows
 - **REST API** — JSON API with API key + session-cookie hybrid authentication
