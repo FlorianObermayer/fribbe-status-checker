@@ -1,20 +1,38 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
         {
-            "cwd": "${workspaceFolder}",
-            "name": "Python Debugger: FastAPI",
+            "name": "Python: Debug",
             "type": "debugpy",
             "request": "launch",
             "module": "uvicorn",
             "args": [
                 "app.main:app",
+                "--host",
+                "0.0.0.0",
+                "--port",
+                "8007"
+            ],
+            "jinja2": true,
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "envFile": "${workspaceFolder}/.env.dev"
+        },
+        {
+            "name": "Python: Run (watch)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "app.main:app",
+                "--host",
+                "0.0.0.0",
+                "--port",
+                "8007",
                 "--reload"
             ],
-            "jinja": true
+            "jinja2": true,
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "envFile": "${workspaceFolder}/.env.dev"
         }
     ]
 }
