@@ -1,8 +1,0 @@
-huawei-lte-api>=1.11.0
-fastapi[standard]>=0.115.12
-beautifulsoup4>=4.13.4
-dateparser>=1.2.1
-readerwriterlock>=1.0.9
-markdown>=3.8.2
-starlette-session>=0.4.3
-secure >=1.0.1
