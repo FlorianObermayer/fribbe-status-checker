@@ -27,7 +27,7 @@ class InternalPersistentData(PersistentPathProvider):
 
     active_devices_ct = persistent(int, "active_devices_ct", 0)
 
-    wardens_on_site = persistent(list[Warden], "wardens_on_site", list())
+    wardens_on_site = persistent(list[Warden], "wardens_on_site", [])
 
     def get_path(self) -> str:
         return path.join(os.environ["LOCAL_DATA_PATH"], "internal")
