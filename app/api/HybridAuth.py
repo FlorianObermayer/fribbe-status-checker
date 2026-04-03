@@ -4,6 +4,13 @@ from app.api.EphemeralAPIKeyHeader import EphemeralAPIKeyHeader
 from app.api.EphemeralAPIKeyStore import EphemeralAPIKeyStore
 
 
+class AuthRedirectException(Exception):
+    """Raised by PageAuth when the user is not authenticated. Handled by a registered exception handler that redirects to /auth."""
+
+    def __init__(self, next_url: str):
+        self.next_url = next_url
+
+
 class HybridAuth:
     def __init__(
         self,
@@ -38,3 +45,19 @@ class HybridAuth:
             raise HTTPException(status_code=401, detail="Not authenticated")
 
         return None
+
+
+class PageAuth:
+    """Auth dependency for HTML page routes. Redirects to /auth instead of returning 401."""
+
+    def __init__(self) -> None:
+        self._hybrid_auth = HybridAuth(auto_error=False)
+
+    async def __call__(self, request: Request) -> str:
+        api_key = await self._hybrid_auth(request)
+        if api_key is None:
+            next_path = request.url.path
+            if request.url.query:
+                next_path += "?" + request.url.query
+            raise AuthRedirectException(next_url=next_path)
+        return api_key
