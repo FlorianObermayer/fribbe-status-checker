@@ -1,0 +1,6 @@
+.env
+.env.*
+!.env.template
+dev-data/
+.venv/
+.git/
