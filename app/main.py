@@ -33,9 +33,13 @@ from app.api.Responses import (
     PostNotificationResponse,
     PresenceResponse,
     StatusResponse,
+    WardenListResponse,
+    WardenResponse,
 )
 from app.api.Schema import requires_auth_extra, update_openapi_schema
 from app.services.internal.InternalService import InternalService
+from app.services.internal.Model import Warden
+from app.services.internal.WardenStore import WardenStore
 from app.services.MessageService import MessageService
 from app.services.NotificationService import NotificationService
 from app.services.occupancy.Model import OccupancyType
@@ -441,6 +445,83 @@ async def config(threshold_min_non_empty_ct: int = Body(None, gt=0), threshold_m
         thresholds.min_many_ct = threshold_min_many_ct
 
     return Response()
+
+
+@app.get(
+    "/api/internal/wardens",
+    response_model=WardenListResponse,
+    tags=["Internal"],
+    openapi_extra=requires_auth_extra(),
+)
+def list_wardens(_: str = Depends(HybridAuth())) -> WardenListResponse:
+    wardens = WardenStore.get_instance().get_all()
+    return WardenListResponse(
+        wardens=[WardenResponse(name=w.name, device_macs=w.device_macs, device_names=w.device_names) for w in wardens]
+    )
+
+
+@app.post(
+    "/api/internal/wardens",
+    response_model=WardenResponse,
+    status_code=201,
+    tags=["Internal"],
+    openapi_extra=requires_auth_extra(),
+)
+def create_warden(
+    name: str = Body(..., embed=True),
+    device_macs: list[str] = Body([], embed=True),
+    device_names: list[str] = Body([], embed=True),
+    _: str = Depends(HybridAuth()),
+) -> WardenResponse:
+    warden = Warden(name, device_macs, device_names)
+    try:
+        WardenStore.get_instance().add(warden)
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    return WardenResponse(name=warden.name, device_macs=warden.device_macs, device_names=warden.device_names)
+
+
+@app.put(
+    "/api/internal/wardens/{name}",
+    response_model=WardenResponse,
+    tags=["Internal"],
+    openapi_extra=requires_auth_extra(),
+)
+def update_warden(
+    name: str,
+    new_name: str | None = Body(None, embed=True),
+    device_macs: list[str] | None = Body(None, embed=True),
+    device_names: list[str] | None = Body(None, embed=True),
+    _: str = Depends(HybridAuth()),
+) -> WardenResponse:
+    store = WardenStore.get_instance()
+    try:
+        existing = store.by_name(name)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    updated = Warden(
+        new_name if new_name is not None else existing.name,
+        device_macs if device_macs is not None else existing.device_macs,
+        device_names if device_names is not None else existing.device_names,
+    )
+    try:
+        store.update(name, updated)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    return WardenResponse(name=updated.name, device_macs=updated.device_macs, device_names=updated.device_names)
+
+
+@app.delete(
+    "/api/internal/wardens/{name}",
+    status_code=204,
+    tags=["Internal"],
+    openapi_extra=requires_auth_extra(),
+)
+def delete_warden(name: str, _: str = Depends(HybridAuth())) -> None:
+    try:
+        WardenStore.get_instance().delete(name)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 update_openapi_schema(app)

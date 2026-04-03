@@ -66,3 +66,13 @@ class ApiKeys(BaseModel):
 
 class PostNotificationResponse(BaseModel):
     notification_id: str
+
+
+class WardenResponse(BaseModel):
+    name: str
+    device_macs: list[str]
+    device_names: list[str]
+
+
+class WardenListResponse(BaseModel):
+    wardens: list[WardenResponse]

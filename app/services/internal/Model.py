@@ -1,4 +1,4 @@
-from typing import ClassVar, Self
+from typing import Self
 
 from app.services.PersistentCollections import DictSerializable
 
@@ -19,47 +19,25 @@ class Warden(DictSerializable):
     def __init__(self, name: str, device_macs: list[str] | None = None, device_names: list[str] | None = None):
         self._name = name
         self._device_macs = [mac.lower() for mac in (device_macs or [])]
-        self._device_names = [name.lower() for name in (device_names or [])]
+        self._device_names = [n.lower() for n in (device_names or [])]
 
     @classmethod
     def from_dict(cls, d: dict[str, str]) -> Self:
-        warden = Wardens.by_name(d["name"])
-        return cls(
-            name=warden.name,
-            device_macs=warden.device_macs,
-            device_names=warden.device_names,
-        )
+        return cls(name=d["name"])
 
     def to_dict(self) -> dict[str, str]:
         return {"name": self.name}
 
 
 class Wardens:
-    _team: ClassVar[list[Warden]] = [
-        Warden(
-            "Flo",
-            [
-                "REDACTED_MAC",  # MacBook
-                "REDACTED_MAC",  # Samsung Galaxy S24+
-            ],
-        ),
-        Warden("REDACTED_NAME", ["REDACTED_MAC", "REDACTED_MAC"]),
-        Warden("REDACTED_NAME", ["REDACTED_MAC"]),
-        Warden("REDACTED_NAME"),
-    ]
+    @staticmethod
+    def first_or_none(device_mac: str | None, device_name: str | None) -> "Warden | None":
+        from app.services.internal.WardenStore import WardenStore
+
+        return WardenStore.get_instance().first_or_none(device_mac, device_name)
 
     @staticmethod
-    def first_or_none(device_mac: str | None, device_name: str | None) -> Warden | None:
-        for warden in Wardens._team:
-            if (device_mac and device_mac.lower() in warden.device_macs) or (
-                device_name and device_name.lower() in warden.device_names
-            ):
-                return warden
-        return None
+    def by_name(name: str) -> "Warden":
+        from app.services.internal.WardenStore import WardenStore
 
-    @staticmethod
-    def by_name(name: str) -> Warden:
-        for warden in Wardens._team:
-            if warden.name.lower() == name.lower():
-                return warden
-        raise ValueError(f"No warden found with name {name}")
+        return WardenStore.get_instance().by_name(name)
