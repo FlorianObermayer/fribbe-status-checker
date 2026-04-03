@@ -10,9 +10,11 @@
         "Beachwart",
         "beautifulsoup",
         "bissle",
+        "charliermarsh",
         "chillen",
         "chillrunde",
         "chromecast",
+        "cooldown",
         "dateparser",
         "debugpy",
         "devcontainers",
@@ -46,6 +48,7 @@
         "PYTHONUNBUFFERED",
         "raspberrypi",
         "readerwriterlock",
+        "redoc",
         "rlock",
         "rwlock",
         "schnapp",
@@ -54,6 +57,7 @@
         "tageszeitabhängige",
         "Unparameterized",
         "uvicorn",
+        "venv",
         "volleyballpartner",
         "wlan",
         "wlock"
@@ -64,5 +68,9 @@
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
-    "python.terminal.useEnvFile": true
+    "python.terminal.useEnvFile": true,
+    "editor.formatOnSave": true,
+    "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff"
+    }
 }

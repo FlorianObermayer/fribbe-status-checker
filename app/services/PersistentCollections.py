@@ -5,7 +5,6 @@ from datetime import datetime
 from inspect import isclass
 from typing import (
     Any,
-    Generic,
     Protocol,
     Self,
     TypeVar,
@@ -42,7 +41,7 @@ class ConversionHelper:
         return range(lst[0], lst[-1] + step, step)
 
 
-class PersistentDict(MutableMapping[str, V], Generic[V]):
+class PersistentDict[V](MutableMapping[str, V]):
     def __init__(self, path: str, value_type: type[V]):
         self._path = path
         self._value_type = value_type
@@ -242,7 +241,7 @@ class PersistentDict(MutableMapping[str, V], Generic[V]):
         self._load()
 
 
-class PersistentList(Generic[V]):
+class PersistentList[V]:
     def __init__(self, path: str, value_type: type[V]):
         self._dict: PersistentDict[list[V]] = PersistentDict(path, list[value_type])
         if self._dict.get("items") is None:
@@ -291,7 +290,7 @@ class PersistentList(Generic[V]):
         return self._get_items()
 
 
-class PersistentObject(Generic[V]):
+class PersistentObject[V]:
     """A persistent storage for a single object of type V.
 
     Similar to PersistentList but only stores and manages a single value.
@@ -348,7 +347,7 @@ class PersistentPathProvider(Protocol):
         ...
 
 
-class PersistentDescriptor(Generic[V]):
+class PersistentDescriptor[V]:
     def __init__(self, name: str, field_type: type[V], default_value: V, storage_attr: str, lock: rwlock.RWLockFair):
         self._name = name
         self._field_type = field_type
@@ -386,7 +385,7 @@ class PersistentDescriptor(Generic[V]):
                 storage.set(value)
 
 
-def persistent(field_type: type[V], name: str, default_value: V) -> PersistentDescriptor[V]:
+def persistent[V](field_type: type[V], name: str, default_value: V) -> PersistentDescriptor[V]:
     """Create a persistent field descriptor.
 
     Creates a descriptor that automatically persists the field value to disk.

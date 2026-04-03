@@ -1,6 +1,8 @@
-import pytest
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+
+import pytest
+
 from app.services.internal.InternalService import InternalService
 
 
