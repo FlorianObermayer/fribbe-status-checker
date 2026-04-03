@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Literal
+from typing import Literal, TypeGuard, get_args
 from zoneinfo import ZoneInfo
 
 from bs4 import Tag
@@ -10,10 +10,19 @@ from app.services.occupancy.Model import Occupancy, OccupancySource, OccupancyTy
 Weekday = Literal["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"]
 
 
+def _is_weekday(value: str) -> TypeGuard[Weekday]:
+    return value in get_args(Weekday)
+
+
 def _verify_table_headers(table: Tag, *headers: str):
-    actual_headers = [th.get_text(strip=True) for th in table.find("tr").find_all("th")]
+    row = table.find("tr")
+    if not row:
+        raise Exception("Table does not contain any rows.")
+    actual_headers = [th.get_text(strip=True) for th in row.find_all("th")]
     if list(headers) != actual_headers:
-        raise Exception(f"Table headers do not match expected.\nexpected: {list(headers)}\nactual: {actual_headers}")
+        raise Exception(
+            f"Table headers do not match expected.\nexpected: {list(headers)}\nactual: {actual_headers}\nrow: {row}"
+        )
 
 
 def parse_weekly_plan(weekly_plan_table: Tag) -> list[Occupancy]:
@@ -28,14 +37,14 @@ def parse_weekly_plan(weekly_plan_table: Tag) -> list[Occupancy]:
         # Check for day row (colspan=3)
         if len(cells) == 1 and cells[0].has_attr("colspan") and cells[0]["colspan"] == "3":
             day_text = cells[0].get_text(strip=True)
-            if day_text:
+            if _is_weekday(day_text):
                 current_day = day_text
             continue
         # Skip empty rows
         if all(cell.get_text(strip=True) == "" for cell in cells):
             continue
         # Normal event row
-        if len(cells) == 3 and current_day and isinstance(current_day, str):
+        if len(cells) == 3 and current_day:
             event = str(cells[0].get_text(strip=True))
             time_str = str(cells[1].get_text(strip=True))
             location_field = str(cells[2].get_text(strip=True))
