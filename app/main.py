@@ -84,7 +84,7 @@ async def log_requests(request: Request, call_next: Callable[[Request], Awaitabl
     logger = logging.getLogger("uvicorn.error")
     api_key = request.headers.get("api_key")
     if api_key:
-        logger.info(f"-H api_key[:4]={api_key[:4]}")
+        logger.info(f"-H api_key[:2]={api_key[:2]}")
     response = await call_next(request)
     return response
 

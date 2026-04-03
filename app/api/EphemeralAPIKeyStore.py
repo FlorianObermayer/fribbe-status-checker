@@ -35,7 +35,7 @@ class EphemeralAPIKeyStore:
 
     @staticmethod
     def is_key_valid(key: str | None) -> bool:
-        log_key = key[:4] if key is not None else None
+        log_key = key[:2] if key is not None else None
 
         if key is None:
             logger.info(f"EphemeralAPIKeyStore::is_key_valid(api_key={log_key}...) - key is None)")
