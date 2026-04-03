@@ -20,16 +20,20 @@
             window.location.href = '/';
             return;
         }
-        const resp = await fetch('/auth', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token, next }),
-        });
-        if (resp.ok) {
-            const data = await resp.json();
-            window.location.href = data.redirect;
-            return;
+        try {
+            const resp = await fetch('/auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token, next }),
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                window.location.href = data.redirect;
+                return;
+            }
+            message = 'Ungültiger Schlüssel. Erneut versuchen:';
+        } catch (_error) {
+            message = 'Anmeldung derzeit nicht möglich. Verbindung prüfen und erneut versuchen:';
         }
-        message = 'Ungültiger Schlüssel. Erneut versuchen:';
     }
 })();
