@@ -14,18 +14,7 @@ const easyMDE = new EasyMDE({
     forceSync: true,
 });
 
-document.addEventListener('DOMContentLoaded', () => {
-    // restore api key
-    const savedApiKey = localStorage.getItem('notification_api_key');
-    if (savedApiKey) {
-        document.getElementById('apiKey').value = savedApiKey;
-    }
-});
-
 document.getElementById('submitBtn').addEventListener('click', async function () {
-    const rememberMe = document.getElementById('rememberMe').checked;
-
-    const apiKey = document.getElementById('apiKey').value;
     const message = document.getElementById('message').value;
     const validFrom = document.getElementById('validFrom').value;
     const validUntil = document.getElementById('validUntil').value;
@@ -34,18 +23,6 @@ document.getElementById('submitBtn').addEventListener('click', async function ()
     const resultDiv = document.getElementById('result');
     resultDiv.className = '';
     resultDiv.textContent = '';
-
-    if (rememberMe && apiKey) {
-        localStorage.setItem('notification_api_key', apiKey);
-    } else {
-        localStorage.removeItem('notification_api_key');
-    }
-
-    if (!apiKey) {
-        resultDiv.textContent = 'API Schlüssel ist ein Pflichtfeld - Frag Flo, falls du einen brauchst!';
-        resultDiv.classList.add('error');
-        return;
-    }
 
     if (!message) {
         resultDiv.textContent = 'Nachricht is ein Pflichtfeld';
@@ -66,7 +43,6 @@ document.getElementById('submitBtn').addEventListener('click', async function ()
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'api_key': apiKey
             },
             body: JSON.stringify(payload)
         });
