@@ -50,11 +50,11 @@ def parse_weekly_plan(weekly_plan_table: Tag) -> list[Occupancy]:
             location_field = str(cells[2].get_text(strip=True))
             if event == "" or location_field == "":
                 continue
-            occupancies.append(_parse_weekly_plan_data(current_day, time_str, event, location_field))
+            occupancies.append(_parse_weekly_plan_row(current_day, time_str, event, location_field))
     return occupancies
 
 
-def _parse_weekly_plan_data(day: Weekday, time: str, event_name: str, location_field: str) -> Occupancy:
+def _parse_weekly_plan_row(day: Weekday, time: str, event_name: str, location_field: str) -> Occupancy:
     weekday_map: dict[Weekday, int] = {
         "Montag": 0,
         "Dienstag": 1,
@@ -69,10 +69,11 @@ def _parse_weekly_plan_data(day: Weekday, time: str, event_name: str, location_f
     event_weekday = weekday_map.get(day, today_weekday)
     days_ahead = (event_weekday - today_weekday) % 7
     event_date = today + timedelta(days=days_ahead)
-    match location_field:
+    location_normalized = location_field.lower().strip()
+    match location_normalized:
         case "":
             occupancy_type = OccupancyType.NONE
-        case _ if location_field.lower().startswith("feld"):
+        case _ if location_normalized.startswith("feld"):
             occupancy_type = OccupancyType.PARTIALLY
         case _:
             occupancy_type = OccupancyType.FULLY
@@ -113,29 +114,31 @@ def parse_event_calendar(event_calendar_table: Tag) -> list[Occupancy]:
             except Exception:  # noqa: S112
                 continue
 
-        start_time, end_time = parse_event_times(event_date, time_str)
-
-        # Occupancy type
-        if not location_field or location_field == "-":
-            occupancy_type = OccupancyType.NONE
-        elif location_field.lower().startswith("feld") or "feld" in location_field.lower():
-            occupancy_type = OccupancyType.PARTIALLY
-        elif location_field.lower().startswith("hütten"):
-            occupancy_type = OccupancyType.PARTIALLY
-        elif location_field.lower() == "komplett":
-            occupancy_type = OccupancyType.FULLY
-        else:
-            occupancy_type = OccupancyType.PARTIALLY
-
-        occupancies.append(
-            Occupancy(
-                start_time,
-                end_time,
-                event_name,
-                occupancy_type,
-                OccupancySource.EVENT_CALENDAR,
-                location_field,
-                time_str,
-            )
-        )
+        occupancies.append(_parse_event_calendar_row(event_date, event_name, time_str, location_field))
     return occupancies
+
+
+def _parse_event_calendar_row(event_date: str, event_name: str, time_str: str, location_field: str) -> Occupancy:
+    location_lower = location_field.lower()
+    if not location_field or location_field == "-":
+        occupancy_type = OccupancyType.NONE
+    elif location_lower.startswith("feld") or "feld" in location_lower:
+        occupancy_type = OccupancyType.PARTIALLY
+    elif location_lower.startswith("hütten"):
+        occupancy_type = OccupancyType.PARTIALLY
+    elif location_lower == "komplett":
+        occupancy_type = OccupancyType.FULLY
+    else:
+        occupancy_type = OccupancyType.PARTIALLY
+
+    start_time, end_time = parse_event_times(event_date, time_str)
+
+    return Occupancy(
+        start_time,
+        end_time,
+        event_name,
+        occupancy_type,
+        OccupancySource.EVENT_CALENDAR,
+        location_field,
+        time_str,
+    )
