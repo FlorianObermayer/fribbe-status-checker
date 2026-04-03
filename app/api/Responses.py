@@ -40,7 +40,7 @@ class DetailsResponse(BaseResponse):
 
 
 class ApiKey(BaseModel):
-    key: str = Field(..., min_length=20)
+    key: str = Field(..., min_length=48)
     comment: str
     valid_until: datetime
 
