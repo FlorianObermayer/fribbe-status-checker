@@ -1,15 +1,53 @@
+:root {
+    --color-green: #4caf50;
+    --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+html,
 body {
-    font-family: Arial, sans-serif;
-    max-width: 550px;
-    margin: 0 auto;
-    padding: 20px;
+    max-width: 100vw;
+        overflow-x: hidden;
+    }
+    
+    body {
+        font-family: 'Roboto', sans-serif;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background-color: #f5f5f5;
+        text-align: center;
     line-height: 1.6;
 }
 
+.container {
+    position: relative;
+    background: white;
+    border-radius: 16px;
+    padding: 24px 20px 32px 20px;
+    box-shadow: var(--shadow);
+    max-width: 650px;
+    width: 90%;
+    margin: 8px 0;
+    box-sizing: border-box;
+    text-align: left;
+}
 h1 {
+    font-weight: 500;
     color: #333;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 10px;
+    margin-bottom: 6px;
+        text-align: center;
+    }
+    
+    .subtitle {
+        text-align: center;
+        color: #888;
+        font-size: 0.92rem;
+        margin-top: 0;
+        margin-bottom: 24px;
 }
 
 .form-group {
@@ -19,16 +57,31 @@ h1 {
 label {
     display: block;
     margin-bottom: 5px;
-    font-weight: bold;
+    font-weight: 500;
+        font-size: 0.92rem;
+        color: #444;
 }
 
 input[type="text"],
+input[type="datetime-local"],
 textarea {
     width: 100%;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    padding: 8px 10px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
     box-sizing: border-box;
+    font-family: 'Roboto', sans-serif;
+        font-size: 0.95rem;
+        color: #333;
+        background: #fafafa;
+        transition: border-color 0.2s;
+    }
+    
+    input[type="text"]:focus,
+    input[type="datetime-local"]:focus,
+    textarea:focus {
+        outline: none;
+        border-color: #999;
 }
 
 textarea {
@@ -36,79 +89,92 @@ textarea {
     resize: vertical;
 }
 
-button {
-    background-color: #4CAF50;
-    color: white;
-    padding: 10px 15px;
-    border: none;
-    border-radius: 4px;
+#submitBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 24px;
+    border: 1px solid #bbb;
+    background: #f5f5f5;
+    color: #444;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 0.95rem;
+        font-family: 'Roboto', sans-serif;
+        font-weight: 500;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        transition: background 0.2s, box-shadow 0.2s;
+        width: 100%;
 }
 
-button:hover {
-    background-color: #45a049;
+#submitBtn svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+
+#submitBtn:hover {
+    background: #e0e0e0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 #result {
-    margin-top: 20px;
-    padding: 10px;
-    border-radius: 4px;
+    margin-top: 16px;
+        padding: 12px;
+        border-radius: 10px;
+        font-size: 0.95rem;
+    }
+    
+    #result:empty {
+        display: none;
 }
 
 .success {
-    background-color: #dff0d8;
-    color: #3c763d;
-    border: 1px solid #d6e9c6;
+    background-color: #e8f5e9;
+        color: #2e7d32;
+        border: 1px solid #c8e6c9;
 }
 
 .error {
-    background-color: #f2dede;
-    color: #a94442;
-    border: 1px solid #ebccd1;
-}
-
-.api-key-group {
-    margin-bottom: 20px;
-    padding: 15px;
-    background-color: #f9f9f9;
-    border-radius: 4px;
-}
-.api-key-input {
-    width: 100%;
+    background-color: #ffebee;
+        color: #c62828;
+        border: 1px solid #ffcdd2;
 }
 
 .CodeMirror {
     background: #fffbe7;
     border-radius: 12px;
-    max-width: 550px;
+    max-width: 100%;
 }
 
-/* Button-Stil */
+/* Preview button (in result) */
 .preview-button {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background-color: #4CAF50;
-    color: white !important;
-    padding: 6px 12px;
-    border-radius: 4px;
+    padding: 6px 14px;
+        border-radius: 20px;
+        border: 1px solid #bbb;
+        background: #f5f5f5;
+        color: #444 !important;
     text-decoration: none !important;
-    margin-left: 10px;
-    font-size: 14px;
-    transition: background-color 0.3s;
+    font-size: 0.9rem;
+        font-weight: 500;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        transition: background 0.2s, box-shadow 0.2s;
 }
 
 .preview-button:hover {
-    background-color: #45a049;
+    background: #e0e0e0;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-/* Icon-Anpassung */
 .preview-button svg {
-    margin-right: 4px;
+    width: 16px;
+        height: 16px;
 }
 
-/* Erfolgsmeldung-Ausrichtung */
 .success-message {
     display: flex;
     align-items: center;
@@ -118,7 +184,7 @@ button:hover {
 
 .datetime-group {
     display: flex;
-    gap: 20px;
+    gap: 16px;
     margin-bottom: 15px;
 }
 
@@ -127,9 +193,80 @@ button:hover {
     margin-bottom: 0;
 }
 
+/* Nav button (back) — matches admin-btn style from main page */
+#nav-btn-group {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+}
+
+.nav-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid #bbb;
+    background: #f5f5f5;
+    color: #444;
+    cursor: pointer;
+    text-decoration: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: background 0.2s, box-shadow 0.2s;
+    padding: 0;
+}
+
+.nav-btn svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+}
+
+.nav-btn:hover {
+    background: #e0e0e0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.nav-btn[data-tooltip]::before {
+    content: attr(data-tooltip);
+    position: absolute;
+    right: calc(100% + 10px);
+    top: 50%;
+    transform: translateY(-50%);
+    white-space: nowrap;
+    background: rgba(50, 50, 50, 0.88);
+    color: #fff;
+    font-size: 0.78rem;
+    padding: 4px 9px;
+    border-radius: 5px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.nav-btn[data-tooltip]:hover::before {
+    opacity: 1;
+}
 @media (max-width: 600px) {
+    .container {
+            padding: 10px 12px 24px 12px;
+            border-radius: 0;
+            max-width: 100vw;
+            width: 100%;
+        }
+    
+        h1 {
+            font-size: 1.3rem;
+        }
     .datetime-group {
         flex-direction: column;
-        gap: 15px;
+        gap: 12px;
     }
 }

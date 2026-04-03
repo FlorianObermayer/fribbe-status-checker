@@ -62,9 +62,7 @@ async function copyTextToClipboard(text) {
 
     const textArea = document.createElement('textarea');
     textArea.value = text;
-    textArea.style.position = 'fixed';
-    textArea.style.left = '-9999px';
-    textArea.style.top = '-9999px';
+    textArea.className = 'clipboard-textarea';
     document.body.appendChild(textArea);
     textArea.focus();
     textArea.select();
@@ -147,8 +145,7 @@ async function updateStatus() {
         let occMsgElem = document.getElementById('occupancy-message');
         const occCard = document.getElementById('occupancy-card');
         if (Array.isArray(data.occupancy.messages) && data.occupancy.messages.length > 0) {
-            occCard.style.display = '';
-            occMsgElem.innerHTML = '<ul style="margin:0; padding-left:24px;text-align:left;">' +
+            occMsgElem.innerHTML = '<ul class="occupancy-list">' +
                 data.occupancy.messages.map(msg => `<li>${msg}</li>`).join('') + '</ul>';
         } else {
             occMsgElem.textContent = 'Keine Belegungen oder Veranstaltungen!';
@@ -263,15 +260,19 @@ function hashString(str) {
 async function createNotificationsPreviewControls() {
     if (!isNotificationsPreview()) return;
 
-    // Remove existing controls if any
-    const existingControls = document.querySelector('.notification-controls');
-    if (existingControls) existingControls.remove();
+    // Remove existing preview controls if any
+    document.querySelectorAll('.preview-control').forEach(el => el.remove());
 
-    const controls = document.createElement('div');
-    controls.className = 'notification-controls';
+    const adminGroup = document.getElementById('admin-btn-group');
+    if (!adminGroup) return;
+    adminGroup.classList.add('admin-visible');
+
+    // --- Filter select styled as pill ---
+    const filterWrapper = document.createElement('div');
+    filterWrapper.className = 'preview-control filter-wrapper';
 
     const filterSelect = document.createElement('select');
-    filterSelect.className = 'filter-select';
+    filterSelect.className = 'filter-select preview-control';
 
     let filterOptions = [];
     try {
@@ -285,7 +286,6 @@ async function createNotificationsPreviewControls() {
         opt.textContent = label;
         filterSelect.appendChild(opt);
     });
-    // Set current selection from URL, defaulting to all_active
     const currentIds = getNotificationIdsFromUrl();
     if (currentIds.length === 1 && filterOptions.some(o => o.value === currentIds[0])) {
         filterSelect.value = currentIds[0];
@@ -300,35 +300,33 @@ async function createNotificationsPreviewControls() {
         pollNotifications();
     });
 
+    filterWrapper.appendChild(filterSelect);
+
+    // --- Enable button ---
     const enableBtn = document.createElement('button');
-    enableBtn.className = 'enable-btn';
-    enableBtn.textContent = 'Aktivieren';
+    enableBtn.className = 'admin-btn preview-control';
+    enableBtn.title = 'Aktivieren';
+    enableBtn.dataset.tooltip = 'Aktivieren';
+    enableBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>`;
 
+    // --- Delete button ---
     const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'delete-btn';
-    deleteBtn.textContent = 'Löschen';
+    deleteBtn.className = 'admin-btn preview-control';
+    deleteBtn.title = 'Löschen';
+    deleteBtn.dataset.tooltip = 'Löschen';
+    deleteBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
 
-    controls.appendChild(filterSelect);
-    controls.appendChild(enableBtn);
-    controls.appendChild(deleteBtn);
+    // Insert preview controls before the first existing admin-btn
+    const firstAdminBtn = adminGroup.querySelector('.admin-btn:not(.preview-control)');
+    adminGroup.insertBefore(filterWrapper, firstAdminBtn);
+    adminGroup.insertBefore(enableBtn, firstAdminBtn);
+    adminGroup.insertBefore(deleteBtn, firstAdminBtn);
 
-    document.body.appendChild(controls);
-
-    let statusTimeout;
-
+    // --- Status toast helper ---
     const showStatus = (message, isError = false) => {
-        const statusMsg = document.createElement('div');
-        statusMsg.className = `status-message ${isError ? 'error' : 'success'}`;
-        statusMsg.textContent = message;
-        controls.appendChild(statusMsg);
-
-        if (statusTimeout) clearTimeout(statusTimeout);
-        statusTimeout = setTimeout(() => {
-            statusMsg.remove();
-        }, 3000);
+        showToast(message, isError ? 'error' : 'success');
     };
 
-    // Add click handlers
     enableBtn.addEventListener('click', async () => {
         const notificationIds = getNotificationIdsFromUrl();
         if (notificationIds.length !== 1 || notificationIds[0] === 'all_active') {
@@ -340,7 +338,7 @@ async function createNotificationsPreviewControls() {
             await enableNotification(notificationIds[0]);
             showStatus('Notification erfolgreich aktiviert');
             setTimeout(async () => {
-                await pollNotifications();  // Refresh the preview
+                await pollNotifications();
             }, 1500);
         } catch (error) {
             showStatus(`Fehler: ${error.message}`, true);
@@ -401,31 +399,37 @@ async function pollNotifications() {
             }
 
             if (!notificationDismissed) {
-                box.style.display = '';
+                box.classList.remove('hidden');
             } else {
-                box.style.display = 'none';
+                box.classList.add('hidden');
             }
         } else {
-            box.style.display = 'none';
+            box.classList.add('hidden');
             localStorage.removeItem('notificationDismissedHash');
         }
         await createNotificationsPreviewControls();
         if (isNotificationsPreview()) {
             htmlDiv.querySelectorAll('[data-notification-id]').forEach(div => {
-                div.style.position = 'relative';
+                div.classList.add('notification-preview-item');
 
                 const container = document.createElement('div');
                 container.className = 'notification-id-controls';
 
-                const badge = document.createElement('span');
-                badge.className = 'notification-id-badge';
-                badge.textContent = div.dataset.notificationId;
+                const btn = document.createElement('button');
+                btn.className = 'notification-id-btn';
                 const nid = div.dataset.notificationId;
                 const currentIds = getNotificationIdsFromUrl();
                 const isSelected = currentIds.length === 1 && currentIds[0] === nid;
-                badge.title = isSelected ? 'Klicken zum Kopieren' : 'Klicken zum Auswählen';
-                if (isSelected) badge.classList.add('selected');
-                badge.addEventListener('click', async () => {
+                btn.dataset.tooltip = nid;
+                btn.title = nid;
+
+                const filterIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>`;
+                const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+
+                btn.innerHTML = isSelected ? copyIcon : filterIcon;
+                if (isSelected) btn.classList.add('selected');
+
+                btn.addEventListener('click', async () => {
                     if (isSelected) {
                         try {
                             await copyTextToClipboard(nid);
@@ -442,13 +446,13 @@ async function pollNotifications() {
                     }
                 });
 
-                container.appendChild(badge);
+                container.appendChild(btn);
                 div.prepend(container);
             });
         }
     } catch (e) {
         // ignore box on error
-        document.getElementById('notification-box').style.display = 'none';
+        document.getElementById('notification-box').classList.add('hidden');
         localStorage.removeItem('notificationDismissedHash');
         console.error(e)
     }
@@ -465,7 +469,7 @@ document.addEventListener('DOMContentLoaded', () => {
         String(today.getDate()).padStart(2, '0');
     if (dateInput) {
         dateInput.value = urlForDate || todayStr;
-        dateInput.max = new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString().slice(0, 10); // max 1 Jahr in Zukunft
+        dateInput.max = new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString().slice(0, 10); // max 1 year in future
         dateInput.min = todayStr
         dateInput.addEventListener('change', (e) => {
             const val = e.target.value;
@@ -494,13 +498,27 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(updateStatus, 30000); // Refresh status every 30 seconds
     setupLegendToggle();
 
+    const signedIn = document.body.dataset.signedIn === 'true';
+    const adminBtnGroup = document.getElementById('admin-btn-group');
+    if (signedIn && adminBtnGroup) {
+        adminBtnGroup.classList.add('admin-visible');
+
+        const signoutBtn = document.getElementById('signout-btn');
+        if (signoutBtn) {
+            signoutBtn.addEventListener('click', async () => {
+                await fetch('/signout', { method: 'POST' });
+                window.location.href = '/';
+            });
+        }
+    }
+
     const closeBtn = document.getElementById('notification-close');
     if (closeBtn) {
         closeBtn.addEventListener('click', () => {
             htmlDiv = document.getElementById('notification-html')
             hash = hashString(htmlDiv.textContent);
 
-            document.getElementById('notification-box').style.display = 'none';
+            document.getElementById('notification-box').classList.add('hidden');
             notificationDismissed = true;
             if (hash !== null) {
                 localStorage.setItem('notificationDismissedHash', hash);
