@@ -7,6 +7,7 @@ import secrets
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
 from typing import Annotated
+from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 import markdown
@@ -25,7 +26,7 @@ from secure import ContentSecurityPolicy, Secure
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.api.EphemeralAPIKeyStore import EphemeralAPIKeyStore
-from app.api.HybridAuth import HybridAuth
+from app.api.HybridAuth import AuthRedirectException, HybridAuth, PageAuth
 from app.api.Requests import NOTIFICATION_FILTERS, NotificationQuery
 from app.api.Responses import (
     ApiKey,
@@ -71,6 +72,12 @@ app.add_middleware(
     max_age=60 * 60 * 24 * 7,  # 7 Days or until api key expires
     https_only=os.environ.get("HTTPS_ONLY", "true").lower() == "true",
 )
+
+
+@app.exception_handler(AuthRedirectException)
+async def auth_redirect_handler(request: Request, exc: AuthRedirectException) -> RedirectResponse:
+    safe_next = sanitize_next(exc.next_url)
+    return RedirectResponse(url=f"/auth?next={quote(safe_next, safe='/:?=&')}", status_code=302)
 
 
 @app.middleware("http")
@@ -425,7 +432,7 @@ async def update_notification(
 )
 async def get_notification_preview(
     _: NotificationQuery = Query(...),
-    __: str = Depends(HybridAuth()),
+    __: str = Depends(PageAuth()),
 ):  # keep unused variable for api reference
     with open("app/static/index.html") as f:
         content = f.read()
@@ -468,9 +475,7 @@ async def signout(request: Request):
 
 
 @app.get("/notification-create", response_class=HTMLResponse, tags=["Notifications", "HTML"])
-async def get_notification_builder(api_key: str | None = Depends(HybridAuth(auto_error=False))):
-    if api_key is None:
-        return RedirectResponse(url="/auth?next=/notification-create", status_code=302)
+async def get_notification_builder(_: str = Depends(PageAuth())):
     with open("app/static/notification-create.html") as f:
         return HTMLResponse(f.read())
 
