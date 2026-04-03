@@ -38,7 +38,8 @@ from app.api.Responses import (
 )
 from app.api.Schema import requires_auth_extra, update_openapi_schema
 from app.services.internal.InternalService import InternalService
-from app.services.internal.Model import Warden, WardenStore
+from app.services.internal.Model import Warden
+from app.services.internal.WardenStore import WardenStore
 from app.services.MessageService import MessageService
 from app.services.NotificationService import NotificationService
 from app.services.occupancy.Model import OccupancyType
