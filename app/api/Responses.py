@@ -76,3 +76,8 @@ class WardenResponse(BaseModel):
 
 class WardenListResponse(BaseModel):
     wardens: list[WardenResponse]
+
+
+class ForecastResponse(BaseModel):
+    count: int
+    committed: bool

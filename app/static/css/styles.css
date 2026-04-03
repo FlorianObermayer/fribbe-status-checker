@@ -369,6 +369,9 @@ body.status-many {
 
 .occupancy-card .date-picker-row {
     margin: 0;
+    display: flex;
+        align-items: center;
+        flex-wrap: wrap;
     gap: 6px;
 }
 
@@ -397,6 +400,37 @@ body.status-many {
     background: #e0e0e0;
 }
 
+.occupancy-card #forecast-btn {
+    font-size: 0.95rem;
+    padding: 2px 8px;
+    border-radius: 6px;
+    border: 1px solid #bbb;
+    background: #f5f5f5;
+    color: #333;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.occupancy-card #forecast-btn:hover {
+    background: #e0e0e0;
+}
+
+.occupancy-card #forecast-btn.committed {
+    background: var(--color-green);
+    color: white;
+    border-color: var(--color-green);
+}
+
+.occupancy-card #forecast-btn.committed:hover {
+    background: #388e3c;
+    border-color: #388e3c;
+}
+
+.forecast-count {
+    font-size: 0.85rem;
+    color: #555;
+    white-space: nowrap;
+}
 .legend-toggle {
     display: flex;
     align-items: center;

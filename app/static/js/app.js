@@ -94,6 +94,49 @@ function showToast(message, type = 'success') {
     _toastTimeout = setTimeout(() => toast.classList.remove('visible'), 1800);
 }
 
+function getForecastToken() {
+    let token = localStorage.getItem('forecastToken');
+    if (!token) {
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+            token = crypto.randomUUID();
+        } else {
+            token = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+        localStorage.setItem('forecastToken', token);
+    }
+    return token;
+}
+
+function getEffectiveForDate() {
+    const forDate = getForDateFromUrl();
+    if (forDate && forDate !== 'today') return forDate;
+    const today = new Date();
+    return today.getFullYear() + '-' +
+        String(today.getMonth() + 1).padStart(2, '0') + '-' +
+        String(today.getDate()).padStart(2, '0');
+}
+
+async function updateForecast(forDate, token) {
+    const btn = document.getElementById('forecast-btn');
+    const countSpan = document.getElementById('forecast-count');
+    if (!btn || !countSpan) return;
+    try {
+        const params = new URLSearchParams({ for_date: forDate, token });
+        const resp = await fetch(`/api/forecast?${params}`);
+        if (!resp.ok) return;
+        const data = await resp.json();
+        countSpan.textContent = data.count > 0 ? `${data.count} dabei` : '';
+        btn.classList.toggle('committed', data.committed);
+        btn.textContent = data.committed ? 'Komme doch nicht' : 'Bin dabei';
+    } catch {
+        // silently ignore
+    }
+}
+
 async function updateStatus() {
     const dateTimeOptions = {
         day: 'numeric',
@@ -179,6 +222,7 @@ async function updateStatus() {
         document.getElementById('combined-updated-text').textContent = combinedText;
 
         setTrafficLightExplanation(data.presence.thresholds);
+        await updateForecast(getEffectiveForDate(), getForecastToken());
     } catch (error) {
         console.error('Fehler beim Laden des Status:', error);
         document.getElementById('status-message').textContent =
@@ -492,6 +536,24 @@ document.addEventListener('DOMContentLoaded', () => {
             const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
             window.history.replaceState({}, '', newUrl);
             updateStatus();
+        });
+    }
+    const forecastBtn = document.getElementById('forecast-btn');
+    if (forecastBtn) {
+        forecastBtn.addEventListener('click', async () => {
+            const forDate = getEffectiveForDate();
+            const token = getForecastToken();
+            const method = forecastBtn.classList.contains('committed') ? 'DELETE' : 'POST';
+            try {
+                await fetch('/api/forecast', {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date: forDate, token }),
+                });
+            } catch {
+                // silently ignore
+            }
+            await updateForecast(forDate, token);
         });
     }
     updateStatus();

@@ -4,7 +4,7 @@ import json
 import logging
 import secrets
 from collections.abc import Awaitable, Callable
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Annotated
 from urllib.parse import quote
@@ -28,11 +28,12 @@ from starlette.middleware.sessions import SessionMiddleware
 import app.env as env
 from app.api.EphemeralAPIKeyStore import EphemeralAPIKeyStore
 from app.api.HybridAuth import AuthRedirectException, HybridAuth, PageAuth
-from app.api.Requests import NOTIFICATION_FILTERS, NotificationQuery
+from app.api.Requests import NOTIFICATION_FILTERS, ForecastRequest, NotificationQuery
 from app.api.Responses import (
     ApiKey,
     ApiKeys,
     DetailsResponse,
+    ForecastResponse,
     OccupancyResponse,
     PostNotificationResponse,
     PresenceResponse,
@@ -41,6 +42,7 @@ from app.api.Responses import (
     WardenResponse,
 )
 from app.api.Schema import requires_auth_extra, update_openapi_schema
+from app.services.ForecastStore import ForecastStore
 from app.services.internal.InternalService import InternalService
 from app.services.internal.Model import Warden
 from app.services.internal.WardenStore import WardenStore
@@ -623,6 +625,26 @@ def delete_warden(name: str, _: str = Depends(HybridAuth())) -> None:
         WardenStore.get_instance().delete(name)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
+
+
+@app.get("/api/forecast", response_model=ForecastResponse, tags=["Forecast"])
+def get_forecast(for_date: date = Query(...), token: str = Query(...)) -> ForecastResponse:
+    store = ForecastStore.get_instance()
+    return ForecastResponse(count=store.count(for_date), committed=store.has(for_date, token))
+
+
+@app.post("/api/forecast", response_model=ForecastResponse, tags=["Forecast"])
+def add_forecast(body: ForecastRequest) -> ForecastResponse:
+    store = ForecastStore.get_instance()
+    store.add(body.date, body.token)
+    return ForecastResponse(count=store.count(body.date), committed=store.has(body.date, body.token))
+
+
+@app.delete("/api/forecast", response_model=ForecastResponse, tags=["Forecast"])
+def remove_forecast(body: ForecastRequest) -> ForecastResponse:
+    store = ForecastStore.get_instance()
+    store.remove(body.date, body.token)
+    return ForecastResponse(count=store.count(body.date), committed=store.has(body.date, body.token))
 
 
 update_openapi_schema(app)

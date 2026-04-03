@@ -1,7 +1,11 @@
+import re
+from datetime import date
 from typing import Any
 
 from fastapi import Query
 from pydantic import BaseModel, field_validator
+
+_FORECAST_TOKEN_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 
 # Single source of truth for all keyword filter options.
 # Order here determines the order in the UI selector.
@@ -41,3 +45,14 @@ class NotificationQuery(BaseModel):
             if not (n_id in _keyword_ids or n_id.startswith("nid-")):
                 raise ValueError(f"Invalid ID: '{n_id}'. Must be any or multiple of: [{', '.join(_examples)}]")
         return value
+
+
+class ForecastRequest(BaseModel):
+    date: date
+    token: str
+
+    @field_validator("token")
+    def validate_token(cls, v: str) -> str:
+        if not _FORECAST_TOKEN_RE.match(v):
+            raise ValueError("token must be a valid lowercase UUID")
+        return v
