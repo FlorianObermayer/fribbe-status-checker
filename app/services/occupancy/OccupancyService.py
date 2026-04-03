@@ -127,7 +127,10 @@ class OccupancyService:
     async def _get_occupancy_data(source_url: str) -> Tag:
         import urllib.request
 
-        with urllib.request.urlopen(source_url) as response:
+        if not source_url.startswith(("http://", "https://")):
+            raise ValueError("URL must start with 'http://' or 'https://'")
+
+        with urllib.request.urlopen(source_url) as response:  # noqa: S310
             if response.status != 200:
                 raise Exception(f"Failed to fetch page: {response.status}")
             html = response.read().decode("utf-8")
