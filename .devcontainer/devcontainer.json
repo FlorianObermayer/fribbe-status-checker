@@ -17,7 +17,8 @@
                 "ms-python.debugpy",
                 "charliermarsh.ruff",
                 "streetsidesoftware.code-spell-checker",
-                "streetsidesoftware.code-spell-checker-german"
+                "streetsidesoftware.code-spell-checker-german",
+                "GitHub.vscode-github-actions"
             ],
             "settings": {
                 "python.defaultInterpreterPath": "${containerWorkspaceFolder}/.venv/bin/python",
