@@ -1,7 +1,7 @@
 """Central environment variable configuration.
 
 All environment variables consumed by the app are declared here.
-Required variables raise RuntimeError at import time if missing.
+Required variables are validated at application startup via validate().
 Optional variables fall back to their stated defaults.
 """
 
@@ -21,9 +21,12 @@ _REQUIRED: list[str] = [
     "API_KEYS_PATH",
 ]
 
-_missing = [v for v in _REQUIRED if not os.environ.get(v)]
-if _missing:
-    raise RuntimeError(f"Missing required environment variable(s): {', '.join(_missing)}")
+
+def validate() -> None:
+    """Raise RuntimeError if any required environment variable is missing."""
+    _missing = [v for v in _REQUIRED if not os.environ.get(v)]
+    if _missing:
+        raise RuntimeError(f"Missing required environment variable(s): {', '.join(_missing)}")
 
 # ---------------------------------------------------------------------------
 # Optional (with defaults)

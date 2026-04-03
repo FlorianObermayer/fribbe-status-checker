@@ -53,6 +53,8 @@ from app.services.PresenceLevelService import (
 from app.services.PresenceThresholds import PresenceThresholds
 from app.version import VERSION
 
+env.validate()
+
 app = FastAPI(version=VERSION)
 _csp = (
     ContentSecurityPolicy()
