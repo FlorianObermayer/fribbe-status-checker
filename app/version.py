@@ -1,3 +1,3 @@
-import app.env as env
+import os
 
-VERSION = env.BUILD_VERSION
+VERSION = os.getenv("BUILD_VERSION", "dev")
