@@ -5,6 +5,7 @@ import logging
 import secrets
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Annotated
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
@@ -51,6 +52,7 @@ from app.services.PresenceLevelService import (
     PresenceLevelService,
 )
 from app.services.PresenceThresholds import PresenceThresholds
+from app.services.PushSubscriptionService import PushSubscriptionService
 from app.version import VERSION
 
 env.validate()
@@ -127,6 +129,15 @@ message_service = MessageService()
 notification_service = NotificationService()
 notification_service.start_cleanup_job()
 
+push_subscription_service: PushSubscriptionService | None = None
+if env.VAPID_PRIVATE_KEY and env.VAPID_PUBLIC_KEY and env.VAPID_CLAIM_SUBJECT:
+    push_subscription_service = PushSubscriptionService(
+        env.VAPID_PRIVATE_KEY, env.VAPID_PUBLIC_KEY, env.VAPID_CLAIM_SUBJECT
+    )
+    presence_service.set_push_service(push_subscription_service)
+else:
+    logging.getLogger("uvicorn.error").warning("VAPID keys not configured; push notifications disabled")
+
 
 @app.get("/api/version")
 async def version():
@@ -136,6 +147,45 @@ async def version():
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     return FileResponse("app/static/images/favicon.ico")
+
+
+@app.get("/sw.js", include_in_schema=False)
+async def service_worker():
+    return FileResponse(
+        "app/static/sw.js",
+        media_type="application/javascript",
+        headers={"Service-Worker-Allowed": "/"},
+    )
+
+
+@app.get("/api/push/vapid-key", tags=["Push Notifications"])
+async def get_vapid_key():
+    if push_subscription_service is None:
+        raise HTTPException(status_code=503, detail="Push notifications not configured")
+    return {"public_key": push_subscription_service.get_public_key()}
+
+
+@app.post("/api/push/subscribe", status_code=201, tags=["Push Notifications"])
+async def push_subscribe(
+    endpoint: str = Body(...),
+    p256dh: str = Body(...),
+    auth: str = Body(...),
+):
+    if push_subscription_service is None:
+        raise HTTPException(status_code=503, detail="Push notifications not configured")
+    try:
+        PushSubscriptionService.validate_subscription(endpoint, p256dh, auth)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    push_subscription_service.add(endpoint, p256dh, auth)
+
+
+@app.delete("/api/push/unsubscribe", tags=["Push Notifications"])
+async def push_unsubscribe(auth: str = Body(..., embed=True)):
+    if push_subscription_service is None:
+        raise HTTPException(status_code=503, detail="Push notifications not configured")
+    if not push_subscription_service.remove(auth):
+        raise HTTPException(status_code=404, detail="Subscription not found")
 
 
 @app.get("/robots.txt", response_class=PlainTextResponse, include_in_schema=False)
@@ -169,7 +219,7 @@ def sitemap():
 async def get_html(request: Request, for_date: str = "today"):  # keep unused variable for api reference
     api_key = request.session.get("api_key")
     signed_in = EphemeralAPIKeyStore.is_key_valid(api_key)
-    with open("app/static/index.html") as f:
+    with Path("app/static/index.html").open() as f:
         content = f.read()
     content = content.replace("__SIGNED_IN__", json.dumps(signed_in))
     return HTMLResponse(content)
@@ -296,7 +346,7 @@ def delete_api_key(
     if len(matches) > 1:
         raise HTTPException(status_code=409, detail="Ambiguous key prefix: multiple matches found")
     key_to_delete = matches[0].key
-    keys = [k for k in keys if not (k.key == key_to_delete)]
+    keys = [k for k in keys if k.key != key_to_delete]
     EphemeralAPIKeyStore.save(keys)
 
 
@@ -436,7 +486,7 @@ async def get_notification_preview(
     _: NotificationQuery = Query(...),
     __: str = Depends(PageAuth()),
 ):  # keep unused variable for api reference
-    with open("app/static/index.html") as f:
+    with Path("app/static/index.html").open() as f:
         content = f.read()
     content = content.replace("__SIGNED_IN__", json.dumps(True))
     return HTMLResponse(content)
@@ -453,7 +503,7 @@ async def get_auth_page(request: Request, next: str = "/"):
     next = sanitize_next(next)
     api_key = request.session.get("api_key")
     signed_in = EphemeralAPIKeyStore.is_key_valid(api_key)
-    with open("app/static/auth.html") as f:
+    with Path("app/static/auth.html").open() as f:
         content = f.read()
     safe_next = html.escape(next, quote=True)
     content = content.replace("__NEXT_DATA__", safe_next)
@@ -478,7 +528,7 @@ async def signout(request: Request):
 
 @app.get("/notification-create", response_class=HTMLResponse, tags=["Notifications", "HTML"])
 async def get_notification_builder(_: str = Depends(PageAuth())):
-    with open("app/static/notification-create.html") as f:
+    with Path("app/static/notification-create.html").open() as f:
         return HTMLResponse(f.read())
 
 

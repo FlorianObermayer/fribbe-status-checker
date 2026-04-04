@@ -4,7 +4,7 @@ import threading
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from os import path
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from huawei_lte_api.Client import Client
@@ -30,7 +30,7 @@ class InternalPersistentData(PersistentPathProvider):
     wardens_on_site = persistent(list[Warden], "wardens_on_site", [])
 
     def get_path(self) -> str:
-        return path.join(env.LOCAL_DATA_PATH, "internal")
+        return str(Path(env.LOCAL_DATA_PATH) / "internal")
 
 
 class InternalService:

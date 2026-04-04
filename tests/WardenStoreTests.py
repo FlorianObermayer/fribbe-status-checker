@@ -1,5 +1,5 @@
 import json
-import os
+from pathlib import Path
 
 import pytest
 
@@ -8,15 +8,15 @@ from app.services.internal.WardenStore import WardenStore
 
 
 @pytest.fixture
-def store(tmp_path: str) -> WardenStore:
-    path = os.path.join(str(tmp_path), "wardens.json")
+def store(tmp_path: Path) -> WardenStore:
+    path = str(tmp_path / "wardens.json")
     # Bypass the singleton to get a fresh store backed by a temp file
     return WardenStore(path)
 
 
 @pytest.fixture
-def populated_store(tmp_path: str) -> WardenStore:
-    path = os.path.join(str(tmp_path), "wardens.json")
+def populated_store(tmp_path: Path) -> WardenStore:
+    path = str(tmp_path / "wardens.json")
     store = WardenStore(path)
     store.add(Warden("Alice", ["aa:bb:cc:dd:ee:ff"], ["alices-macbook"]))
     store.add(Warden("Bob", ["11:22:33:44:55:66"]))
@@ -168,8 +168,8 @@ def test_delete_case_insensitive(populated_store: WardenStore):
 # ---------------------------------------------------------------------------
 
 
-def test_persist_and_reload(tmp_path: str):
-    path = os.path.join(str(tmp_path), "wardens.json")
+def test_persist_and_reload(tmp_path: Path):
+    path = str(tmp_path / "wardens.json")
     s1 = WardenStore(path)
     s1.add(Warden("Alice", ["aa:bb:cc:dd:ee:ff"], ["alice-laptop"]))
     s1.add(Warden("Bob"))
@@ -182,8 +182,8 @@ def test_persist_and_reload(tmp_path: str):
     assert alice.device_names == ["alice-laptop"]
 
 
-def test_persist_delete_and_reload(tmp_path: str):
-    path = os.path.join(str(tmp_path), "wardens.json")
+def test_persist_delete_and_reload(tmp_path: Path):
+    path = str(tmp_path / "wardens.json")
     s1 = WardenStore(path)
     s1.add(Warden("Alice"))
     s1.add(Warden("Bob"))
@@ -194,25 +194,25 @@ def test_persist_delete_and_reload(tmp_path: str):
     assert s2.get_all()[0].name == "Bob"
 
 
-def test_load_missing_file_starts_empty(tmp_path: str):
-    path = os.path.join(str(tmp_path), "nonexistent.json")
+def test_load_missing_file_starts_empty(tmp_path: Path):
+    path = str(tmp_path / "nonexistent.json")
     store = WardenStore(path)
     assert store.get_all() == []
 
 
-def test_creates_parent_directory_on_save(tmp_path: str):
-    path = os.path.join(str(tmp_path), "nested", "dir", "wardens.json")
+def test_creates_parent_directory_on_save(tmp_path: Path):
+    path = str(tmp_path / "nested" / "dir" / "wardens.json")
     store = WardenStore(path)
     store.add(Warden("Alice"))
-    assert os.path.exists(path)
+    assert Path(path).exists()
 
 
-def test_json_structure_on_disk(tmp_path: str):
-    path = os.path.join(str(tmp_path), "wardens.json")
+def test_json_structure_on_disk(tmp_path: Path):
+    path = str(tmp_path / "wardens.json")
     store = WardenStore(path)
     store.add(Warden("Alice", ["aa:bb:cc:dd:ee:ff"]))
 
-    with open(path, encoding="utf-8") as f:
+    with Path(path).open(encoding="utf-8") as f:
         data = json.load(f)
 
     assert "wardens" in data

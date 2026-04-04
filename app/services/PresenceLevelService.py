@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import threading
 import time
-from datetime import datetime
+from datetime import date, datetime, timedelta
+from typing import Protocol
 from zoneinfo import ZoneInfo
 
 from huawei_lte_api.Client import Client
@@ -12,6 +15,11 @@ from readerwriterlock import rwlock
 from app.services.MacAddressHelper import should_ignore_device
 from app.services.PresenceLevel import PresenceLevel
 from app.services.PresenceThresholds import PresenceThresholds
+
+
+class PushSender(Protocol):
+    def send_to_all_sync(self, title: str, body: str) -> None: ...
+
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -27,6 +35,10 @@ class PresenceLevelService:
         self._rwlock = rwlock.RWLockFair()
         self._thresholds = PresenceThresholds()
 
+        self._push_service: PushSender | None = None
+        self._push_initialized: bool = False
+        self._last_push_virtual_date: date | None = None
+
     def get_level(self):
         with self._rwlock.gen_rlock():
             return self._presence_level
@@ -38,6 +50,9 @@ class PresenceLevelService:
     def get_last_error(self):
         with self._rwlock.gen_rlock():
             return self._last_error
+
+    def set_push_service(self, push_service: PushSender | None) -> None:
+        self._push_service = push_service
 
     async def _run_presence_detection(self, router_ip: str, username: str, password: str):
         try:
@@ -52,16 +67,41 @@ class PresenceLevelService:
                     ]
                 )
                 logger.debug(f"active member devices: {active_member_devices_ct}", exc_info=True)
+                new_level = self._thresholds.get_presence_level(active_member_devices_ct)
                 with self._rwlock.gen_wlock():
-                    self._presence_level = self._thresholds.get_presence_level(active_member_devices_ct)
+                    prev_level = self._presence_level
+                    self._presence_level = new_level
                     self._last_updated = datetime.now(tz=ZoneInfo("Europe/Berlin"))
                     self._last_error = None
             logger.info(f"Refresh Presence Level... DONE ({self._presence_level})")
+            try:
+                self._maybe_send_first_active_push(prev_level, new_level)
+            except Exception as e:
+                logger.error(f"Error sending first active push: {e}", exc_info=True)
         except Exception as e:
             logger.error(f"Error during presence detection: {e}", exc_info=True)
             with self._rwlock.gen_wlock():
                 self._presence_level = PresenceLevel.EMPTY
                 self._last_error = e
+
+    def _maybe_send_first_active_push(self, prev_level: PresenceLevel, new_level: PresenceLevel) -> None:
+        """Fire a push notification the first time per day the level goes from empty to non-empty."""
+        if not self._push_service:
+            return
+        if not self._push_initialized:
+            # Skip the very first poll to avoid false alarms on service restart
+            self._push_initialized = True
+            return
+        if prev_level == PresenceLevel.EMPTY and new_level != PresenceLevel.EMPTY:
+            now = datetime.now(tz=ZoneInfo("Europe/Berlin"))
+            virtual_today = (now - timedelta(hours=5)).date()
+            if self._last_push_virtual_date != virtual_today:
+                self._last_push_virtual_date = virtual_today
+                body = (
+                    "Ein paar Leute sind schon da!" if new_level == PresenceLevel.FEW else "Heute ist richtig was los!"
+                )
+                logger.info("First non-empty presence today — sending push notifications")
+                self._push_service.send_to_all_sync("Leute am Fribbe! 🏐", body)
 
     def _presence_detection_loop(self, interval: int, router_ip: str, username: str, password: str):
         loop = asyncio.new_event_loop()

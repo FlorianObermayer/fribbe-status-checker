@@ -42,6 +42,11 @@ HTTPS_ONLY: bool = False
 # Build-time version tag injected by CI; falls back to "dev" locally.
 BUILD_VERSION: str = "dev"
 
+# All three must be set together to enable Web Push; individually optional.
+VAPID_PRIVATE_KEY: str | None = None
+VAPID_PUBLIC_KEY: str | None = None
+VAPID_CLAIM_SUBJECT: str | None = None
+
 
 def load() -> None:
     """Load (or reload) all env var values into the module-level globals.
@@ -69,7 +74,12 @@ def load() -> None:
     g["OCCUPANCY_POLLING_INTERVAL_SECONDS"] = int(os.environ.get("OCCUPANCY_POLLING_INTERVAL_SECONDS", "360"))
 
     g["HTTPS_ONLY"] = os.environ.get("HTTPS_ONLY", "false").lower() == "true"
+
     g["BUILD_VERSION"] = os.environ.get("BUILD_VERSION", "dev")
+
+    g["VAPID_PRIVATE_KEY"] = os.environ.get("VAPID_PRIVATE_KEY") or None
+    g["VAPID_PUBLIC_KEY"] = os.environ.get("VAPID_PUBLIC_KEY") or None
+    g["VAPID_CLAIM_SUBJECT"] = os.environ.get("VAPID_CLAIM_SUBJECT") or None
 
 
 def validate() -> None:

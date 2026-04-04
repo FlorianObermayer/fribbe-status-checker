@@ -1,6 +1,6 @@
 import json
-import os
 import threading
+from pathlib import Path
 from typing import ClassVar
 
 from readerwriterlock import rwlock
@@ -24,7 +24,7 @@ class WardenStore:
         if cls._instance is None:
             with cls._instance_lock:
                 if cls._instance is None:
-                    path = os.path.join(env.LOCAL_DATA_PATH, "internal", "wardens.json")
+                    path = str(Path(env.LOCAL_DATA_PATH) / "internal" / "wardens.json")
                     cls._instance = cls(path)
         return cls._instance
 
@@ -32,8 +32,8 @@ class WardenStore:
         return {"name": w.name, "device_macs": w.device_macs, "device_names": w.device_names}
 
     def _load(self) -> None:
-        if os.path.exists(self._path):
-            with open(self._path, encoding="utf-8") as f:
+        if Path(self._path).exists():
+            with Path(self._path).open(encoding="utf-8") as f:
                 data: dict[str, list[dict[str, str | list[str]]]] = json.load(f)
             self._wardens = [
                 Warden(
@@ -45,8 +45,8 @@ class WardenStore:
             ]
 
     def _save(self) -> None:
-        os.makedirs(os.path.dirname(self._path), exist_ok=True)
-        with open(self._path, "w", encoding="utf-8") as f:
+        Path(self._path).parent.mkdir(parents=True, exist_ok=True)
+        with Path(self._path).open("w", encoding="utf-8") as f:
             json.dump({"wardens": [self._warden_to_raw(w) for w in self._wardens]}, f, indent=2, ensure_ascii=False)
 
     def get_all(self) -> list[Warden]:

@@ -9,8 +9,9 @@ Usage:
 import os
 import subprocess
 import sys
+from pathlib import Path
 
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_ROOT = str(Path(__file__).resolve().parent.parent)
 
 
 def run(args: list[str], env: dict[str, str] | None = None) -> None:

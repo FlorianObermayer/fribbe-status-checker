@@ -15,12 +15,16 @@ dependencies = [
     "markdown>=3.8.2",
     "starlette-session>=0.4.3",
     "secure>=1.0.1",
+    "pywebpush>=2.3.0",
 ]
 
 [project.scripts]
 lint = "scripts.lint:main"
 dev = "scripts.dev:main"
 watch = "scripts.watch:main"
+generate-vapid-keys = "scripts.generate_vapid_keys:main"
+test-push-notification = "scripts.test_push_notification:main"
+
 
 [dependency-groups]
 dev = [
@@ -50,11 +54,18 @@ select = [
     "S",   # flake8-bandit (security)
     "C4",  # flake8-comprehensions
     "RUF", # ruff-specific rules
+    "PIE", # flake8-pie
+    "SIM", # flake8-simplify
+    "TRY", # tryceratops
+    "PTH", # flake8-use-pathlib
 ]
 ignore = [
-    "E501", # line too long (handled by formatter)
-    "B008", # FastAPI uses Depends/Body/Query as argument defaults by design
-    "S101", # assert is used in tests
+    "E501",   # line too long (handled by formatter)
+    "B008",   # FastAPI uses Depends/Body/Query as argument defaults by design
+    "S101",   # assert is used in tests
+    "TRY002", # custom exception classes not required for internal errors
+    "TRY003", # long exception messages in raise are fine
+    "TRY300", # moving return into else block is a style preference
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -62,7 +73,6 @@ packages = ["app", "scripts"]
 
 [tool.uv]
 package = true
-env-file = ".env.dev"
 
 [tool.pyright]
 pythonVersion = "3.12"

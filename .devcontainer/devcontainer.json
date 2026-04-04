@@ -25,18 +25,7 @@
                 "streetsidesoftware.code-spell-checker-german",
                 "GitHub.vscode-github-actions",
                 "DavidAnson.vscode-markdownlint"
-            ],
-            "settings": {
-                "python.defaultInterpreterPath": "${containerWorkspaceFolder}/.venv/bin/python",
-                "editor.formatOnSave": true,
-                "[python]": {
-                    "editor.defaultFormatter": "charliermarsh.ruff",
-                    "editor.codeActionsOnSave": {
-                        "source.fixAll.ruff": "explicit",
-                        "source.organizeImports.ruff": "explicit"
-                    }
-                }
-            }
+            ]
         }
     }
     // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
