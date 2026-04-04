@@ -57,7 +57,9 @@ uv run lint
 
 On a fresh install with no API keys configured, the `POST /api/internal/api_key` endpoint operates in **setup mode**: authentication is skipped, allowing anyone to create the very first key without credentials. Once at least one key exists the endpoint requires a valid key, so setup mode is automatically deactivated after bootstrap.
 
-To obtain the first key, send a request to the running app (e.g. via the Swagger UI at `/docs`) while the key store is empty:
+> **Production recommendation:** set `ADMIN_TOKEN` to a strong random secret (see below). This disables the open bootstrap bypass entirely, so the endpoint is never unauthenticated even if the key store is accidentally emptied.
+
+To obtain the first key on a fresh install (no `ADMIN_TOKEN` set), send a request to the running app while the key store is empty:
 
 ```sh
 curl -X POST http://localhost:8007/api/internal/api_key \
@@ -65,7 +67,27 @@ curl -X POST http://localhost:8007/api/internal/api_key \
   -d '{"comment": "bootstrap key"}'
 ```
 
-Store the returned key securely and use it for all subsequent authenticated requests.
+When `ADMIN_TOKEN` is set, pass it as the `api_key` header instead:
+
+```sh
+curl -X POST http://localhost:8007/api/internal/api_key \
+  -H "api_key: $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"comment": "bootstrap key"}'
+```
+
+Store the returned key securely and use it for all subsequent authenticated requests. `ADMIN_TOKEN` is also accepted on all other protected endpoints and acts as a permanent recovery credential.
+
+### `ADMIN_TOKEN` (master / recovery credential)
+
+```sh
+ADMIN_TOKEN=<strong-random-secret>  # recommended for production
+```
+
+- Accepted as a valid credential on **all** protected API endpoints.
+- Disables the open empty-store bootstrap bypass — the create-key endpoint always requires auth when this is set.
+- The home-page bootstrap warning banner is suppressed when `ADMIN_TOKEN` is configured (no open endpoint, no warning).
+- Use `python -c "import secrets; print(secrets.token_urlsafe(48))"` to generate a suitable value.
 
 ### Sign-in button on the home page (`SHOW_ADMIN_AUTH`)
 

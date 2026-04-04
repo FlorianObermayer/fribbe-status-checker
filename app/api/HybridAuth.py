@@ -1,5 +1,8 @@
+import secrets
+
 from fastapi import HTTPException, Request
 
+import app.env as env
 from app.api.EphemeralAPIKeyHeader import EphemeralAPIKeyHeader
 from app.api.EphemeralAPIKeyStore import EphemeralAPIKeyStore
 
@@ -26,7 +29,9 @@ class HybridAuth:
     async def __call__(self, request: Request) -> str | None:
         # 1. Check Session and remove if not valid anymore
         api_key = request.session.get("api_key")
-        if EphemeralAPIKeyStore.is_key_valid(api_key):
+        admin_token = env.ADMIN_TOKEN
+        is_admin = bool(api_key and admin_token and secrets.compare_digest(api_key, admin_token))
+        if EphemeralAPIKeyStore.is_key_valid(api_key) or is_admin:
             return api_key
         else:
             request.session.clear()

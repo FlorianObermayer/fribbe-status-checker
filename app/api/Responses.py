@@ -3,6 +3,7 @@ from typing import Self
 
 from pydantic import BaseModel, Field
 
+from app import env
 from app.services.occupancy.Model import Occupancy, OccupancySource, OccupancyType
 from app.services.PresenceLevel import PresenceLevel
 
@@ -40,7 +41,7 @@ class DetailsResponse(BaseResponse):
 
 
 class ApiKey(BaseModel):
-    key: str = Field(..., min_length=48)
+    key: str = Field(..., min_length=env.MIN_TOKEN_BYTES)
     comment: str
     valid_until: datetime
 

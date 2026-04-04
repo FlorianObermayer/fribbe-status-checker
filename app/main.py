@@ -221,7 +221,7 @@ async def get_html(request: Request, for_date: str = "today"):  # keep unused va
     signed_in = EphemeralAPIKeyStore.is_key_valid(api_key)
     with Path("app/static/index.html").open() as f:
         content = f.read()
-    bootstrap_mode = EphemeralAPIKeyStore.is_empty()
+    bootstrap_mode = EphemeralAPIKeyStore.is_empty() and not env.ADMIN_TOKEN
     content = content.replace("__SIGNED_IN__", json.dumps(signed_in))
     content = content.replace("__SHOW_ADMIN_AUTH__", json.dumps(env.SHOW_ADMIN_AUTH))
     content = content.replace("__BOOTSTRAP_MODE__", json.dumps(bootstrap_mode))
@@ -316,7 +316,7 @@ def create_api_key(
     - valid_until: Optional datetime (default: 6 months from now)
     """
     # Generate a new key
-    new_key = secrets.token_urlsafe(48)
+    new_key = secrets.token_urlsafe(env.MIN_TOKEN_BYTES)
     valid_until = (valid_until or datetime.now(tz=ZoneInfo("Europe/Berlin")) + timedelta(days=180)).replace(
         microsecond=0
     )
