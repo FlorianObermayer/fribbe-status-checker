@@ -93,3 +93,17 @@ def test_append_require_empty_fails_when_store_is_not_empty():
 
     assert result is False
     assert EphemeralAPIKeyStore.is_key_valid(new_key.key) is False
+
+
+def test_append_returns_false_when_save_raises(monkeypatch: pytest.MonkeyPatch):
+    EphemeralAPIKeyStore.save([])
+    key = ApiKey.generate_new(comment="", valid_until=datetime.now(tz=ZoneInfo("Europe/Berlin")) + timedelta(days=1))
+
+    def _raise(_: list[ApiKey]) -> None:
+        raise OSError("disk full")
+
+    monkeypatch.setattr(EphemeralAPIKeyStore, "save", staticmethod(_raise))
+
+    result = EphemeralAPIKeyStore.append(key)
+
+    assert result is False

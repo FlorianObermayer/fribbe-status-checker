@@ -22,14 +22,10 @@ class EphemeralAPIKeyStore:
         return PersistentList(EphemeralAPIKeyStore._get_path(), ApiKey).to_list()
 
     @staticmethod
-    def save(keys: list[ApiKey]):
-        try:
-            persistent_list = PersistentList(EphemeralAPIKeyStore._get_path(), ApiKey)
-            persistent_list.clear()
-            persistent_list.extend(keys)
-
-        except Exception:
-            logger.exception("EphemeralAPIKeyStore - failed to save api keys")
+    def save(keys: list[ApiKey]) -> None:
+        persistent_list = PersistentList(EphemeralAPIKeyStore._get_path(), ApiKey)
+        persistent_list.clear()
+        persistent_list.extend(keys)
 
     @staticmethod
     def is_empty() -> bool:
@@ -49,7 +45,11 @@ class EphemeralAPIKeyStore:
             if require_empty and keys:
                 return False
             keys.append(key)
-            EphemeralAPIKeyStore.save(keys)
+            try:
+                EphemeralAPIKeyStore.save(keys)
+            except Exception:
+                logger.exception("EphemeralAPIKeyStore - failed to save api keys")
+                return False
             return True
 
     @staticmethod
