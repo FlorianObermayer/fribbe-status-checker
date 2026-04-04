@@ -222,6 +222,7 @@ async def get_html(request: Request, for_date: str = "today"):  # keep unused va
     with Path("app/static/index.html").open() as f:
         content = f.read()
     content = content.replace("__SIGNED_IN__", json.dumps(signed_in))
+    content = content.replace("__VERSION__", VERSION)
     return HTMLResponse(content)
 
 
@@ -489,6 +490,7 @@ async def get_notification_preview(
     with Path("app/static/index.html").open() as f:
         content = f.read()
     content = content.replace("__SIGNED_IN__", json.dumps(True))
+    content = content.replace("__VERSION__", VERSION)
     return HTMLResponse(content)
 
 
@@ -508,6 +510,7 @@ async def get_auth_page(request: Request, next: str = "/"):
     safe_next = html.escape(next, quote=True)
     content = content.replace("__NEXT_DATA__", safe_next)
     content = content.replace("__SIGNED_IN__", json.dumps(signed_in))
+    content = content.replace("__VERSION__", VERSION)
     return HTMLResponse(content)
 
 
@@ -529,7 +532,9 @@ async def signout(request: Request):
 @app.get("/notification-create", response_class=HTMLResponse, tags=["Notifications", "HTML"])
 async def get_notification_builder(_: str = Depends(PageAuth())):
     with Path("app/static/notification-create.html").open() as f:
-        return HTMLResponse(f.read())
+        content = f.read()
+    content = content.replace("__VERSION__", VERSION)
+    return HTMLResponse(content)
 
 
 @app.patch("/internal/config", response_class=HTMLResponse, tags=["Config"], openapi_extra=requires_auth_extra())
