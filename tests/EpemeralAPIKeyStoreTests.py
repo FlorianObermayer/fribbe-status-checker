@@ -39,3 +39,22 @@ def test_key_too_short():
             comment="",
             valid_until=datetime.now(tz=ZoneInfo("Europe/Berlin")),
         )
+
+
+def test_generate_new_returns_valid_api_key():
+    from app import env
+
+    valid_until = datetime.now(tz=ZoneInfo("Europe/Berlin")) + timedelta(days=30)
+    api_key = ApiKey.generate_new(comment="test", valid_until=valid_until)
+
+    assert len(api_key.key) >= env.MIN_TOKEN_LENGTH
+    assert api_key.comment == "test"
+    assert api_key.valid_until == valid_until
+
+
+def test_generate_new_keys_are_unique():
+    valid_until = datetime.now(tz=ZoneInfo("Europe/Berlin")) + timedelta(days=30)
+    key_a = ApiKey.generate_new(comment="", valid_until=valid_until)
+    key_b = ApiKey.generate_new(comment="", valid_until=valid_until)
+
+    assert key_a.key != key_b.key

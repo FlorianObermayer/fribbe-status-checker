@@ -92,3 +92,42 @@ def test_load_vapid_keys(monkeypatch: pytest.MonkeyPatch):
     assert env.VAPID_PRIVATE_KEY == "private"
     assert env.VAPID_PUBLIC_KEY == "public"
     assert env.VAPID_CLAIM_SUBJECT == "https://example.com"
+
+
+def test_load_show_admin_auth_default_is_false(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.delenv("SHOW_ADMIN_AUTH", raising=False)
+    env.load()
+    assert env.SHOW_ADMIN_AUTH is False
+
+
+def test_load_show_admin_auth_true(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("SHOW_ADMIN_AUTH", "true")
+    env.load()
+    assert env.SHOW_ADMIN_AUTH is True
+
+
+def test_load_admin_token_default_is_none(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.delenv("ADMIN_TOKEN", raising=False)
+    env.load()
+    assert env.ADMIN_TOKEN is None
+
+
+def test_load_admin_token_override(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("ADMIN_TOKEN", "some-token-value")
+    env.load()
+    assert env.ADMIN_TOKEN == "some-token-value"  # noqa: S105
+
+
+def test_validate_raises_when_admin_token_too_short(monkeypatch: pytest.MonkeyPatch, env_paths: tuple[Path, Path]):
+    monkeypatch.setenv("SESSION_SECRET_KEY", "secret")
+    monkeypatch.setenv("ADMIN_TOKEN", "short")
+    with pytest.raises(RuntimeError, match="ADMIN_TOKEN"):
+        env.validate()
+
+
+def test_validate_passes_when_admin_token_meets_minimum_length(
+    monkeypatch: pytest.MonkeyPatch, env_paths: tuple[Path, Path]
+):
+    monkeypatch.setenv("SESSION_SECRET_KEY", "secret")
+    monkeypatch.setenv("ADMIN_TOKEN", "a" * env.MIN_TOKEN_LENGTH)
+    env.validate()  # should not raise

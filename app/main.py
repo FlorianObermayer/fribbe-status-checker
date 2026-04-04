@@ -2,7 +2,6 @@
 import html
 import json
 import logging
-import secrets
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -218,10 +217,14 @@ def sitemap():
 @app.get("/", response_class=HTMLResponse, tags=["HTML"])
 async def get_html(request: Request, for_date: str = "today"):  # keep unused variable for api reference
     api_key = request.session.get("api_key")
-    signed_in = EphemeralAPIKeyStore.is_key_valid(api_key)
+    is_admin_session = bool(request.session.get("is_admin") and env.ADMIN_TOKEN)
+    signed_in = EphemeralAPIKeyStore.is_key_valid(api_key) or is_admin_session
     with Path("app/static/index.html").open() as f:
         content = f.read()
+    bootstrap_mode = EphemeralAPIKeyStore.is_empty() and not env.ADMIN_TOKEN
     content = content.replace("__SIGNED_IN__", json.dumps(signed_in))
+    content = content.replace("__SHOW_ADMIN_AUTH__", json.dumps(env.SHOW_ADMIN_AUTH))
+    content = content.replace("__BOOTSTRAP_MODE__", json.dumps(bootstrap_mode))
     content = content.replace("__VERSION__", VERSION)
     return HTMLResponse(content)
 
@@ -313,11 +316,10 @@ def create_api_key(
     - valid_until: Optional datetime (default: 6 months from now)
     """
     # Generate a new key
-    new_key = secrets.token_urlsafe(48)
     valid_until = (valid_until or datetime.now(tz=ZoneInfo("Europe/Berlin")) + timedelta(days=180)).replace(
         microsecond=0
     )
-    new_api_key = ApiKey(key=new_key, comment=comment, valid_until=valid_until)
+    new_api_key = ApiKey.generate_new(comment, valid_until)
     keys = EphemeralAPIKeyStore.load()
     if not keys:
         keys = []
@@ -504,7 +506,8 @@ def sanitize_next(next_url: str) -> str:
 async def get_auth_page(request: Request, next: str = "/"):
     next = sanitize_next(next)
     api_key = request.session.get("api_key")
-    signed_in = EphemeralAPIKeyStore.is_key_valid(api_key)
+    is_admin_session = bool(request.session.get("is_admin") and env.ADMIN_TOKEN)
+    signed_in = EphemeralAPIKeyStore.is_key_valid(api_key) or is_admin_session
     with Path("app/static/auth.html").open() as f:
         content = f.read()
     safe_next = html.escape(next, quote=True)

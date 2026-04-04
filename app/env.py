@@ -9,6 +9,9 @@ import os
 
 from app.version import VERSION as _version
 
+# Minimum token length for all generated and configured tokens.
+MIN_TOKEN_LENGTH: int = 48
+
 # ---------------------------------------------------------------------------
 # Required
 # ---------------------------------------------------------------------------
@@ -40,6 +43,12 @@ INTERNAL_POLLING_DELAY_SECONDS: int = 30
 OCCUPANCY_POLLING_INTERVAL_SECONDS: int = 360
 
 HTTPS_ONLY: bool = False
+
+SHOW_ADMIN_AUTH: bool = False
+
+# When set, accepted as a master credential on all protected endpoints.
+# Also disables the empty-store bypass, so setup mode never opens the API to the world.
+ADMIN_TOKEN: str | None = None
 
 # Build-time version tag injected by CI; falls back to "dev" locally.
 BUILD_VERSION: str = _version
@@ -77,6 +86,10 @@ def load() -> None:
 
     g["HTTPS_ONLY"] = os.environ.get("HTTPS_ONLY", "false").lower() == "true"
 
+    g["SHOW_ADMIN_AUTH"] = os.environ.get("SHOW_ADMIN_AUTH", "false").lower() == "true"
+
+    g["ADMIN_TOKEN"] = os.environ.get("ADMIN_TOKEN") or None
+
     g["BUILD_VERSION"] = os.environ.get("BUILD_VERSION") or _version
 
     g["VAPID_PRIVATE_KEY"] = os.environ.get("VAPID_PRIVATE_KEY") or None
@@ -90,6 +103,8 @@ def validate() -> None:
     _missing = [v for v in _REQUIRED if not os.environ.get(v)]
     if _missing:
         raise RuntimeError(f"Missing required environment variable(s): {', '.join(_missing)}")
+    if ADMIN_TOKEN is not None and len(ADMIN_TOKEN) < MIN_TOKEN_LENGTH:
+        raise RuntimeError(f"ADMIN_TOKEN must be at least {MIN_TOKEN_LENGTH} characters long")
 
 
 # Populate from os.environ at import time.

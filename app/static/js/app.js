@@ -499,9 +499,25 @@ document.addEventListener('DOMContentLoaded', () => {
     setupLegendToggle();
 
     const signedIn = document.body.dataset.signedIn === 'true';
+    const showAdminAuth = document.body.dataset.showAdminAuth === 'true';
+    const bootstrapMode = document.body.dataset.bootstrapMode === 'true';
+
+    const bootstrapBanner = document.getElementById('bootstrap-banner');
+    if (bootstrapMode && bootstrapBanner) {
+        bootstrapBanner.classList.remove('hidden');
+    }
     const adminBtnGroup = document.getElementById('admin-btn-group');
+    const signinBtn = document.getElementById('signin-btn');
+
+    if (!signedIn && showAdminAuth && adminBtnGroup && signinBtn) {
+        adminBtnGroup.classList.add('admin-visible');
+        // Hide admin-only buttons, show only the sign-in button
+        adminBtnGroup.querySelectorAll('.admin-btn:not(#signin-btn)').forEach(btn => btn.classList.add('hidden'));
+    }
+
     if (signedIn && adminBtnGroup) {
         adminBtnGroup.classList.add('admin-visible');
+        if (signinBtn) signinBtn.classList.add('hidden');
 
         const signoutBtn = document.getElementById('signout-btn');
         if (signoutBtn) {
