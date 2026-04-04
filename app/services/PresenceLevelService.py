@@ -74,7 +74,10 @@ class PresenceLevelService:
                     self._last_updated = datetime.now(tz=ZoneInfo("Europe/Berlin"))
                     self._last_error = None
             logger.info(f"Refresh Presence Level... DONE ({self._presence_level})")
-            self._maybe_send_first_active_push(prev_level, new_level)
+            try:
+                self._maybe_send_first_active_push(prev_level, new_level)
+            except Exception as e:
+                logger.error(f"Error sending first active push: {e}", exc_info=True)
         except Exception as e:
             logger.error(f"Error during presence detection: {e}", exc_info=True)
             with self._rwlock.gen_wlock():
