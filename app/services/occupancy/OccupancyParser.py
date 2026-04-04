@@ -124,9 +124,7 @@ def _parse_event_calendar_row(event_date: str, event_name: str, time_str: str, l
     location_lower = location_field.lower()
     if not location_field or location_field == "-":
         occupancy_type = OccupancyType.NONE
-    elif location_lower.startswith("feld") or "feld" in location_lower:
-        occupancy_type = OccupancyType.PARTIALLY
-    elif location_lower.startswith("hütten"):
+    elif location_lower.startswith(("feld", "hütten")) or "feld" in location_lower:
         occupancy_type = OccupancyType.PARTIALLY
     elif location_lower == "komplett":
         occupancy_type = OccupancyType.FULLY

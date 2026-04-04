@@ -5,7 +5,7 @@ import time
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from os import path
+from pathlib import Path
 from typing import Self
 from zoneinfo import ZoneInfo
 
@@ -69,7 +69,7 @@ class Notification:
 class NotificationService:
     def __init__(self):
         self._store: PersistentDict[Notification] = PersistentDict(
-            path.join(env.LOCAL_DATA_PATH, "notifications.json"),
+            str(Path(env.LOCAL_DATA_PATH) / "notifications.json"),
             value_type=Notification,
         )
         self._interval_thread: threading.Thread | None = None

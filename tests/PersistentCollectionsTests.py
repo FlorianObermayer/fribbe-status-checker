@@ -1,7 +1,7 @@
-import os
 import tempfile
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -20,7 +20,7 @@ from app.services.PersistentCollections import (
 
 def test_persistentdict_write_to_non_existing_subfolder():
     with tempfile.TemporaryDirectory() as tmpdir:
-        path = os.path.join(tmpdir, "subfolder", "in_subfolder.json")
+        path = str(Path(tmpdir) / "subfolder" / "in_subfolder.json")
         d = PersistentDict(path, int)
         d["foo"] = 123
         d2: PersistentDict[int] = PersistentDict(path, int)
@@ -29,7 +29,7 @@ def test_persistentdict_write_to_non_existing_subfolder():
 
 def test_persistentdict_write_and_read():
     with tempfile.TemporaryDirectory() as tmpdir:
-        path = os.path.join(tmpdir, "test.json")
+        path = str(Path(tmpdir) / "test.json")
 
         d = PersistentDict(path, int)
         d["foo"] = 123
@@ -44,7 +44,7 @@ def test_persistentdict_write_and_read():
 
 def test_persistentdict_delete():
     with tempfile.TemporaryDirectory() as tmpdir:
-        path = os.path.join(tmpdir, "test.json")
+        path = str(Path(tmpdir) / "test.json")
         d: PersistentDict[int] = PersistentDict(path, int)
         d["foo"] = 1
         d["bar"] = 2
@@ -58,7 +58,7 @@ def test_persistentdict_delete():
 
 def test_persistentdict_len_and_iter():
     with tempfile.TemporaryDirectory() as tmpdir:
-        path = os.path.join(tmpdir, "test.json")
+        path = str(Path(tmpdir) / "test.json")
         d: PersistentDict[int] = PersistentDict(path, int)
         d["a"] = 1
         d["b"] = 2
@@ -98,7 +98,7 @@ class MyDataClass(DictSerializable):
 
 def test_persistentdict_with_class():
     with tempfile.TemporaryDirectory() as tmpdir:
-        path = os.path.join(tmpdir, "class.json")
+        path = str(Path(tmpdir) / "class.json")
         d = PersistentDict[MyClass](path, value_type=MyClass)
         d["a"] = MyClass("hello", 123)
         d["b"] = MyClass("world", 456)
@@ -110,7 +110,7 @@ def test_persistentdict_with_class():
 
 def test_persistentdict_with_class_in_list():
     with tempfile.TemporaryDirectory() as tmpdir:
-        path = os.path.join(tmpdir, "class_in_list.json")
+        path = str(Path(tmpdir) / "class_in_list.json")
         d = PersistentDict[list[MyClass]](path, value_type=list[MyClass])
         d["a"] = [MyClass("hello", 123)]
         d["b"] = [MyClass("world", 456)]
@@ -122,7 +122,7 @@ def test_persistentdict_with_class_in_list():
 
 def test_persistentdict_with_dataclass():
     with tempfile.TemporaryDirectory() as tmpdir:
-        path = os.path.join(tmpdir, "dataclass.json")
+        path = str(Path(tmpdir) / "dataclass.json")
         d = PersistentDict[MyDataClass](path, value_type=MyDataClass)
         d["x"] = MyDataClass("foo", 1)
         d["y"] = MyDataClass("bar", 2)
@@ -165,7 +165,7 @@ class NestedClass(DictSerializable):
 
 def test_persistentdict_nested_dictserializable():
     with tempfile.TemporaryDirectory() as tmpdir:
-        path = os.path.join(tmpdir, "nested.json")
+        path = str(Path(tmpdir) / "nested.json")
         nested = NestedClass("root", [1, 2], NestedClass("child", [3, 4]))
         d = PersistentDict[NestedClass](path, value_type=NestedClass)
         d["n"] = nested
@@ -180,7 +180,7 @@ def test_persistentdict_nested_dictserializable():
 
 def test_persistentdict_nested_dict():
     with tempfile.TemporaryDirectory() as tmpdir:
-        path = os.path.join(tmpdir, "nested_dict.json")
+        path = str(Path(tmpdir) / "nested_dict.json")
         nested_dict: dict[str, dict[int, dict[str, int]]] = {"a": {1: {"b": 1}}}
         d = PersistentDict(path, value_type=dict[str, dict[int, dict[str, int]]])
         d["nested"] = nested_dict
@@ -200,7 +200,7 @@ def test_persistentdict_nested_list_any_type_not_supported():
 
 def test_persistentdict_nested_list():
     with tempfile.TemporaryDirectory() as tmpdir:
-        path = os.path.join(tmpdir, "nested_list.json")
+        path = str(Path(tmpdir) / "nested_list.json")
         nested_list: list[list[list[int]]] = [[[1, 2], [3, 5]]]
         d = PersistentDict(path, value_type=list[list[list[int]]])
         d["lst"] = nested_list
@@ -215,7 +215,7 @@ def test_persistentlist_with_union_types_not_supported():
 
 def test_persistentlist_with_int():
     with tempfile.TemporaryDirectory() as tmpdir:
-        path = os.path.join(tmpdir, "list.json")
+        path = str(Path(tmpdir) / "list.json")
         lst = PersistentList(path, int)
         lst.append(1)
         lst.append(2)
@@ -230,7 +230,7 @@ def test_persistentlist_with_int():
 
 def test_persistentlist_with_class():
     with tempfile.TemporaryDirectory() as tmpdir:
-        path = os.path.join(tmpdir, "list.json")
+        path = str(Path(tmpdir) / "list.json")
         lst = PersistentList(path, MyClass)
         lst.append(MyClass("a", 1))
         lst.append(MyClass("b", 2))
@@ -244,7 +244,7 @@ def test_persistentlist_with_class():
 
 def test_persistentlist_with_dataclass():
     with tempfile.TemporaryDirectory() as tmpdir:
-        path = os.path.join(tmpdir, "list.json")
+        path = str(Path(tmpdir) / "list.json")
         lst = PersistentList(path, MyDataClass)
         lst.append(MyDataClass("x", 10))
         lst.append(MyDataClass("y", 20))
@@ -260,7 +260,7 @@ def test_persistentlist_with_dataclass():
 
 def test_persistentdict_with_datetime():
     with tempfile.TemporaryDirectory() as tmpdir:
-        path = os.path.join(tmpdir, "datetime.json")
+        path = str(Path(tmpdir) / "datetime.json")
         d = PersistentDict(path, datetime)
 
         # Test with timezone-aware datetime
@@ -280,7 +280,7 @@ def test_persistentdict_with_datetime():
 
 def test_persistentdict_with_naive_datetime():
     with tempfile.TemporaryDirectory() as tmpdir:
-        path = os.path.join(tmpdir, "naive_datetime.json")
+        path = str(Path(tmpdir) / "naive_datetime.json")
         d = PersistentDict(path, datetime)
 
         # Test with naive datetime (no timezone)
@@ -294,7 +294,7 @@ def test_persistentdict_with_naive_datetime():
 
 def test_persistentlist_with_datetime():
     with tempfile.TemporaryDirectory() as tmpdir:
-        path = os.path.join(tmpdir, "datetime_list.json")
+        path = str(Path(tmpdir) / "datetime_list.json")
         lst = PersistentList(path, datetime)
 
         berlin_tz = ZoneInfo("Europe/Berlin")
@@ -320,7 +320,7 @@ def test_persistentlist_with_datetime():
 
 def test_persistentdict_with_mixed_datetime_formats():
     with tempfile.TemporaryDirectory() as tmpdir:
-        path = os.path.join(tmpdir, "mixed_datetime.json")
+        path = str(Path(tmpdir) / "mixed_datetime.json")
         d = PersistentDict(path, datetime)
 
         berlin_tz = ZoneInfo("Europe/Berlin")
@@ -342,7 +342,7 @@ def test_persistentdict_with_mixed_datetime_formats():
 
 def test_persistentobject_with_int():
     with tempfile.TemporaryDirectory() as tmpdir:
-        path = os.path.join(tmpdir, "object.json")
+        path = str(Path(tmpdir) / "object.json")
         obj = PersistentObject(path, int, default_value=42)
         assert obj.get() == 42
 
@@ -362,7 +362,7 @@ def test_persistentobject_with_int():
 
 def test_persistentobject_with_class():
     with tempfile.TemporaryDirectory() as tmpdir:
-        path = os.path.join(tmpdir, "object_class.json")
+        path = str(Path(tmpdir) / "object_class.json")
         # Test without default value
         obj = PersistentObject(path, MyClass)
         assert obj.get() is None
@@ -380,7 +380,7 @@ def test_persistentobject_with_class():
 
 def test_persistentobject_with_dataclass():
     with tempfile.TemporaryDirectory() as tmpdir:
-        path = os.path.join(tmpdir, "object_dataclass.json")
+        path = str(Path(tmpdir) / "object_dataclass.json")
         default_value = MyDataClass("default", 0)
         obj = PersistentObject(path, MyDataClass, default_value=default_value)
 
@@ -400,7 +400,7 @@ def test_persistentobject_with_dataclass():
 
 def test_persistentobject_with_datetime():
     with tempfile.TemporaryDirectory() as tmpdir:
-        path = os.path.join(tmpdir, "object_datetime.json")
+        path = str(Path(tmpdir) / "object_datetime.json")
         berlin_tz = ZoneInfo("Europe/Berlin")
         now = datetime.now(berlin_tz)
 

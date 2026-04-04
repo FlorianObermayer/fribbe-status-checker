@@ -5,6 +5,7 @@ import logging
 import secrets
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Annotated
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
@@ -169,7 +170,7 @@ def sitemap():
 async def get_html(request: Request, for_date: str = "today"):  # keep unused variable for api reference
     api_key = request.session.get("api_key")
     signed_in = EphemeralAPIKeyStore.is_key_valid(api_key)
-    with open("app/static/index.html") as f:
+    with Path("app/static/index.html").open() as f:
         content = f.read()
     content = content.replace("__SIGNED_IN__", json.dumps(signed_in))
     return HTMLResponse(content)
@@ -296,7 +297,7 @@ def delete_api_key(
     if len(matches) > 1:
         raise HTTPException(status_code=409, detail="Ambiguous key prefix: multiple matches found")
     key_to_delete = matches[0].key
-    keys = [k for k in keys if not (k.key == key_to_delete)]
+    keys = [k for k in keys if k.key != key_to_delete]
     EphemeralAPIKeyStore.save(keys)
 
 
@@ -436,7 +437,7 @@ async def get_notification_preview(
     _: NotificationQuery = Query(...),
     __: str = Depends(PageAuth()),
 ):  # keep unused variable for api reference
-    with open("app/static/index.html") as f:
+    with Path("app/static/index.html").open() as f:
         content = f.read()
     content = content.replace("__SIGNED_IN__", json.dumps(True))
     return HTMLResponse(content)
@@ -453,7 +454,7 @@ async def get_auth_page(request: Request, next: str = "/"):
     next = sanitize_next(next)
     api_key = request.session.get("api_key")
     signed_in = EphemeralAPIKeyStore.is_key_valid(api_key)
-    with open("app/static/auth.html") as f:
+    with Path("app/static/auth.html").open() as f:
         content = f.read()
     safe_next = html.escape(next, quote=True)
     content = content.replace("__NEXT_DATA__", safe_next)
@@ -478,7 +479,7 @@ async def signout(request: Request):
 
 @app.get("/notification-create", response_class=HTMLResponse, tags=["Notifications", "HTML"])
 async def get_notification_builder(_: str = Depends(PageAuth())):
-    with open("app/static/notification-create.html") as f:
+    with Path("app/static/notification-create.html").open() as f:
         return HTMLResponse(f.read())
 
 

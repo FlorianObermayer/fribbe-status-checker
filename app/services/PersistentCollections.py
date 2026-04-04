@@ -1,8 +1,8 @@
 import json
-import os
 from collections.abc import MutableMapping
 from datetime import datetime
 from inspect import isclass
+from pathlib import Path
 from typing import (
     Any,
     Protocol,
@@ -200,8 +200,8 @@ class PersistentDict[V](MutableMapping[str, V]):
         return str(value)
 
     def _load(self):
-        if os.path.exists(self._path):
-            with open(self._path, encoding="utf-8") as f:
+        if Path(self._path).exists():
+            with Path(self._path).open(encoding="utf-8") as f:
                 raw_data = json.load(f)
 
             self._data = {k: self._deserialize(v, self._value_type) for k, v in raw_data.items()}
@@ -209,8 +209,8 @@ class PersistentDict[V](MutableMapping[str, V]):
             self._data = {}
 
     def _save(self):
-        os.makedirs(os.path.dirname(self._path), exist_ok=True)
-        with open(self._path, "w", encoding="utf-8") as f:
+        Path(self._path).parent.mkdir(parents=True, exist_ok=True)
+        with Path(self._path).open("w", encoding="utf-8") as f:
             serialized = {k: self._serialize(v) for k, v in self._data.items()}
             json.dump(
                 serialized,
@@ -363,7 +363,7 @@ class PersistentDescriptor[V]:
             # Create storage if it doesn't exist
             if not hasattr(instance, self._storage_attr):
                 base_path = instance.get_path()
-                file_path = os.path.join(base_path, f"{self._name}.json")
+                file_path = str(Path(base_path) / f"{self._name}.json")
                 setattr(
                     instance, self._storage_attr, PersistentObject(file_path, self._field_type, self._default_value)
                 )

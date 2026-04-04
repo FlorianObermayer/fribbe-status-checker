@@ -25,8 +25,8 @@ class EphemeralAPIKeyStore:
             persistent_list.clear()
             persistent_list.extend(keys)
 
-        except Exception as e:
-            logger.error(f"EphemeralAPIKeyStore - failed to save api keys: {e}")
+        except Exception:
+            logger.exception("EphemeralAPIKeyStore - failed to save api keys")
 
     @staticmethod
     def is_empty() -> bool:

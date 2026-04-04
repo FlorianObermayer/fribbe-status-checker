@@ -1,13 +1,10 @@
-import os
+from pathlib import Path
 
 from bs4 import BeautifulSoup, Tag
 
 
 def read_testdata_from_fs(relative_path: str) -> str:
-    with open(
-        os.path.join(os.path.dirname(__file__), relative_path),
-        encoding="utf-8",
-    ) as f:
+    with (Path(__file__).parent / relative_path).open(encoding="utf-8") as f:
         return f.read()
 
 
