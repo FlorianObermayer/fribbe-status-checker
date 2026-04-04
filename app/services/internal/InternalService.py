@@ -99,12 +99,9 @@ class InternalService:
         if old_active_devices_ct > 0 and new_active_devices_ct == 0:
             self._internal_data.last_device_on_site = now
 
-    async def _run_internal_query(self, router_ip: str | None, username: str | None, password: str | None):
+    async def _run_internal_query(self, router_ip: str, username: str, password: str):
         try:
             logger.info("Refresh Internal...")
-            if not router_ip or not username or not password:
-                logger.warning("Router credentials not fully set — skipping internal query")
-                return
             with Connection(f"http://{router_ip}", username, password, login_on_demand=True) as connection:
                 client = Client(connection)
                 active_member_devices = [
@@ -139,7 +136,7 @@ class InternalService:
             with self._rwlock.gen_wlock():
                 self._last_error = e
 
-    def _internal_query_loop(self, interval: int, router_ip: str | None, username: str | None, password: str | None):
+    def _internal_query_loop(self, interval: int, router_ip: str, username: str, password: str):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         while not self._stop_event.is_set():
@@ -154,6 +151,9 @@ class InternalService:
         interval: int = 60,
         delay_to_first_poll: int = 30,
     ):
+        if not router_ip or not username or not password:
+            logger.warning("Router credentials not set — internal polling will not start")
+            return
         if self._interval_thread is None or not self._interval_thread.is_alive():
             self._stop_event.clear()
 
