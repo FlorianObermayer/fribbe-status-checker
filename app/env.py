@@ -58,6 +58,12 @@ VAPID_PRIVATE_KEY: str | None = None
 VAPID_PUBLIC_KEY: str | None = None
 VAPID_CLAIM_SUBJECT: str | None = None
 
+# OpenWeatherMap integration — all three must be set to enable weather-aware push messages.
+OPENWEATHERMAP_API_KEY: str | None = None
+WEATHER_LAT: float | None = None
+WEATHER_LON: float | None = None
+WEATHER_CACHE_TTL_SECONDS: int = 1800  # 30 minutes
+
 
 def load() -> None:
     """Load (or reload) all env var values into the module-level globals.
@@ -95,6 +101,14 @@ def load() -> None:
     g["VAPID_PRIVATE_KEY"] = os.environ.get("VAPID_PRIVATE_KEY") or None
     g["VAPID_PUBLIC_KEY"] = os.environ.get("VAPID_PUBLIC_KEY") or None
     g["VAPID_CLAIM_SUBJECT"] = os.environ.get("VAPID_CLAIM_SUBJECT") or None
+
+    g["OPENWEATHERMAP_API_KEY"] = os.environ.get("OPENWEATHERMAP_API_KEY") or None
+    _lat = os.environ.get("WEATHER_LAT")
+    _lon = os.environ.get("WEATHER_LON")
+    g["WEATHER_LAT"] = float(_lat) if _lat else None
+    g["WEATHER_LON"] = float(_lon) if _lon else None
+
+    g["WEATHER_CACHE_TTL_SECONDS"] = int(os.environ.get("WEATHER_CACHE_TTL_SECONDS", "1800"))  # 30 minutes
 
 
 def validate() -> None:

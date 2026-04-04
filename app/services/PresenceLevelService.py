@@ -5,7 +5,7 @@ import logging
 import threading
 import time
 from datetime import date, datetime, timedelta
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 from zoneinfo import ZoneInfo
 
 from huawei_lte_api.Client import Client
@@ -15,6 +15,10 @@ from readerwriterlock import rwlock
 from app.services.MacAddressHelper import should_ignore_device
 from app.services.PresenceLevel import PresenceLevel
 from app.services.PresenceThresholds import PresenceThresholds
+
+if TYPE_CHECKING:
+    from app.services.MessageService import MessageService
+    from app.services.WeatherService import WeatherService
 
 
 class PushSender(Protocol):
@@ -38,6 +42,8 @@ class PresenceLevelService:
         self._push_service: PushSender | None = None
         self._push_initialized: bool = False
         self._last_push_virtual_date: date | None = None
+        self._message_service: MessageService | None = None
+        self._weather_service: WeatherService | None = None
 
     def get_level(self):
         with self._rwlock.gen_rlock():
@@ -53,6 +59,12 @@ class PresenceLevelService:
 
     def set_push_service(self, push_service: PushSender | None) -> None:
         self._push_service = push_service
+
+    def set_message_service(self, message_service: MessageService) -> None:
+        self._message_service = message_service
+
+    def set_weather_service(self, weather_service: WeatherService) -> None:
+        self._weather_service = weather_service
 
     async def _run_presence_detection(self, router_ip: str, username: str, password: str):
         try:
@@ -97,11 +109,27 @@ class PresenceLevelService:
             virtual_today = (now - timedelta(hours=5)).date()
             if self._last_push_virtual_date != virtual_today:
                 self._last_push_virtual_date = virtual_today
-                body = (
-                    "Ein paar Leute sind schon da!" if new_level == PresenceLevel.FEW else "Heute ist richtig was los!"
-                )
+                title, body = self._build_push_message(new_level)
                 logger.info("First non-empty presence today — sending push notifications")
-                self._push_service.send_to_all_sync("Leute am Fribbe! 🏐", body)
+                self._push_service.send_to_all_sync(title, body)
+
+    def _build_push_message(self, level: PresenceLevel) -> tuple[str, str]:
+        """Return (title, body) for the push notification."""
+        from app.services.occupancy.Model import OccupancyType
+
+        if self._message_service is not None:
+            weather = self._weather_service.get_condition() if self._weather_service is not None else None
+            msg = self._message_service.get_push_message(level, OccupancyType.NONE, None, weather=weather)
+            return msg.title, msg.message
+
+        # Fallback when no MessageService is wired
+        title = (
+            "Erster Aufschlag im Fribbe! 🏐"
+            if level == PresenceLevel.FEW
+            else "Heute ist richtig was los im Fribbe! 🏐"
+        )
+        body = "Ein paar Leute sind schon da!" if level == PresenceLevel.FEW else "Heute ist richtig was los!"
+        return title, body
 
     def _presence_detection_loop(self, interval: int, router_ip: str, username: str, password: str):
         loop = asyncio.new_event_loop()

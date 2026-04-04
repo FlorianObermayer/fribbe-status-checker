@@ -1,9 +1,21 @@
 import random
+from dataclasses import dataclass
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from app.services.occupancy.Model import OccupancyType
 from app.services.PresenceLevel import PresenceLevel
+from app.services.WeatherService import Temperature, Weather, WeatherState
+
+
+@dataclass
+class StatusMessage:
+    message: str
+
+
+@dataclass
+class PushMessage(StatusMessage):
+    title: str
 
 
 class MessageService:
@@ -168,6 +180,163 @@ class MessageService:
             "Das perfekte Beach-Life: Spiel, Spaß, Entspannung!",
         ]
 
+        self.push_titles: dict[PresenceLevel, list[str]] = {
+            PresenceLevel.FEW: [
+                "Erster Aufschlag im Fribbe! 🏐",
+                "Die ersten Spieler sind da! 🏐",
+                "Es geht los im Fribbe! 🏐",
+                "Kleine Runde im Fribbe! 🏐",
+            ],
+            PresenceLevel.MANY: [
+                "Heute ist richtig was los im Fribbe! 🏐",
+                "Voll besetzt im Fribbe! 🏐",
+                "Der Sand bebt im Fribbe! 🏐",
+                "Party am Fribbe! 🏐",
+            ],
+        }
+
+        self.temperature_messages: dict[Temperature, dict[PresenceLevel, list[str]]] = {
+            Temperature.HOT: {
+                PresenceLevel.EMPTY: [
+                    "Hitzerekord! Erst Volleyball, dann direkt in den Kaufbach! 💦",
+                    "So heiß - aber das Feld ist frei! 🌡️ Wer traut sich?",
+                    "Tropische Temperaturen, freier Sand - die perfekte Beach-Session!",
+                ],
+                PresenceLevel.FEW: [
+                    "Trotz der Hitze sind schon ein paar Mutige am Ball! 🌡️",
+                    "Heiß, heiß, heiß - kleine Runde hält durch! ☀️",
+                    "Sommerhitze trifft Beachvolleyball - Respekt!",
+                ],
+                PresenceLevel.MANY: [
+                    "Hitzewelle trifft volles Feld - echte Beachvolleyball-Stimmung! ☀️",
+                    "So heiß und trotzdem volles Haus - ihr seid unglaublich! 🌡️",
+                    "Sommerparty im Fribbe! Heute wird geschwitzt und gespielt! 🏖️",
+                ],
+            },
+            Temperature.WARM: {
+                PresenceLevel.EMPTY: [
+                    "Perfektes Wetter, freier Sand - jetzt einsteigen! ☀️",
+                    "Traumwetter und keine Warteschlange - selten! 🌞",
+                    "Warmer Tag, leerer Platz - deine Einladung!",
+                ],
+                PresenceLevel.FEW: [
+                    "Herrliches Wetter, kleine Runde - genieß die Sonne! 🌤️",
+                    "Warme Temperaturen und ein paar Spieler - perfekte Kombination!",
+                    "Tolles Wetter lockt die ersten Spieler raus - mach mit! ☀️",
+                ],
+                PresenceLevel.MANY: [
+                    "Tolles Wetter, voller Platz - Sommerfeeling pur! 🌞",
+                    "Bei diesem Traumwetter ist richtig was los! ☀️",
+                    "Warmer Abend, volles Feld - so muss das sein! 🏐",
+                ],
+            },
+            Temperature.MILD: {
+                PresenceLevel.EMPTY: [
+                    "Angenehme Temperaturen, freier Sand - ideal zum Spielen!",
+                    "Mildes Wetter, kein Gedränge - komm einfach vorbei! 🌥️",
+                    "Perfekte Bedingungen für entspanntes Volleyball!",
+                ],
+                PresenceLevel.FEW: [
+                    "Schöner milder Tag, ein paar Spieler schon am Start!",
+                    "Angenehmes Wetter, kleine Gruppe - noch Platz für dich! 🌤️",
+                    "Mildes Temperaturen, gute Stimmung - komm dazu!",
+                ],
+                PresenceLevel.MANY: [
+                    "Tolles mildes Wetter hat viele rausgelockt! 🌤️",
+                    "Angenehm mild und voller Platz - herrlicher Abend!",
+                    "Mildes Wetter, beste Stimmung - alle sind dabei!",
+                ],
+            },
+            Temperature.COLD: {
+                PresenceLevel.EMPTY: [
+                    "Kalt, aber das Feld wartet! Für echte Hartgesottene! 🥶",
+                    "Frostige Temperaturen = freier Sand. Trau dich! ❄️",
+                    "Wer braucht schon Wärme? Das Feld ist frei! 🥶",
+                ],
+                PresenceLevel.FEW: [
+                    "Trotz der Kälte am Ball - das ist Leidenschaft! 🔥",
+                    "Kleine aber mutige Gruppe trotzt dem Frost! ❄️",
+                    "Kalt draußen, heiß am Netz - Respekt! 🏐",
+                ],
+                PresenceLevel.MANY: [
+                    "Das Feld trotzt der Kälte - ihr seid unaufhaltbar! ❄️",
+                    "Voller Platz trotz Minusgraden - absolute Legenden! 🥶",
+                    "Kalt wie draußen, heiß wie die Stimmung - Wahnsinn! 🔥",
+                ],
+            },
+        }
+
+        self.weather_state_messages: dict[WeatherState, dict[PresenceLevel, list[str]]] = {
+            WeatherState.MILD_RAIN: {
+                PresenceLevel.EMPTY: [
+                    "Leichter Regen - der Sand ist frisch und das Feld frei! 🌦️",
+                    "Nieselregen hält Mutige nicht auf - das Feld wartet! 🌧️",
+                    "Ein bisschen Regen macht den Sand nur saftiger! 🌦️",
+                ],
+                PresenceLevel.FEW: [
+                    "Leichter Regen hält die Hartgesottenen nicht auf! 🌧️",
+                    "Kleine Gruppe spielt trotz Nieselregen - Respekt! 🌦️",
+                    "Regen? Egal! Ein paar Mutige spielen trotzdem! 💪",
+                ],
+                PresenceLevel.MANY: [
+                    "Voller Einsatz trotz Nieselregen - ihr seid verrückt! 🌧️",
+                    "Regen stoppt diese Crew nicht - volles Haus! 🌦️",
+                    "Regenvolleyball at its best - echte Fribbe-DNA! 💪",
+                ],
+            },
+            WeatherState.HEAVY_RAIN: {
+                PresenceLevel.EMPTY: [
+                    "Starkregen - heute lieber trocken bleiben und auf besseres Wetter warten! ⛈️",
+                    "Beim Regen ist das Feld frei - aber Vorsicht bei Sturm! 🌧️",
+                    "Starker Regen heute - vielleicht besser morgen? ⛈️",
+                ],
+                PresenceLevel.FEW: [
+                    "Starkregen + Volleyball = Legendenstatus! 💪⛈️",
+                    "Paar absolut Wahnsinnige spielen trotz Starkregen! 🌧️",
+                    "Wer spielt bei diesem Regen? Echte Fribbe-Helden! ⛈️",
+                ],
+                PresenceLevel.MANY: [
+                    "Echte Wikinger! Volles Feld trotz Starkregen! ⛈️",
+                    "Starkregen? Die Fribbe-Community schreckt das nicht ab! 💪",
+                    "Volles Haus im strömenden Regen - unvergesslich! 🌧️",
+                ],
+            },
+            WeatherState.THUNDERSTORM: {
+                PresenceLevel.EMPTY: [
+                    "Gewitter - heute bitte drin bleiben! Sicherheit geht vor! ⚡",
+                    "Bei Gewitter ist das Feld leer und das ist gut so! ⛈️",
+                    "Gewitter zieht auf - bitte warten bis es vorbeizieht! ⚡",
+                ],
+                PresenceLevel.FEW: [
+                    "Gewitter im Anmarsch - bitte Sicherheit beachten! ⚡",
+                    "Achtung Gewitter! Spielpause empfohlen! ⛈️",
+                    "Bei Blitz und Donner bitte das Feld verlassen! ⚡",
+                ],
+                PresenceLevel.MANY: [
+                    "Gewitter - bitte sofort das Feld verlassen! Sicherheit geht vor! ⚡",
+                    "Achtung: Gewitter! Alle vom Feld - Sicherheit zuerst! ⛈️",
+                    "Beim Gewitter gilt: Rein ins Trockene! Sicherheit geht vor! ⚡",
+                ],
+            },
+            WeatherState.SNOW: {
+                PresenceLevel.EMPTY: [
+                    "Schnee auf dem Feld - Wintervolleyball für Mutige! ❄️",
+                    "Weißer Sand? Schnee! Das Feld wartet auf Winterhelden! ⛄",
+                    "Schneebedecktes Beachfeld - einmalig! Wer traut sich? ❄️",
+                ],
+                PresenceLevel.FEW: [
+                    "Schnee trifft Sand - kleine aber mutige Gruppe! ⛄",
+                    "Volleyball im Schnee - das muss man erstmal schaffen! ❄️",
+                    "Winter-Wahnsinn! Paar Unerschrockene spielen im Schnee! ⛄",
+                ],
+                PresenceLevel.MANY: [
+                    "Volleyball im Schnee - ihr seid absolute Legenden! ⛄",
+                    "Schnee? Egal! Volles Haus und Wintervolleyball! ❄️",
+                    "Schneegestöber und volles Feld - das ist Fribbe at its best! ⛄",
+                ],
+            },
+        }
+
     def get_season(self, last_updated: datetime) -> str:
         month = last_updated.month
         if 3 <= month <= 5:
@@ -190,16 +359,27 @@ class MessageService:
         else:
             return "night"
 
-    def get_message(
+    def _pick_message(
         self,
         level: PresenceLevel,
         occupancy: OccupancyType,
         occupancy_time_str: str | None,
+        weather: Weather | None = None,
     ) -> str:
-
         if occupancy == OccupancyType.FULLY:
             formatted_occ_messages = [message.format(ftime=occupancy_time_str) for message in self.occupied_messages]
             return random.choice(formatted_occ_messages)  # noqa: S311
+
+        # 30% chance for a weather-aware message when weather is available
+        if weather is not None and random.random() < 0.3:  # noqa: S311
+            # Precipitation/special states take priority over temperature
+            state_pool = self.weather_state_messages.get(weather.state, {}).get(level)
+            if state_pool:
+                return random.choice(state_pool)  # noqa: S311
+            # Clear/cloudy: use temperature messages
+            temp_pool = self.temperature_messages.get(weather.temperature, {}).get(level)
+            if temp_pool:
+                return random.choice(temp_pool)  # noqa: S311
 
         # 20% chance for a combo message
         if random.random() < 0.2:  # noqa: S311
@@ -207,7 +387,7 @@ class MessageService:
 
         for_datetime = datetime.now(tz=ZoneInfo("Europe/Berlin"))
 
-        # 40% chance for saisonal or daytime-dependant messages
+        # 40% chance for seasonal or daytime-dependent messages
         if random.random() < 0.4:  # noqa: S311
             daytime = self.get_daytime(for_datetime)
             if daytime in self.time_messages and level in self.time_messages[daytime]:
@@ -217,5 +397,26 @@ class MessageService:
             if season in self.seasonal_messages and level in self.seasonal_messages[season]:
                 return random.choice(self.seasonal_messages[season][level])  # noqa: S311
 
-        # Fallback to base messages (40% chance)
+        # Fallback to base messages
         return random.choice(self.base_messages[level])  # noqa: S311
+
+    def get_status_message(
+        self,
+        level: PresenceLevel,
+        occupancy: OccupancyType,
+        occupancy_time_str: str | None,
+        weather: Weather | None = None,
+    ) -> StatusMessage:
+        return StatusMessage(message=self._pick_message(level, occupancy, occupancy_time_str, weather))
+
+    def get_push_message(
+        self,
+        level: PresenceLevel,
+        occupancy: OccupancyType,
+        occupancy_time_str: str | None,
+        weather: Weather | None = None,
+    ) -> PushMessage:
+        body = self._pick_message(level, occupancy, occupancy_time_str, weather)
+        title_pool = self.push_titles.get(level, self.push_titles[PresenceLevel.FEW])
+        title = random.choice(title_pool)  # noqa: S311
+        return PushMessage(message=body, title=title)

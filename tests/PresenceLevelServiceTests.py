@@ -136,7 +136,17 @@ def test_push_title():
 
     svc._maybe_send_first_active_push(PresenceLevel.EMPTY, PresenceLevel.FEW)
 
-    assert push.calls[0][0] == "Leute am Fribbe! 🏐"
+    assert push.calls[0][0] == "Erster Aufschlag im Fribbe! 🏐"
+
+
+def test_push_title_many():
+    push = _FakePushSender()
+    svc = _make_service(push)
+    svc._push_initialized = True
+
+    svc._maybe_send_first_active_push(PresenceLevel.EMPTY, PresenceLevel.MANY)
+
+    assert push.calls[0][0] == "Heute ist richtig was los im Fribbe! 🏐"
 
 
 # ---------------------------------------------------------------------------
