@@ -308,7 +308,7 @@ def details(_: str = Depends(HybridAuth())):
 def create_api_key(
     comment: str = Body("", embed=True),
     valid_until: datetime = Body(None, embed=True),
-    _: str | None = Depends(HybridAuth(bypass_on_empty_api_key_list=True)),
+    auth_subject: str | None = Depends(HybridAuth(bypass_on_empty_api_key_list=True)),
 ) -> ApiKey:
     """
     Create a new API key, store it in the JSON file, and return it. Requires valid API key to create or no API keys to begin with at all (admin setup mode)
@@ -320,11 +320,10 @@ def create_api_key(
         microsecond=0
     )
     new_api_key = ApiKey.generate_new(comment, valid_until)
-    keys = EphemeralAPIKeyStore.load()
-    if not keys:
-        keys = []
-    keys.append(new_api_key)
-    EphemeralAPIKeyStore.save(keys)
+    bootstrap_mode = auth_subject is None
+    appended = EphemeralAPIKeyStore.append(new_api_key, require_empty=bootstrap_mode)
+    if not appended:
+        raise HTTPException(status_code=409, detail="Bootstrap window closed: store is no longer empty")
     return new_api_key
 
 
