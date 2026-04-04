@@ -10,6 +10,25 @@
     display: none !important;
 }
 
+.bootstrap-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 2000;
+    background: #c62828;
+    color: #fff;
+    text-align: center;
+    padding: 12px 16px;
+    font-size: 0.95rem;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+.bootstrap-banner a {
+    color: #ffe082;
+    text-decoration: underline;
+}
+
 .clipboard-textarea {
     position: fixed;
     left: -9999px;

@@ -221,8 +221,10 @@ async def get_html(request: Request, for_date: str = "today"):  # keep unused va
     signed_in = EphemeralAPIKeyStore.is_key_valid(api_key)
     with Path("app/static/index.html").open() as f:
         content = f.read()
+    bootstrap_mode = EphemeralAPIKeyStore.is_empty()
     content = content.replace("__SIGNED_IN__", json.dumps(signed_in))
     content = content.replace("__SHOW_ADMIN_AUTH__", json.dumps(env.SHOW_ADMIN_AUTH))
+    content = content.replace("__BOOTSTRAP_MODE__", json.dumps(bootstrap_mode))
     content = content.replace("__VERSION__", VERSION)
     return HTMLResponse(content)
 
