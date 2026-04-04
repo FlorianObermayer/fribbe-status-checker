@@ -62,6 +62,7 @@ packages = ["app", "scripts"]
 
 [tool.uv]
 package = true
+env-file = ".env.dev"
 
 [tool.pyright]
 pythonVersion = "3.12"

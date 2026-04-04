@@ -28,6 +28,7 @@ def validate() -> None:
     if _missing:
         raise RuntimeError(f"Missing required environment variable(s): {', '.join(_missing)}")
 
+
 # ---------------------------------------------------------------------------
 # Optional (with defaults)
 # ---------------------------------------------------------------------------

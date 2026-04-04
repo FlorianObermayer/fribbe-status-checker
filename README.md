@@ -22,15 +22,21 @@ A FastAPI-based status checker for [Fribbe Beach](https://fribbebeach.de), runni
 uv sync
 ```
 
-### Run the app locally
+### Local development setup
 
-The app expects several environment variables. Check the `.env.template` file for the minimal set for local development:
+**Using a dev container** is recommended for local development, but you can also run the app directly on your machine. Either way, set up the required environment variables as described below.
+
+The local app expects several environment variables, provided via a `.env.dev` file. Check the `.env.template` file for the minimal set for local development.
 
 ```sh
-uv run fastapi dev app/main.py
+uv run dev
 ```
 
-The API and UI are then available at <http://localhost:8000>.
+### Run with VSCode Debugger
+
+Run `Python: Debug` run configuration in VSCode.
+
+The API and UI are then available at <http://localhost:8007>.
 
 ### Run tests
 
