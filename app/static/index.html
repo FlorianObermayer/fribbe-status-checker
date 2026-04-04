@@ -56,7 +56,7 @@
     <link rel="stylesheet" href="/static/css/styles.css?v=__VERSION__">
 </head>
 
-<body id="status-body" data-signed-in="__SIGNED_IN__">
+<body id="status-body" data-signed-in="__SIGNED_IN__" data-show-admin-auth="__SHOW_ADMIN_AUTH__">
     <div class="container">
         <h1>Fribbe Beach - was geht aaaab?</h1>
 
@@ -139,6 +139,14 @@
     </div>
 
     <div id="admin-btn-group">
+        <a id="signin-btn" href="/auth" class="admin-btn" title="Anmelden" data-tooltip="Anmelden">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                <polyline points="10 17 15 12 10 7" />
+                <line x1="15" y1="12" x2="3" y2="12" />
+            </svg>
+        </a>
         <a href="/notification-create" class="admin-btn" title="Benachrichtigung erstellen"
             data-tooltip="Benachrichtigung erstellen">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"

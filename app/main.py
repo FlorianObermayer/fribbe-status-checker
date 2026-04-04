@@ -222,6 +222,7 @@ async def get_html(request: Request, for_date: str = "today"):  # keep unused va
     with Path("app/static/index.html").open() as f:
         content = f.read()
     content = content.replace("__SIGNED_IN__", json.dumps(signed_in))
+    content = content.replace("__SHOW_ADMIN_AUTH__", json.dumps(env.SHOW_ADMIN_AUTH))
     content = content.replace("__VERSION__", VERSION)
     return HTMLResponse(content)
 

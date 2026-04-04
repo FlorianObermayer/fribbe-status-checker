@@ -41,6 +41,8 @@ OCCUPANCY_POLLING_INTERVAL_SECONDS: int = 360
 
 HTTPS_ONLY: bool = False
 
+SHOW_ADMIN_AUTH: bool = False
+
 # Build-time version tag injected by CI; falls back to "dev" locally.
 BUILD_VERSION: str = _version
 
@@ -76,6 +78,8 @@ def load() -> None:
     g["OCCUPANCY_POLLING_INTERVAL_SECONDS"] = int(os.environ.get("OCCUPANCY_POLLING_INTERVAL_SECONDS", "360"))
 
     g["HTTPS_ONLY"] = os.environ.get("HTTPS_ONLY", "false").lower() == "true"
+
+    g["SHOW_ADMIN_AUTH"] = os.environ.get("SHOW_ADMIN_AUTH", "false").lower() == "true"
 
     g["BUILD_VERSION"] = os.environ.get("BUILD_VERSION") or _version
 

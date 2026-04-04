@@ -51,6 +51,32 @@ uv run pytest
 uv run lint
 ```
 
+## Admin authentication
+
+### First API key (bootstrap / setup mode)
+
+On a fresh install with no API keys configured, the `POST /api/internal/api_key` endpoint operates in **setup mode**: authentication is skipped, allowing anyone to create the very first key without credentials. Once at least one key exists the endpoint requires a valid key, so setup mode is automatically deactivated after bootstrap.
+
+To obtain the first key, send a request to the running app (e.g. via the Swagger UI at `/docs`) while the key store is empty:
+
+```sh
+curl -X POST http://localhost:8007/api/internal/api_key \
+  -H "Content-Type: application/json" \
+  -d '{"comment": "bootstrap key"}'
+```
+
+Store the returned key securely and use it for all subsequent authenticated requests.
+
+### Sign-in button on the home page (`SHOW_ADMIN_AUTH`)
+
+By default the home page (`/`) shows no sign-in affordance to keep the public-facing UI clean. Setting `SHOW_ADMIN_AUTH=true` makes a sign-in button appear in the bottom-right corner whenever the visitor is **not** authenticated. Clicking it leads to the `/auth` page.
+
+```sh
+SHOW_ADMIN_AUTH=true  # default: false
+```
+
+Authenticated users always see the full admin button group regardless of this setting.
+
 ## Enable Push notifications (Web Push / VAPID)
 
 Push notifications require a VAPID key pair. Generate one with:
