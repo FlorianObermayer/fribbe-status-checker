@@ -632,7 +632,7 @@ async function initPushNotifications() {
                     userVisibleOnly: true,
                     applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
                 });
-                await fetch('/api/push/subscribe', {
+                const resp = await fetch('/api/push/subscribe', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -641,6 +641,10 @@ async function initPushNotifications() {
                         auth: arrayBufferToBase64Url(sub.getKey('auth')),
                     }),
                 });
+                if (!resp.ok) {
+                    await sub.unsubscribe();
+                    throw new Error(`Subscribe request failed with status ${resp.status}`);
+                }
                 setPushButtonState('subscribed');
                 showToast('Benachrichtigungen aktiviert!');
             } catch (e) {
