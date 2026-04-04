@@ -7,6 +7,8 @@ Optional variables fall back to their stated defaults.
 
 import os
 
+from app.version import VERSION as _version
+
 # ---------------------------------------------------------------------------
 # Required
 # ---------------------------------------------------------------------------
@@ -40,7 +42,7 @@ OCCUPANCY_POLLING_INTERVAL_SECONDS: int = 360
 HTTPS_ONLY: bool = False
 
 # Build-time version tag injected by CI; falls back to "dev" locally.
-BUILD_VERSION: str = "dev"
+BUILD_VERSION: str = _version
 
 # All three must be set together to enable Web Push; individually optional.
 VAPID_PRIVATE_KEY: str | None = None
@@ -75,7 +77,7 @@ def load() -> None:
 
     g["HTTPS_ONLY"] = os.environ.get("HTTPS_ONLY", "false").lower() == "true"
 
-    g["BUILD_VERSION"] = os.environ.get("BUILD_VERSION", "dev")
+    g["BUILD_VERSION"] = os.environ.get("BUILD_VERSION") or _version
 
     g["VAPID_PRIVATE_KEY"] = os.environ.get("VAPID_PRIVATE_KEY") or None
     g["VAPID_PUBLIC_KEY"] = os.environ.get("VAPID_PUBLIC_KEY") or None
