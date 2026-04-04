@@ -28,12 +28,20 @@ class HybridAuth:
 
     async def __call__(self, request: Request) -> str | None:
         # 1. Check Session and remove if not valid anymore
-        api_key = request.session.get("api_key")
         admin_token = env.ADMIN_TOKEN
-        is_admin = bool(api_key and admin_token and secrets.compare_digest(api_key, admin_token))
-        if EphemeralAPIKeyStore.is_key_valid(api_key) or is_admin:
+
+        # 1a. Admin session marker - token value is never stored in the session cookie
+        if request.session.get("is_admin"):
+            if admin_token:
+                return admin_token
+            # ADMIN_TOKEN was removed from env; invalidate the stale marker
+            request.session.pop("is_admin", None)
+
+        # 1b. Ephemeral key in session
+        api_key = request.session.get("api_key")
+        if EphemeralAPIKeyStore.is_key_valid(api_key):
             return api_key
-        else:
+        elif api_key:
             request.session.clear()
 
         # 2. Check API Key Header
@@ -43,7 +51,11 @@ class HybridAuth:
             auto_error=self._auto_error,
         )(request)
         if api_key:
-            request.session["api_key"] = api_key
+            if admin_token and secrets.compare_digest(api_key, admin_token):
+                # Store a boolean marker only - never persist the token value into the cookie
+                request.session["is_admin"] = True
+            else:
+                request.session["api_key"] = api_key
             return api_key
 
         if self._auto_error:

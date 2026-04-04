@@ -1,3 +1,4 @@
+import secrets
 from datetime import date, datetime
 from typing import Self
 
@@ -41,9 +42,19 @@ class DetailsResponse(BaseResponse):
 
 
 class ApiKey(BaseModel):
-    key: str = Field(..., min_length=env.MIN_TOKEN_BYTES)
+    key: str = Field(..., min_length=env.MIN_TOKEN_LENGTH)
     comment: str
     valid_until: datetime
+
+    @staticmethod
+    def generate_new(comment: str, valid_until: datetime) -> "ApiKey":
+        n_bytes = env.MIN_TOKEN_LENGTH // 4 * 3  # convert from base64-url string length to raw byte length
+        new_key = secrets.token_urlsafe(n_bytes)
+        if len(new_key) < env.MIN_TOKEN_LENGTH:
+            raise ValueError(
+                f"Generated key is too short: {len(new_key)} characters (expected at least {env.MIN_TOKEN_LENGTH})"
+            )
+        return ApiKey(key=new_key, comment=comment, valid_until=valid_until)
 
     @classmethod
     def from_dict(cls, d: dict[str, str]) -> Self:

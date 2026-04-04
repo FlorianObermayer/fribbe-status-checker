@@ -9,8 +9,8 @@ import os
 
 from app.version import VERSION as _version
 
-# Minimum raw-byte length for all generated and configured tokens.
-MIN_TOKEN_BYTES: int = 48
+# Minimum token length for all generated and configured tokens.
+MIN_TOKEN_LENGTH: int = 48
 
 # ---------------------------------------------------------------------------
 # Required
@@ -103,8 +103,8 @@ def validate() -> None:
     _missing = [v for v in _REQUIRED if not os.environ.get(v)]
     if _missing:
         raise RuntimeError(f"Missing required environment variable(s): {', '.join(_missing)}")
-    if ADMIN_TOKEN is not None and len(ADMIN_TOKEN) < MIN_TOKEN_BYTES:
-        raise RuntimeError(f"ADMIN_TOKEN must be at least {MIN_TOKEN_BYTES} characters long")
+    if ADMIN_TOKEN is not None and len(ADMIN_TOKEN) < MIN_TOKEN_LENGTH:
+        raise RuntimeError(f"ADMIN_TOKEN must be at least {MIN_TOKEN_LENGTH} characters long")
 
 
 # Populate from os.environ at import time.
