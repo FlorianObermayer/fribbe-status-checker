@@ -320,11 +320,10 @@ def create_api_key(
         microsecond=0
     )
     new_api_key = ApiKey.generate_new(comment, valid_until)
-    keys = EphemeralAPIKeyStore.load()
-    if not keys:
-        keys = []
-    keys.append(new_api_key)
-    EphemeralAPIKeyStore.save(keys)
+    bootstrap_mode = _ is None
+    appended = EphemeralAPIKeyStore.append(new_api_key, require_empty=bootstrap_mode)
+    if not appended:
+        raise HTTPException(status_code=409, detail="Bootstrap window closed: store is no longer empty")
     return new_api_key
 
 

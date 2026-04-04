@@ -45,6 +45,10 @@ class HybridAuth:
             request.session.clear()
 
         # 2. Check API Key Header
+        # Bootstrap bypass: store is empty and no ADMIN_TOKEN configured — allow through
+        if self._bypass_on_empty_api_key_list and EphemeralAPIKeyStore.is_empty() and not admin_token:
+            return None
+
         api_key: str | None = await EphemeralAPIKeyHeader(
             name=self._name,
             bypass_on_empty_api_key_list=self._bypass_on_empty_api_key_list,

@@ -1,10 +1,13 @@
 import logging
+import threading
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import app.env as env
 from app.api.Responses import ApiKey
 from app.services.PersistentCollections import PersistentList
+
+_write_lock = threading.Lock()
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -31,6 +34,23 @@ class EphemeralAPIKeyStore:
     @staticmethod
     def is_empty() -> bool:
         return len(EphemeralAPIKeyStore.load()) == 0
+
+    @staticmethod
+    def append(key: ApiKey, *, require_empty: bool = False) -> bool:
+        """Append a key under a write lock.
+
+        If require_empty=True the append only proceeds when the store is still
+        empty at the time the lock is held, closing the TOCTOU bootstrap window.
+        Returns True if the key was stored, False if require_empty was set and
+        the store was no longer empty.
+        """
+        with _write_lock:
+            keys = EphemeralAPIKeyStore.load()
+            if require_empty and keys:
+                return False
+            keys.append(key)
+            EphemeralAPIKeyStore.save(keys)
+            return True
 
     @staticmethod
     def is_key_valid(key: str | None) -> bool:
