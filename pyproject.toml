@@ -15,12 +15,16 @@ dependencies = [
     "markdown>=3.8.2",
     "starlette-session>=0.4.3",
     "secure>=1.0.1",
+    "pywebpush>=2.3.0",
 ]
 
 [project.scripts]
 lint = "scripts.lint:main"
 dev = "scripts.dev:main"
 watch = "scripts.watch:main"
+generate-vapid-keys = "scripts.generate_vapid_keys:main"
+test-push-notification = "scripts.test_push_notification:main"
+
 
 [dependency-groups]
 dev = [

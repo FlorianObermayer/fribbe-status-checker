@@ -527,4 +527,127 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     pollNotifications();
     setInterval(pollNotifications, 30000); // Poll for new notifications every 30 seconds
+
+    initPushNotifications();
 });
+
+// ---- Web Push Notifications ----
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = atob(base64);
+    const output = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; i++) output[i] = rawData.charCodeAt(i);
+    return output;
+}
+
+function arrayBufferToBase64Url(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    bytes.forEach(b => (binary += String.fromCharCode(b)));
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+function setPushButtonState(state) {
+    const row = document.getElementById('push-notify-row');
+    const btn = document.getElementById('push-subscribe-btn');
+    const label = document.getElementById('push-btn-label');
+    if (!row || !btn || !label) return;
+
+    row.classList.remove('hidden');
+    btn.classList.remove('subscribed', 'denied');
+    btn.disabled = false;
+
+    if (state === 'subscribed') {
+        btn.classList.add('subscribed');
+        label.textContent = 'Benachrichtigung deaktivieren';
+        btn.title = 'Push-Benachrichtigungen deaktivieren';
+    } else if (state === 'denied') {
+        btn.classList.add('denied');
+        label.textContent = 'Benachrichtigungen blockiert';
+        btn.title = 'Benachrichtigungen sind im Browser blockiert';
+        btn.disabled = true;
+    } else {
+        label.textContent = 'Benachrichtigung aktivieren';
+        btn.title = 'Push-Benachrichtigung, sobald die Meute ins Fribbe strömt!';
+    }
+}
+
+async function initPushNotifications() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+
+    let vapidPublicKey;
+    try {
+        const resp = await fetch('/api/push/vapid-key');
+        if (!resp.ok) return; // server not configured
+        vapidPublicKey = (await resp.json()).public_key;
+    } catch {
+        return;
+    }
+
+    let swReg;
+    try {
+        swReg = await navigator.serviceWorker.register('/sw.js');
+    } catch {
+        return;
+    }
+
+    const permission = Notification.permission;
+    if (permission === 'denied') {
+        setPushButtonState('denied');
+        return;
+    }
+
+    const existingSub = await swReg.pushManager.getSubscription();
+    setPushButtonState(existingSub ? 'subscribed' : 'unsubscribed');
+
+    const btn = document.getElementById('push-subscribe-btn');
+    if (!btn) return;
+
+    btn.addEventListener('click', async () => {
+        const currentSub = await swReg.pushManager.getSubscription();
+        if (currentSub) {
+            // Unsubscribe
+            try {
+                const auth = arrayBufferToBase64Url(currentSub.getKey('auth'));
+                await currentSub.unsubscribe();
+                await fetch('/api/push/unsubscribe', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ auth }),
+                });
+                setPushButtonState('unsubscribed');
+            } catch (e) {
+                console.error('Unsubscribe failed:', e);
+                showToast('Fehler beim Deaktivieren', 'error');
+            }
+        } else {
+            // Subscribe
+            try {
+                const sub = await swReg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+                });
+                await fetch('/api/push/subscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        endpoint: sub.endpoint,
+                        p256dh: arrayBufferToBase64Url(sub.getKey('p256dh')),
+                        auth: arrayBufferToBase64Url(sub.getKey('auth')),
+                    }),
+                });
+                setPushButtonState('subscribed');
+                showToast('Benachrichtigungen aktiviert!');
+            } catch (e) {
+                if (Notification.permission === 'denied') {
+                    setPushButtonState('denied');
+                } else {
+                    console.error('Subscribe failed:', e);
+                    showToast('Fehler beim Aktivieren', 'error');
+                }
+            }
+        }
+    });
+}

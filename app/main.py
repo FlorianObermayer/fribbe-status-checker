@@ -52,6 +52,7 @@ from app.services.PresenceLevelService import (
     PresenceLevelService,
 )
 from app.services.PresenceThresholds import PresenceThresholds
+from app.services.PushSubscriptionService import PushSubscriptionService
 from app.version import VERSION
 
 env.validate()
@@ -128,6 +129,15 @@ message_service = MessageService()
 notification_service = NotificationService()
 notification_service.start_cleanup_job()
 
+push_subscription_service: PushSubscriptionService | None = None
+if env.VAPID_PRIVATE_KEY and env.VAPID_PUBLIC_KEY and env.VAPID_CLAIM_SUBJECT:
+    push_subscription_service = PushSubscriptionService(
+        env.VAPID_PRIVATE_KEY, env.VAPID_PUBLIC_KEY, env.VAPID_CLAIM_SUBJECT
+    )
+    presence_service.set_push_service(push_subscription_service)
+else:
+    logging.getLogger("uvicorn.error").warning("VAPID keys not configured; push notifications disabled")
+
 
 @app.get("/api/version")
 async def version():
@@ -137,6 +147,45 @@ async def version():
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     return FileResponse("app/static/images/favicon.ico")
+
+
+@app.get("/sw.js", include_in_schema=False)
+async def service_worker():
+    return FileResponse(
+        "app/static/sw.js",
+        media_type="application/javascript",
+        headers={"Service-Worker-Allowed": "/"},
+    )
+
+
+@app.get("/api/push/vapid-key", tags=["Push Notifications"])
+async def get_vapid_key():
+    if push_subscription_service is None:
+        raise HTTPException(status_code=503, detail="Push notifications not configured")
+    return {"public_key": push_subscription_service.get_public_key()}
+
+
+@app.post("/api/push/subscribe", status_code=201, tags=["Push Notifications"])
+async def push_subscribe(
+    endpoint: str = Body(...),
+    p256dh: str = Body(...),
+    auth: str = Body(...),
+):
+    if push_subscription_service is None:
+        raise HTTPException(status_code=503, detail="Push notifications not configured")
+    try:
+        PushSubscriptionService.validate_subscription(endpoint, p256dh, auth)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    push_subscription_service.add(endpoint, p256dh, auth)
+
+
+@app.delete("/api/push/unsubscribe", tags=["Push Notifications"])
+async def push_unsubscribe(auth: str = Body(..., embed=True)):
+    if push_subscription_service is None:
+        raise HTTPException(status_code=503, detail="Push notifications not configured")
+    if not push_subscription_service.remove(auth):
+        raise HTTPException(status_code=404, detail="Subscription not found")
 
 
 @app.get("/robots.txt", response_class=PlainTextResponse, include_in_schema=False)
