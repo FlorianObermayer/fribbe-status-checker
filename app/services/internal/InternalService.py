@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import os
 import threading
 import time
 from dataclasses import dataclass
@@ -12,6 +11,7 @@ from huawei_lte_api.Client import Client
 from huawei_lte_api.Connection import Connection
 from readerwriterlock import rwlock
 
+import app.env as env
 from app.services.internal.Model import Warden, Wardens
 from app.services.MacAddressHelper import should_ignore_device
 from app.services.PersistentCollections import PersistentPathProvider, persistent
@@ -30,7 +30,7 @@ class InternalPersistentData(PersistentPathProvider):
     wardens_on_site = persistent(list[Warden], "wardens_on_site", [])
 
     def get_path(self) -> str:
-        return path.join(os.environ["LOCAL_DATA_PATH"], "internal")
+        return path.join(env.LOCAL_DATA_PATH, "internal")
 
 
 class InternalService:
@@ -145,12 +145,15 @@ class InternalService:
 
     def start_polling(
         self,
-        router_ip: str,
-        username: str,
-        password: str,
+        router_ip: str | None,
+        username: str | None,
+        password: str | None,
         interval: int = 60,
         delay_to_first_poll: int = 30,
     ):
+        if not router_ip or not username or not password:
+            logger.warning("Router credentials not set — internal polling will not start")
+            return
         if self._interval_thread is None or not self._interval_thread.is_alive():
             self._stop_event.clear()
 

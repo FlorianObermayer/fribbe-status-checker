@@ -1,5 +1,3 @@
-import os
-import tempfile
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -8,12 +6,6 @@ from pydantic import ValidationError
 
 from app.api.EphemeralAPIKeyStore import EphemeralAPIKeyStore
 from app.api.Responses import ApiKey
-
-
-@pytest.fixture(scope="session", autouse=True)
-def set_env():
-    with tempfile.TemporaryDirectory() as tmpdir:
-        os.environ["API_KEYS_PATH"] = os.path.join(tmpdir, "apikeys.test.json")
 
 
 def test_is_key_valid():

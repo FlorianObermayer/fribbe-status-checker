@@ -1,0 +1,84 @@
+"""Central environment variable configuration.
+
+All environment variables consumed by the app are declared here.
+Required variables are validated at application startup via validate().
+Optional variables fall back to their stated defaults.
+"""
+
+import os
+
+# ---------------------------------------------------------------------------
+# Required
+# ---------------------------------------------------------------------------
+
+SESSION_SECRET_KEY: str = ""
+LOCAL_DATA_PATH: str = ""
+API_KEYS_PATH: str = ""
+
+_REQUIRED: list[str] = [
+    "SESSION_SECRET_KEY",
+    "LOCAL_DATA_PATH",
+    "API_KEYS_PATH",
+]
+
+# ---------------------------------------------------------------------------
+# Optional (with defaults)
+# ---------------------------------------------------------------------------
+
+ROUTER_IP: str | None = None
+ROUTER_USERNAME: str | None = None
+ROUTER_PASSWORD: str | None = None
+
+PRESENCE_POLLING_INTERVAL_SECONDS: int = 60
+PRESENCE_POLLING_DELAY_SECONDS: int = 0
+
+INTERNAL_POLLING_INTERVAL_SECONDS: int = 60
+INTERNAL_POLLING_DELAY_SECONDS: int = 30
+
+OCCUPANCY_POLLING_INTERVAL_SECONDS: int = 360
+
+HTTPS_ONLY: bool = False
+
+# Build-time version tag injected by CI; falls back to "dev" locally.
+BUILD_VERSION: str = "dev"
+
+
+def load() -> None:
+    """Load (or reload) all env var values into the module-level globals.
+
+    Called once at import time and again by validate() so that env vars set
+    after the initial import (e.g. in tests) are reflected in the constants.
+    Uses globals() dict access to avoid Pyright's reportConstantRedefinition
+    rule, which treats uppercase module-level names as Final by convention.
+    """
+    g = globals()
+    g["SESSION_SECRET_KEY"] = os.environ.get("SESSION_SECRET_KEY", "")
+    g["LOCAL_DATA_PATH"] = os.environ.get("LOCAL_DATA_PATH", "")
+    g["API_KEYS_PATH"] = os.environ.get("API_KEYS_PATH", "")
+
+    g["ROUTER_IP"] = os.environ.get("ROUTER_IP", "") or None
+    g["ROUTER_USERNAME"] = os.environ.get("ROUTER_USERNAME", "") or None
+    g["ROUTER_PASSWORD"] = os.environ.get("ROUTER_PASSWORD", "") or None
+
+    g["PRESENCE_POLLING_INTERVAL_SECONDS"] = int(os.environ.get("PRESENCE_POLLING_INTERVAL_SECONDS", "60"))
+    g["PRESENCE_POLLING_DELAY_SECONDS"] = int(os.environ.get("PRESENCE_POLLING_DELAY_SECONDS", "0"))
+
+    g["INTERNAL_POLLING_INTERVAL_SECONDS"] = int(os.environ.get("INTERNAL_POLLING_INTERVAL_SECONDS", "60"))
+    g["INTERNAL_POLLING_DELAY_SECONDS"] = int(os.environ.get("INTERNAL_POLLING_DELAY_SECONDS", "30"))
+
+    g["OCCUPANCY_POLLING_INTERVAL_SECONDS"] = int(os.environ.get("OCCUPANCY_POLLING_INTERVAL_SECONDS", "360"))
+
+    g["HTTPS_ONLY"] = os.environ.get("HTTPS_ONLY", "false").lower() == "true"
+    g["BUILD_VERSION"] = os.environ.get("BUILD_VERSION", "dev")
+
+
+def validate() -> None:
+    """Raise RuntimeError if any required environment variable is missing."""
+    load()
+    _missing = [v for v in _REQUIRED if not os.environ.get(v)]
+    if _missing:
+        raise RuntimeError(f"Missing required environment variable(s): {', '.join(_missing)}")
+
+
+# Populate from os.environ at import time.
+load()

@@ -72,12 +72,15 @@ class PresenceLevelService:
 
     def start_polling(
         self,
-        router_ip: str,
-        username: str,
-        password: str,
+        router_ip: str | None,
+        username: str | None,
+        password: str | None,
         interval: int = 60,
         delay_to_first_poll: int = 0,
     ):
+        if not router_ip or not username or not password:
+            logger.warning("Router credentials not set — presence polling will not start")
+            return
         if self._interval_thread is None or not self._interval_thread.is_alive():
             self._stop_event.clear()
 

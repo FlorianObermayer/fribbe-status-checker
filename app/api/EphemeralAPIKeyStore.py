@@ -1,8 +1,8 @@
 import logging
-import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+import app.env as env
 from app.api.Responses import ApiKey
 from app.services.PersistentCollections import PersistentList
 
@@ -12,8 +12,7 @@ logger = logging.getLogger("uvicorn.error")
 class EphemeralAPIKeyStore:
     @staticmethod
     def _get_path() -> str:
-        result = os.environ["API_KEYS_PATH"]
-        return result
+        return env.API_KEYS_PATH
 
     @staticmethod
     def load() -> list[ApiKey]:

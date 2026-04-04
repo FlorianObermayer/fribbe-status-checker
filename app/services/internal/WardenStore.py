@@ -5,6 +5,7 @@ from typing import ClassVar
 
 from readerwriterlock import rwlock
 
+import app.env as env
 from app.services.internal.Model import Warden
 
 
@@ -23,7 +24,7 @@ class WardenStore:
         if cls._instance is None:
             with cls._instance_lock:
                 if cls._instance is None:
-                    path = os.path.join(os.environ["LOCAL_DATA_PATH"], "internal", "wardens.json")
+                    path = os.path.join(env.LOCAL_DATA_PATH, "internal", "wardens.json")
                     cls._instance = cls(path)
         return cls._instance
 
