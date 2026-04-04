@@ -55,9 +55,10 @@ def main() -> None:
     title = sys.argv[1] if len(sys.argv) > 1 else "Fribbe Beach Test 🏐"
     body = sys.argv[2] if len(sys.argv) > 2 else "Das ist eine Test-Benachrichtigung. " + secrets.token_hex(4)
 
+    store_path = Path(data_path) / "push_subscriptions.json"
     subscriptions = load_subscriptions(data_path)
     if not subscriptions:
-        print(f"No subscribers found in {data_path}push_subscriptions.json")
+        print(f"No subscribers found in {store_path}")
         sys.exit(0)
 
     print(f'Sending to {len(subscriptions)} subscriber(s): "{title}" — "{body}"\n')
