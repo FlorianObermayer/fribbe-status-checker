@@ -612,11 +612,14 @@ async function initPushNotifications() {
             try {
                 const auth = arrayBufferToBase64Url(currentSub.getKey('auth'));
                 await currentSub.unsubscribe();
-                await fetch('/api/push/unsubscribe', {
+                const resp = await fetch('/api/push/unsubscribe', {
                     method: 'DELETE',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ auth }),
                 });
+                if (!resp.ok) {
+                    throw new Error(`Unsubscribe request failed with status ${resp.status}`);
+                }
                 setPushButtonState('unsubscribed');
             } catch (e) {
                 console.error('Unsubscribe failed:', e);
