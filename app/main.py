@@ -52,6 +52,7 @@ from app.services.PresenceLevelService import (
 )
 from app.services.PresenceThresholds import PresenceThresholds
 from app.services.PushSubscriptionService import PushSubscriptionService
+from app.services.WeatherService import WeatherService
 from app.version import VERSION
 
 env.validate()
@@ -127,6 +128,14 @@ internal_service.start_polling(
 message_service = MessageService()
 notification_service = NotificationService()
 notification_service.start_cleanup_job()
+
+weather_service = WeatherService()
+if env.OPENWEATHERMAP_API_KEY and env.WEATHER_LAT is not None and env.WEATHER_LON is not None:
+    presence_service.set_weather_service(weather_service)
+else:
+    logging.getLogger("uvicorn.error").warning("OpenWeatherMap not configured; weather-aware push messages disabled")
+
+presence_service.set_message_service(message_service)
 
 push_subscription_service: PushSubscriptionService | None = None
 if env.VAPID_PRIVATE_KEY and env.VAPID_PUBLIC_KEY and env.VAPID_CLAIM_SUBJECT:
@@ -257,10 +266,10 @@ async def get_status(for_date: str = "today"):
         (event.time_str for event in occ_events if event.occupancy_type == OccupancyType.FULLY),
         None,
     )
-
+    weather = weather_service.get_condition()
     presence_level = presence_service.get_level()
     presence_last_updated = presence_service.get_last_updated()
-    presence_message = message_service.get_message(presence_level, occ_type, time_str)
+    presence_message = message_service.get_status_message(presence_level, occ_type, time_str, weather).message
     presence_last_error = presence_service.get_last_error()
 
     presence_response = PresenceResponse(
