@@ -71,11 +71,6 @@
         "wlan",
         "wlock"
     ],
-    "python.testing.pytestArgs": [
-        "tests",
-        "--envfile=.env.test",
-        "--override-env-vars-with-env-files"
-    ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
     "python.envFile": "${workspaceFolder}/.env.dev",

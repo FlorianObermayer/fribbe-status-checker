@@ -37,7 +37,10 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
+testpaths = ["tests"]
 python_files = ["*Test.py", "*Tests.py", "*_test.py", "*_tests.py"]
+env_files = [".env.test"]
+env_override_existing_values = true
 
 [tool.ruff]
 target-version = "py312"
