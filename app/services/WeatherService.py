@@ -121,7 +121,12 @@ class WeatherService:
         with self._lock:
             if self._is_cache_valid():
                 return self._cached_weather
-            weather = self._fetch()
+
+        weather = self._fetch()
+
+        with self._lock:
+            if self._is_cache_valid():
+                return self._cached_weather
             self._cached_weather = weather
             self._cache_timestamp = datetime.now()
             self._cache_populated = True
