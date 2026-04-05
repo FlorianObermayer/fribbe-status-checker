@@ -78,19 +78,19 @@ def load() -> None:
     g["LOCAL_DATA_PATH"] = os.environ.get("LOCAL_DATA_PATH", "")
     g["API_KEYS_PATH"] = os.environ.get("API_KEYS_PATH", "")
 
-    g["ROUTER_IP"] = os.environ.get("ROUTER_IP", "") or None
-    g["ROUTER_USERNAME"] = os.environ.get("ROUTER_USERNAME", "") or None
-    g["ROUTER_PASSWORD"] = os.environ.get("ROUTER_PASSWORD", "") or None
+    g["ROUTER_IP"] = os.environ.get("ROUTER_IP") or None
+    g["ROUTER_USERNAME"] = os.environ.get("ROUTER_USERNAME") or None
+    g["ROUTER_PASSWORD"] = os.environ.get("ROUTER_PASSWORD") or None
 
-    g["PRESENCE_POLLING_INTERVAL_SECONDS"] = int(os.environ.get("PRESENCE_POLLING_INTERVAL_SECONDS", "60"))
-    g["PRESENCE_POLLING_DELAY_SECONDS"] = int(os.environ.get("PRESENCE_POLLING_DELAY_SECONDS", "0"))
+    g["PRESENCE_POLLING_INTERVAL_SECONDS"] = int(os.environ.get("PRESENCE_POLLING_INTERVAL_SECONDS") or 60)
+    g["PRESENCE_POLLING_DELAY_SECONDS"] = int(os.environ.get("PRESENCE_POLLING_DELAY_SECONDS") or 0)
 
-    g["INTERNAL_POLLING_INTERVAL_SECONDS"] = int(os.environ.get("INTERNAL_POLLING_INTERVAL_SECONDS", "60"))
-    g["INTERNAL_POLLING_DELAY_SECONDS"] = int(os.environ.get("INTERNAL_POLLING_DELAY_SECONDS", "30"))
+    g["INTERNAL_POLLING_INTERVAL_SECONDS"] = int(os.environ.get("INTERNAL_POLLING_INTERVAL_SECONDS") or 60)
+    g["INTERNAL_POLLING_DELAY_SECONDS"] = int(os.environ.get("INTERNAL_POLLING_DELAY_SECONDS") or 30)
 
-    g["OCCUPANCY_POLLING_INTERVAL_SECONDS"] = int(os.environ.get("OCCUPANCY_POLLING_INTERVAL_SECONDS", "360"))
+    g["OCCUPANCY_POLLING_INTERVAL_SECONDS"] = int(os.environ.get("OCCUPANCY_POLLING_INTERVAL_SECONDS") or 360)
 
-    g["HTTPS_ONLY"] = os.environ.get("HTTPS_ONLY", "false").lower() == "true"
+    g["HTTPS_ONLY"] = os.environ.get("HTTPS_ONLY") == "true"
 
     g["SHOW_ADMIN_AUTH"] = os.environ.get("SHOW_ADMIN_AUTH", "false").lower() == "true"
 
@@ -108,7 +108,7 @@ def load() -> None:
     g["WEATHER_LAT"] = float(_lat) if _lat else None
     g["WEATHER_LON"] = float(_lon) if _lon else None
 
-    g["WEATHER_CACHE_TTL_SECONDS"] = int(os.environ.get("WEATHER_CACHE_TTL_SECONDS", "1800"))  # 30 minutes
+    g["WEATHER_CACHE_TTL_SECONDS"] = int(os.environ.get("WEATHER_CACHE_TTL_SECONDS") or 1800)  # 30 minutes
 
 
 def validate() -> None:

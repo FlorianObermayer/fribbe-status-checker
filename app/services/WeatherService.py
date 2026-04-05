@@ -25,7 +25,7 @@ CURRENT_WEATHER_URL = "https://api.openweathermap.org/data/2.5/weather"
 
 
 class Temperature(Enum):
-    HOT = "hot"    # >= 28 °C
+    HOT = "hot"  # >= 28 °C
     WARM = "warm"  # 22-27 °C
     MILD = "mild"  # 11-21 °C
     COLD = "cold"  # < 11 °C
@@ -34,7 +34,7 @@ class Temperature(Enum):
 class WeatherState(Enum):
     CLEAR = "clear"
     CLOUDY = "cloudy"
-    MILD_RAIN = "mild_rain"    # drizzle, light rain
+    MILD_RAIN = "mild_rain"  # drizzle, light rain
     HEAVY_RAIN = "heavy_rain"
     THUNDERSTORM = "thunderstorm"
     SNOW = "snow"
@@ -82,9 +82,10 @@ class WeatherService:
         self._lock = threading.Lock()
         self._cached_weather: Weather | None = None
         self._cache_timestamp: datetime | None = None
+        self._cache_populated = False
 
     def _is_cache_valid(self) -> bool:
-        if self._cache_timestamp is None:
+        if self._cache_timestamp is None or not self._cache_populated:
             return False
         age = (datetime.now() - self._cache_timestamp).total_seconds()
         return age < env.WEATHER_CACHE_TTL_SECONDS
@@ -123,9 +124,11 @@ class WeatherService:
             weather = self._fetch()
             self._cached_weather = weather
             self._cache_timestamp = datetime.now()
+            self._cache_populated = True
             return weather
 
     def invalidate_cache(self) -> None:
         with self._lock:
             self._cache_timestamp = None
             self._cached_weather = None
+            self._cache_populated = False
