@@ -1,3 +1,5 @@
+import threading
+import time
 from datetime import datetime, timedelta
 
 import pytest
@@ -119,6 +121,41 @@ def test_invalidate_cache_forces_refetch(monkeypatch: pytest.MonkeyPatch):
     service.get_condition()
 
     assert calls == 2
+
+
+def test_get_condition_deduplicates_concurrent_refresh(monkeypatch: pytest.MonkeyPatch):
+    service = WeatherService()
+    monkeypatch.setattr(env, "WEATHER_CACHE_TTL_SECONDS", 300)
+
+    expected = Weather(temperature=Temperature.WARM, state=WeatherState.CLEAR)
+    calls = 0
+    call_lock = threading.Lock()
+
+    def fake_fetch() -> Weather:
+        nonlocal calls
+        with call_lock:
+            calls += 1
+        # Keep the fetch in flight long enough for other threads to queue.
+        time.sleep(0.05)
+        return expected
+
+    monkeypatch.setattr(service, "_fetch", fake_fetch)
+
+    start_barrier = threading.Barrier(5)
+    results: list[Weather | None] = [None, None, None, None, None]
+
+    def worker(index: int) -> None:
+        start_barrier.wait()
+        results[index] = service.get_condition()
+
+    threads = [threading.Thread(target=worker, args=(i,)) for i in range(5)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert calls == 1
+    assert results == [expected, expected, expected, expected, expected]
 
 
 def test_fetch_returns_none_on_http_error(monkeypatch: pytest.MonkeyPatch):

@@ -80,6 +80,8 @@ def _weather_from_owm(weather_id: int, temp_celsius: float) -> Weather:
 class WeatherService:
     def __init__(self) -> None:
         self._lock = threading.Lock()
+        self._fetch_condition = threading.Condition(self._lock)
+        self._fetch_in_progress = False
         self._cached_weather: Weather | None = None
         self._cache_timestamp: datetime | None = None
         self._cache_populated = False
@@ -118,18 +120,31 @@ class WeatherService:
 
     def get_condition(self) -> Weather | None:
         """Return the current weather, using the cache when fresh."""
-        with self._lock:
+        with self._fetch_condition:
             if self._is_cache_valid():
                 return self._cached_weather
 
-        weather = self._fetch()
+            while self._fetch_in_progress:
+                self._fetch_condition.wait()
+                if self._is_cache_valid():
+                    return self._cached_weather
 
-        with self._lock:
-            if self._is_cache_valid():
-                return self._cached_weather
+            self._fetch_in_progress = True
+
+        try:
+            weather = self._fetch()
+        except Exception:
+            with self._fetch_condition:
+                self._fetch_in_progress = False
+                self._fetch_condition.notify_all()
+            raise
+
+        with self._fetch_condition:
             self._cached_weather = weather
             self._cache_timestamp = datetime.now()
             self._cache_populated = True
+            self._fetch_in_progress = False
+            self._fetch_condition.notify_all()
             return weather
 
     def invalidate_cache(self) -> None:
