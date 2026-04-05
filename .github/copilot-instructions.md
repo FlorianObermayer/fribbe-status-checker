@@ -1,0 +1,66 @@
+# fribbe-status-checker
+
+FastAPI beach volleyball status app: presence detection (router polling), occupancy scraping, push notifications, static web frontend.
+
+## Build & Test
+
+```sh
+uv run dev             # run app locally (http://localhost:8007)
+uv run pytest          # run tests (reads .env.test automatically)
+uv run lint            # ruff format + ruff check --fix + pyright
+```
+
+Env files: create `.env.dev` and `.env.test` from `.env.template`. Required: `SESSION_SECRET_KEY`, `LOCAL_DATA_PATH`, `API_KEYS_PATH`.
+
+Test patterns: `*Test.py`, `*Tests.py`, `*_test.py`, `*_tests.py`.
+Integration tests (`tests/integration/`) are `@pytest.mark.skip` — do not remove the skip marker.
+
+## UI Validation
+
+For larger frontend changes, validate against `http://localhost:8007`.
+
+- Prefer built-in tooling first (VS Code Simple Browser or Copilot browser tools) for quick visual/content checks.
+- Add an MCP browser server only when you need repeatable, scripted DOM interaction across multiple pages/states.
+- Workspace MCP config is in `.vscode/mcp.json` as `playwright-localhost` (for localhost:8007 UI checks).
+- Keep localhost access read-only for verification; do not rely on live/manual checks as the only test signal.
+
+## File Structure
+
+```
+.github/
+  copilot-instructions.md  # Instructions for Copilot
+  workflows/
+    ci-cd.yml              # CI/CD pipeline (lint, test, build, deploy)
+    codeql.yml             # CodeQL security analysis
+  dependabot.yml           # Dependabot config for dependency updates
+app/
+  main.py                  # FastAPI app, routing, service wiring
+  env.py                   # ALL env vars declared here; validate() called at startup
+  api/                     # Auth (HybridAuth, EphemeralAPIKeyStore), request/response schemas
+  services/                # Domain services (presence, occupancy, push, messages, weather)
+    internal/              # Internal device-count tracking (WardenStore)
+    occupancy/             # Web scraping for booking status
+  static/                  # Served HTML/CSS/JS frontend
+scripts/                   # uv entry points (dev, lint, watch, generate-vapid-keys, …)
+tests/                     # Unit tests; test-data/ holds fixture files
+README.md                  # Project overview, setup, conventions, instructions
+```
+## Architecture
+
+- `PresenceLevelService` polls router → `PresenceLevel` (empty/few/many) → on first daily EMPTY→active transition fires push notification via `PushSubscriptionService`
+- `MessageService` provides German-language text; uses `Weather` from `WeatherService` (OWM, 30-min cache)
+- `HybridAuth` checks session-cookie first, then `api_key` header; one-time bootstrap bypass when key store is empty
+
+## Conventions
+
+- **Env vars**: Declared as typed globals in `app/env.py`; `load()` populates from `os.environ`. Never read `os.environ` outside `env.py`. `.env.template` is the canonical var list.
+- **Auth**: `ADMIN_TOKEN` never stored in session cookie — only `is_admin: True` flag. Read token from `env.ADMIN_TOKEN` at request time.
+- **Token length**: `env.MIN_TOKEN_LENGTH = 48` is character count (not bytes). Use with `Field(min_length=...)`. For generation: `secrets.token_urlsafe(env.MIN_TOKEN_LENGTH)` (byte param, yields ≥48 chars).
+- **Threading**: `EphemeralAPIKeyStore` has module-level `_write_lock`. Use `append(key, require_empty=True)` (not `save()`); returns `False` on failure.
+- **Weather types**: `WeatherService.get_condition()` → `Weather | None` with `temperature: Temperature` (HOT/WARM/MILD/COLD) and `state: WeatherState` (CLEAR/CLOUDY/MILD_RAIN/HEAVY_RAIN/THUNDERSTORM/SNOW). In `MessageService`, precipitation states take priority over temperature messages.
+- **Type checking**: PyRight strict. All public functions need return-type annotations. Avoid `# type: ignore` except at already-annotated OWM JSON index sites.
+- **Linting**: Line length 120. Ruff rules: `E, W, F, I, UP, B, S, C4, RUF, PIE, SIM, TRY, PTH`. Suppress `S311`/`S101` inline with `# noqa`. Use hyphens (`-`) not en-dashes (`–`) in strings.
+
+## Copilot Instructions
+- always write tests for new features and bug fixes, update existing tests if the change affects their behavior
+- update `README.md` and `.github/copilot-instructions.md` as needed

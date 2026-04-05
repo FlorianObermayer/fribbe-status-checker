@@ -368,12 +368,9 @@ async function pollNotifications() {
     try {
         let notification_ids = getNotificationIdsFromUrl();
 
-
         if (notification_ids.length === 0) {
             notification_ids = ["all_active"];
         }
-
-        console.log("notification_ids:", notification_ids)
 
         // HACK: If specific notification is requested, show always
         if (notification_ids.length === 1 && notification_ids[0] !== "all_active") {

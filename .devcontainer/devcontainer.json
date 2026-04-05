@@ -12,7 +12,8 @@
         "ghcr.io/devcontainers-extra/features/uv:1": {}
     },
     "postCreateCommand": {
-        "uv_sync": "uv sync --all-groups"
+        "uv_sync": "uv sync --all-groups",
+        "install_playwright_mcp": "npm install -g @microsoft/mcp-server-playwright@latest"
     },
     "customizations": {
         "vscode": {
