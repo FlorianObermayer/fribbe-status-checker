@@ -239,7 +239,7 @@ class MessageService:
                 PresenceLevel.FEW: [
                     "Schöner milder Tag, ein paar Spieler schon am Start!",
                     "Angenehmes Wetter, kleine Gruppe - noch Platz für dich! 🌤️",
-                    "Mildes Temperaturen, gute Stimmung - komm dazu!",
+                    "Milde Temperaturen, gute Stimmung - komm dazu!",
                 ],
                 PresenceLevel.MANY: [
                     "Tolles mildes Wetter hat viele rausgelockt! 🌤️",
