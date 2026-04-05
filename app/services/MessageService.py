@@ -267,6 +267,40 @@ class MessageService:
         }
 
         self.weather_state_messages: dict[WeatherState, dict[PresenceLevel, list[str]]] = {
+            WeatherState.CLEAR: {
+                PresenceLevel.EMPTY: [
+                    "Klare Sicht, freier Sand - perfektes Volleyballwetter! ☀️",
+                    "Sonnenschein und leeres Feld - deine Chance auf ein Match! 🌞",
+                    "Strahlend blauer Himmel, keine Warteschlange - los geht's! ☀️",
+                ],
+                PresenceLevel.FEW: [
+                    "Sonnenschein und eine kleine Gruppe - perfekte Kombination! 🌤️",
+                    "Klare Sicht, gute Stimmung - komm dazu! ☀️",
+                    "Tolles Wetter und ein paar Spieler am Start - ideal! 🌞",
+                ],
+                PresenceLevel.MANY: [
+                    "Sonnenschein und volles Feld - Sommerfeeling pur! 🌞",
+                    "Bei diesem Traumwetter ist richtig was los! ☀️",
+                    "Warmer Abend, volles Feld - so muss das sein! 🏐",
+                ],
+            },
+            WeatherState.CLOUDY: {
+                PresenceLevel.EMPTY: [
+                    "Bewölkt, aber das Feld ist frei - perfektes Wetter für ein Spiel! ☁️",
+                    "Keine Sonne, aber auch keine Warteschlange - deine Chance! 🌥️",
+                    "Wolkig, aber freier Sand - ideal für entspanntes Volleyball! ☁️",
+                ],
+                PresenceLevel.FEW: [
+                    "Bewölkter Himmel, aber eine kleine Gruppe am Start - komm dazu! 🌤️",
+                    "Wolkig, aber gute Stimmung - perfekt für eine Runde! ☁️",
+                    "Trotz der Wolken am Ball - das ist Leidenschaft! 🔥",
+                ],
+                PresenceLevel.MANY: [
+                    "Bewölkt, aber volles Feld - echte Beachvolleyball-Stimmung! ☁️",
+                    "So bewölkt und trotzdem volles Haus - ihr seid unglaublich! 🌥️",
+                    "Wolkiger Abend, volles Feld - so muss das sein! 🏐",
+                ],
+            },
             WeatherState.MILD_RAIN: {
                 PresenceLevel.EMPTY: [
                     "Leichter Regen - der Sand ist frisch und das Feld frei! 🌦️",
@@ -374,12 +408,11 @@ class MessageService:
         if weather is not None and random.random() < 0.3:  # noqa: S311
             # Precipitation/special states take priority over temperature
             state_pool = self.weather_state_messages.get(weather.state, {}).get(level)
-            if state_pool:
-                return random.choice(state_pool)  # noqa: S311
-            # Clear/cloudy: use temperature messages
             temp_pool = self.temperature_messages.get(weather.temperature, {}).get(level)
-            if temp_pool:
-                return random.choice(temp_pool)  # noqa: S311
+            weather_message_pool = (state_pool or []) + (temp_pool or [])
+            if weather_message_pool:
+                # 50/50 chance to pick from either
+                return random.choice(weather_message_pool)  # noqa: S311
 
         # 20% chance for a combo message
         if random.random() < 0.2:  # noqa: S311
