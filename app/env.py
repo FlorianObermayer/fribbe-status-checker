@@ -90,7 +90,7 @@ def load() -> None:
 
     g["OCCUPANCY_POLLING_INTERVAL_SECONDS"] = int(os.environ.get("OCCUPANCY_POLLING_INTERVAL_SECONDS") or 360)
 
-    g["HTTPS_ONLY"] = os.environ.get("HTTPS_ONLY") == "true"
+    g["HTTPS_ONLY"] = (os.environ.get("HTTPS_ONLY") or "false").lower() == "true"
 
     g["SHOW_ADMIN_AUTH"] = os.environ.get("SHOW_ADMIN_AUTH", "false").lower() == "true"
 
