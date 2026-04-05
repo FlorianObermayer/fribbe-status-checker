@@ -84,7 +84,7 @@ class WeatherService:
         self._cache_timestamp: datetime | None = None
 
     def _is_cache_valid(self) -> bool:
-        if self._cache_timestamp is None or self._cached_weather is None:
+        if self._cache_timestamp is None:
             return False
         age = (datetime.now() - self._cache_timestamp).total_seconds()
         return age < env.WEATHER_CACHE_TTL_SECONDS
