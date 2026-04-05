@@ -406,12 +406,12 @@ class MessageService:
 
         # 30% chance for a weather-aware message when weather is available
         if weather is not None and random.random() < 0.3:  # noqa: S311
-            # Precipitation/special states take priority over temperature
+            # Combine any matching weather-state and temperature message pools.
             state_pool = self.weather_state_messages.get(weather.state, {}).get(level)
             temp_pool = self.temperature_messages.get(weather.temperature, {}).get(level)
             weather_message_pool = (state_pool or []) + (temp_pool or [])
             if weather_message_pool:
-                # 50/50 chance to pick from either
+                # Pick uniformly from the combined pool; odds depend on pool sizes.
                 return random.choice(weather_message_pool)  # noqa: S311
 
         # 20% chance for a combo message
