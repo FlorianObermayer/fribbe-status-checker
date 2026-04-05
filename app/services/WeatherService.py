@@ -4,7 +4,7 @@ Usage:
     service = WeatherService()
     weather = service.get_condition()   # Weather | None
 
-Results are cached for CACHE_TTL_SECONDS to avoid hammering the API.
+Results are cached for env.WEATHER_CACHE_TTL_SECONDS to avoid hammering the API.
 Returns None when no API key / coordinates are configured or the request fails.
 """
 
