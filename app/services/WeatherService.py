@@ -148,7 +148,9 @@ class WeatherService:
             return weather
 
     def invalidate_cache(self) -> None:
-        with self._lock:
+        """Clear cached weather state without cancelling an in-flight fetch."""
+        with self._fetch_condition:
             self._cache_timestamp = None
             self._cached_weather = None
             self._cache_populated = False
+            self._fetch_condition.notify_all()
