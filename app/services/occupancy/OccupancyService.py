@@ -3,14 +3,14 @@ import logging
 import threading
 import time
 from dataclasses import replace
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import dateparser
 from bs4 import BeautifulSoup, Tag
 from readerwriterlock import rwlock
 
-from app.services.occupancy.Model import Occupancy, OccupancySource, OccupancyType
+from app.services.occupancy.Model import DailyOccupancy, Occupancy, OccupancySource, OccupancyType
 from app.services.occupancy.OccupancyParser import (
     parse_event_calendar,
     parse_weekly_plan,
@@ -31,31 +31,14 @@ class OccupancyService:
         self._last_error: Exception | None = None
         self._rwlock = rwlock.RWLockFair()
 
-    def get_occupancy(
-        self, for_date_str: str
-    ) -> tuple[
-        date,
-        list[str],
-        list[Occupancy],
-        OccupancyType,
-        OccupancySource,
-        datetime,
-        Exception | None,
-    ]:
+    def get_occupancy(self, for_date_str: str = "today") -> DailyOccupancy:
         """
         Retrieves occupancy information for a given date.
 
         Args:
             for_date_str (str): The date string (in any parseable format) for which to retrieve occupancy information.
 
-            Tuple[
-                date,              # The parsed date object, today's date if parsing failed.
-                List[str],         # Human-readable lines describing each occupancy event for the date.
-                List[Occupancy],   # List of Occupancy objects for the date.
-                OccupancyType,     # The overall occupancy type for the date (e.g., PARTIALLY, FULLY, NONE).
-                OccupancySource,   # The source of the occupancy information (e.g., WEEKLY_PLAN, EVENT_CALENDAR).
-                datetime,          # The timestamp of the last update to the occupancy data.
-                Exception | None   # The last parsing error encountered, or None if there was no error.
+            Returns: DailyOccupancy
 
         Notes:
             - If no occupancies are found for the given date, returns empty lists and OccupancyType.NONE.
@@ -77,14 +60,14 @@ class OccupancyService:
             ]
 
             if not filtered_occupancies:
-                return (
-                    for_date,
-                    [],
-                    [],
-                    OccupancyType.NONE,
-                    OccupancySource.WEEKLY_PLAN,
-                    self._last_updated,
-                    self._last_error,
+                return DailyOccupancy(
+                    date=for_date,
+                    lines=[],
+                    events=[],
+                    occupancy_type=OccupancyType.NONE,
+                    occupancy_source=OccupancySource.WEEKLY_PLAN,
+                    last_updated=self._last_updated,
+                    error=self._last_error,
                 )
 
             lines: list[str] = []
@@ -113,14 +96,14 @@ class OccupancyService:
 
             # TODO: Also figure out if each occupation potentially overlaps with other resulting in a fully blocked scenario
 
-            return (
-                for_date,
-                lines,
-                events,
-                occupancy,
-                source,
-                self._last_updated,
-                self._last_error,
+            return DailyOccupancy(
+                date=for_date,
+                lines=lines,
+                events=events,
+                occupancy_type=occupancy,
+                occupancy_source=source,
+                last_updated=self._last_updated,
+                error=self._last_error,
             )
 
     @staticmethod

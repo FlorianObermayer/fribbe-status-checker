@@ -31,13 +31,13 @@ async def test_run_get_latest_occupancy_sets_week_occupancy(
 
 def test_get_todays_occupancy_no_occupancy():
     s = service()
-    for_date, msgs, events, occupancy, _, last_updated, last_error = s.get_occupancy("today")
-    assert len(msgs) == 0
-    assert len(events) == 0
-    assert occupancy is OccupancyType.NONE
-    assert isinstance(last_updated, datetime)
-    assert last_error is None
-    assert isinstance(for_date, date)
+    daily = s.get_occupancy("today")
+    assert len(daily.lines) == 0
+    assert len(daily.events) == 0
+    assert daily.occupancy_type is OccupancyType.NONE
+    assert isinstance(daily.last_updated, datetime)
+    assert daily.error is None
+    assert isinstance(daily.date, date)
 
 
 @pytest.mark.skip("test flaky")
@@ -49,15 +49,15 @@ def test_get_todays_week_occupancy_with_occupancy():
     ].begin = datetime.now()  # HACK: Don't use Datetime with timezone as we can't compare it to the mock data then...
     occ[0].end = occ[0].begin + timedelta(hours=4)
     s._week_occupancy = occ  # type: ignore
-    for_date, msgs, events, occupancy, source, last_updated, last_error = s.get_occupancy("today")
-    assert len(msgs) > 0
-    assert len(events) > 0
-    assert len(msgs) == len(events)
-    assert occupancy is OccupancyType.PARTIALLY
-    assert source is OccupancySource.WEEKLY_PLAN
-    assert isinstance(last_updated, datetime)
-    assert isinstance(for_date, date)
-    assert last_error is None
+    daily = s.get_occupancy("today")
+    assert len(daily.lines) > 0
+    assert len(daily.events) > 0
+    assert len(daily.lines) == len(daily.events)
+    assert daily.occupancy_type is OccupancyType.PARTIALLY
+    assert daily.occupancy_source is OccupancySource.WEEKLY_PLAN
+    assert isinstance(daily.last_updated, datetime)
+    assert isinstance(daily.date, date)
+    assert daily.error is None
 
 
 def test_get_todays_calendar_occupancy_with_occupancy():
@@ -66,15 +66,15 @@ def test_get_todays_calendar_occupancy_with_occupancy():
     occ[0].begin = datetime.now(tz=ZoneInfo("Europe/Berlin"))
     occ[0].end = occ[0].begin + timedelta(hours=4)
     s._event_occupancy = occ  # type: ignore
-    for_date, msgs, events, occupancy, source, last_updated, last_error = s.get_occupancy("today")
-    assert len(msgs) > 0
-    assert len(events) > 0
-    assert len(msgs) == len(events)
-    assert occupancy is OccupancyType.FULLY
-    assert source is OccupancySource.EVENT_CALENDAR
-    assert isinstance(last_updated, datetime)
-    assert isinstance(for_date, date)
-    assert last_error is None
+    daily = s.get_occupancy("today")
+    assert len(daily.lines) > 0
+    assert len(daily.events) > 0
+    assert len(daily.lines) == len(daily.events)
+    assert daily.occupancy_type is OccupancyType.FULLY
+    assert daily.occupancy_source is OccupancySource.EVENT_CALENDAR
+    assert isinstance(daily.last_updated, datetime)
+    assert isinstance(daily.date, date)
+    assert daily.error is None
 
 
 def test_start_and_stop_status_check():

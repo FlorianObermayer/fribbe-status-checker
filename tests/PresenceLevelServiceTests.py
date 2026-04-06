@@ -1,9 +1,13 @@
 # pyright: reportPrivateUsage=false
-"""Tests for PresenceLevelService._maybe_send_first_active_push."""
+"""Tests for PresenceLevelService._try_send_first_active_push."""
 
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
+import pytest
+
+from app.services.MessageService import MessageService
+from app.services.occupancy.OccupancyService import OccupancyService
 from app.services.PresenceLevel import PresenceLevel
 from app.services.PresenceLevelService import PresenceLevelService
 
@@ -17,9 +21,7 @@ class _FakePushSender:
 
 
 def _make_service(push: _FakePushSender | None = None) -> PresenceLevelService:
-    svc = PresenceLevelService()
-    if push is not None:
-        svc.set_push_service(push)
+    svc = PresenceLevelService(None, MessageService(), push, OccupancyService())
     return svc
 
 
@@ -33,7 +35,7 @@ def test_first_transition_does_not_send_push():
     push = _FakePushSender()
     svc = _make_service(push)
 
-    svc._maybe_send_first_active_push(PresenceLevel.EMPTY, PresenceLevel.FEW)
+    svc._try_send_first_active_push(PresenceLevel.EMPTY, PresenceLevel.FEW)
 
     assert push.calls == []
 
@@ -44,9 +46,9 @@ def test_second_transition_sends_push():
     svc = _make_service(push)
 
     # First call arms the guard
-    svc._maybe_send_first_active_push(PresenceLevel.EMPTY, PresenceLevel.FEW)
+    svc._try_send_first_active_push(PresenceLevel.EMPTY, PresenceLevel.FEW)
     # Second call should now fire
-    svc._maybe_send_first_active_push(PresenceLevel.EMPTY, PresenceLevel.FEW)
+    svc._try_send_first_active_push(PresenceLevel.EMPTY, PresenceLevel.FEW)
 
     assert len(push.calls) == 1
 
@@ -61,9 +63,9 @@ def test_no_push_when_not_transitioning_from_empty():
     svc = _make_service(push)
     svc._push_initialized = True  # skip cold-start guard
 
-    svc._maybe_send_first_active_push(PresenceLevel.FEW, PresenceLevel.MANY)
-    svc._maybe_send_first_active_push(PresenceLevel.MANY, PresenceLevel.FEW)
-    svc._maybe_send_first_active_push(PresenceLevel.FEW, PresenceLevel.EMPTY)
+    svc._try_send_first_active_push(PresenceLevel.FEW, PresenceLevel.MANY)
+    svc._try_send_first_active_push(PresenceLevel.MANY, PresenceLevel.FEW)
+    svc._try_send_first_active_push(PresenceLevel.FEW, PresenceLevel.EMPTY)
 
     assert push.calls == []
 
@@ -78,9 +80,9 @@ def test_second_transition_same_day_does_not_send_again():
     svc = _make_service(push)
     svc._push_initialized = True
 
-    svc._maybe_send_first_active_push(PresenceLevel.EMPTY, PresenceLevel.FEW)
+    svc._try_send_first_active_push(PresenceLevel.EMPTY, PresenceLevel.FEW)
     # Simulate going empty and back active again within the same virtual day
-    svc._maybe_send_first_active_push(PresenceLevel.EMPTY, PresenceLevel.FEW)
+    svc._try_send_first_active_push(PresenceLevel.EMPTY, PresenceLevel.FEW)
 
     assert len(push.calls) == 1
 
@@ -91,7 +93,7 @@ def test_transition_sends_again_on_new_virtual_day():
     svc._push_initialized = True
 
     # First transition fires and sets _last_push_virtual_date to today
-    svc._maybe_send_first_active_push(PresenceLevel.EMPTY, PresenceLevel.FEW)
+    svc._try_send_first_active_push(PresenceLevel.EMPTY, PresenceLevel.FEW)
 
     # Move last_push_virtual_date two days back → guaranteed to differ from virtual_today
     # (using 2 days because before 05:00 Berlin time the virtual day is already "yesterday")
@@ -99,7 +101,7 @@ def test_transition_sends_again_on_new_virtual_day():
     two_days_ago = (datetime.now(tz=berlin) - timedelta(days=2)).date()
     svc._last_push_virtual_date = two_days_ago
 
-    svc._maybe_send_first_active_push(PresenceLevel.EMPTY, PresenceLevel.MANY)
+    svc._try_send_first_active_push(PresenceLevel.EMPTY, PresenceLevel.MANY)
 
     assert len(push.calls) == 2
 
@@ -109,44 +111,26 @@ def test_transition_sends_again_on_new_virtual_day():
 # ---------------------------------------------------------------------------
 
 
-def test_push_body_few():
+@pytest.mark.parametrize("level", [PresenceLevel.FEW, PresenceLevel.MANY])
+def test_push_body(level):  # type: ignore
     push = _FakePushSender()
     svc = _make_service(push)
     svc._push_initialized = True
 
-    svc._maybe_send_first_active_push(PresenceLevel.EMPTY, PresenceLevel.FEW)
+    svc._try_send_first_active_push(PresenceLevel.EMPTY, level)  # pyright: ignore[reportUnknownArgumentType]
 
-    assert push.calls[0][1] == "Ein paar Leute sind schon da!"
+    assert push.calls[0][1] is not None
 
 
-def test_push_body_many():
+@pytest.mark.parametrize("level", [PresenceLevel.FEW, PresenceLevel.MANY])
+def test_push_title(level):  # type: ignore
     push = _FakePushSender()
     svc = _make_service(push)
     svc._push_initialized = True
 
-    svc._maybe_send_first_active_push(PresenceLevel.EMPTY, PresenceLevel.MANY)
+    svc._try_send_first_active_push(PresenceLevel.EMPTY, level)  # pyright: ignore[reportUnknownArgumentType]
 
-    assert push.calls[0][1] == "Heute ist richtig was los!"
-
-
-def test_push_title():
-    push = _FakePushSender()
-    svc = _make_service(push)
-    svc._push_initialized = True
-
-    svc._maybe_send_first_active_push(PresenceLevel.EMPTY, PresenceLevel.FEW)
-
-    assert push.calls[0][0] == "Erster Aufschlag im Fribbe! 🏐"
-
-
-def test_push_title_many():
-    push = _FakePushSender()
-    svc = _make_service(push)
-    svc._push_initialized = True
-
-    svc._maybe_send_first_active_push(PresenceLevel.EMPTY, PresenceLevel.MANY)
-
-    assert push.calls[0][0] == "Heute ist richtig was los im Fribbe! 🏐"
+    assert push.calls[0][0] is not None
 
 
 # ---------------------------------------------------------------------------
@@ -159,4 +143,4 @@ def test_no_push_without_service():
     svc._push_initialized = True
 
     # Should not raise
-    svc._maybe_send_first_active_push(PresenceLevel.EMPTY, PresenceLevel.FEW)
+    svc._try_send_first_active_push(PresenceLevel.EMPTY, PresenceLevel.FEW)

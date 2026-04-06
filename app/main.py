@@ -104,15 +104,6 @@ async def log_requests(request: Request, call_next: Callable[[Request], Awaitabl
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
-presence_service = PresenceLevelService()
-presence_service.start_polling(
-    env.ROUTER_IP,
-    env.ROUTER_USERNAME,
-    env.ROUTER_PASSWORD,
-    env.PRESENCE_POLLING_INTERVAL_SECONDS,
-    env.PRESENCE_POLLING_DELAY_SECONDS,
-)
-
 occupancy_service = OccupancyService()
 occupancy_service.start_polling(env.OCCUPANCY_POLLING_INTERVAL_SECONDS)
 
@@ -129,22 +120,31 @@ message_service = MessageService()
 notification_service = NotificationService()
 notification_service.start_cleanup_job()
 
-weather_service = WeatherService()
-if env.OPENWEATHERMAP_API_KEY and env.WEATHER_LAT is not None and env.WEATHER_LON is not None:
-    presence_service.set_weather_service(weather_service)
-else:
-    logging.getLogger("uvicorn.error").warning("OpenWeatherMap not configured; weather-aware push messages disabled")
+weather_service: WeatherService | None = None
 
-presence_service.set_message_service(message_service)
+if env.OPENWEATHERMAP_API_KEY and env.WEATHER_LAT is not None and env.WEATHER_LON is not None:
+    weather_service = WeatherService(env.OPENWEATHERMAP_API_KEY, env.WEATHER_LAT, env.WEATHER_LON)
+else:
+    logging.getLogger("uvicorn.error").warning("OpenWeatherMap not configured; weather-aware messages disabled")
 
 push_subscription_service: PushSubscriptionService | None = None
+
 if env.VAPID_PRIVATE_KEY and env.VAPID_PUBLIC_KEY and env.VAPID_CLAIM_SUBJECT:
     push_subscription_service = PushSubscriptionService(
         env.VAPID_PRIVATE_KEY, env.VAPID_PUBLIC_KEY, env.VAPID_CLAIM_SUBJECT
     )
-    presence_service.set_push_service(push_subscription_service)
 else:
     logging.getLogger("uvicorn.error").warning("VAPID keys not configured; push notifications disabled")
+
+presence_service = PresenceLevelService(weather_service, message_service, push_subscription_service, occupancy_service)
+
+presence_service.start_polling(
+    env.ROUTER_IP,
+    env.ROUTER_USERNAME,
+    env.ROUTER_PASSWORD,
+    env.PRESENCE_POLLING_INTERVAL_SECONDS,
+    env.PRESENCE_POLLING_DELAY_SECONDS,
+)
 
 
 @app.get("/api/version")
@@ -241,35 +241,21 @@ async def get_html(request: Request, for_date: str = "today"):  # keep unused va
 @app.get("/api/status", response_model=StatusResponse, tags=["Status"])
 async def get_status(for_date: str = "today"):
 
-    (
-        occ_for_date,
-        occ_messages,
-        occ_events,
-        occ_type,
-        occ_source,
-        occ_last_updated,
-        occ_last_error,
-    ) = occupancy_service.get_occupancy(for_date)
+    daily_occupancy = occupancy_service.get_occupancy(for_date)
 
-    occupancy_response = OccupancyResponse(
-        last_updated=occ_last_updated,
-        type=occ_type,
-        source=occ_source,
-        messages=occ_messages,
-        events=occ_events,
-        last_error=occ_last_error and str(occ_last_error),
-        for_date=occ_for_date,
-    )
+    occupancy_response = OccupancyResponse.from_daily(daily_occupancy)
 
     # Get the time_str of the first "fully occupying event", if any
     time_str = next(
-        (event.time_str for event in occ_events if event.occupancy_type == OccupancyType.FULLY),
+        (event.time_str for event in daily_occupancy.events if event.occupancy_type == OccupancyType.FULLY),
         None,
     )
-    weather = weather_service.get_condition()
+    weather = weather_service.get_condition() if weather_service is not None else None
     presence_level = presence_service.get_level()
     presence_last_updated = presence_service.get_last_updated()
-    presence_message = message_service.get_status_message(presence_level, occ_type, time_str, weather).message
+    presence_message = message_service.get_status_message(
+        presence_level, daily_occupancy.occupancy_type, time_str, weather
+    ).message
     presence_last_error = presence_service.get_last_error()
 
     presence_response = PresenceResponse(

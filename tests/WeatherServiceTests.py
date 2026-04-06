@@ -41,7 +41,7 @@ def test_weather_from_owm_mappings(
 
 
 def test_get_condition_uses_positive_cache(monkeypatch: pytest.MonkeyPatch):
-    service = WeatherService()
+    service = WeatherService("OPENWEATHERMAP_API_KEY", 10.0, 20.0)
     expected = Weather(temperature=Temperature.MILD, state=WeatherState.CLOUDY)
     calls = 0
 
@@ -61,7 +61,7 @@ def test_get_condition_uses_positive_cache(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_get_condition_negative_cache_prevents_api_hammering(monkeypatch: pytest.MonkeyPatch):
-    service = WeatherService()
+    service = WeatherService("OPENWEATHERMAP_API_KEY", 10.0, 20.0)
     monkeypatch.setattr(env, "WEATHER_CACHE_TTL_SECONDS", 300)
     calls = 0
 
@@ -81,7 +81,7 @@ def test_get_condition_negative_cache_prevents_api_hammering(monkeypatch: pytest
 
 
 def test_get_condition_refetches_after_ttl_expired(monkeypatch: pytest.MonkeyPatch):
-    service = WeatherService()
+    service = WeatherService("OPENWEATHERMAP_API_KEY", 10.0, 20.0)
     monkeypatch.setattr(env, "WEATHER_CACHE_TTL_SECONDS", 30)
 
     first_weather = Weather(temperature=Temperature.COLD, state=WeatherState.CLEAR)
@@ -106,7 +106,7 @@ def test_get_condition_refetches_after_ttl_expired(monkeypatch: pytest.MonkeyPat
 
 
 def test_invalidate_cache_forces_refetch(monkeypatch: pytest.MonkeyPatch):
-    service = WeatherService()
+    service = WeatherService("OPENWEATHERMAP_API_KEY", 10.0, 20.0)
     calls = 0
 
     def fake_fetch() -> Weather:
@@ -124,7 +124,7 @@ def test_invalidate_cache_forces_refetch(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_get_condition_deduplicates_concurrent_refresh(monkeypatch: pytest.MonkeyPatch):
-    service = WeatherService()
+    service = WeatherService("OPENWEATHERMAP_API_KEY", 10.0, 20.0)
     monkeypatch.setattr(env, "WEATHER_CACHE_TTL_SECONDS", 300)
 
     expected = Weather(temperature=Temperature.WARM, state=WeatherState.CLEAR)
@@ -159,10 +159,7 @@ def test_get_condition_deduplicates_concurrent_refresh(monkeypatch: pytest.Monke
 
 
 def test_fetch_returns_none_on_http_error(monkeypatch: pytest.MonkeyPatch):
-    service = WeatherService()
-    monkeypatch.setattr(env, "OPENWEATHERMAP_API_KEY", "key")
-    monkeypatch.setattr(env, "WEATHER_LAT", 10.0)
-    monkeypatch.setattr(env, "WEATHER_LON", 20.0)
+    service = WeatherService("OPENWEATHERMAP_API_KEY", 10.0, 20.0)
 
     import urllib.error
     import urllib.request
@@ -176,10 +173,7 @@ def test_fetch_returns_none_on_http_error(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_fetch_returns_none_on_generic_error(monkeypatch: pytest.MonkeyPatch):
-    service = WeatherService()
-    monkeypatch.setattr(env, "OPENWEATHERMAP_API_KEY", "key")
-    monkeypatch.setattr(env, "WEATHER_LAT", 10.0)
-    monkeypatch.setattr(env, "WEATHER_LON", 20.0)
+    service = WeatherService("OPENWEATHERMAP_API_KEY", 10.0, 20.0)
 
     import urllib.request
 
