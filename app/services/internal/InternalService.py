@@ -3,7 +3,7 @@ import logging
 import threading
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -15,6 +15,7 @@ import app.env as env
 from app.services.internal.Model import Warden, Wardens
 from app.services.MacAddressHelper import should_ignore_device
 from app.services.PersistentCollections import PersistentPathProvider, persistent
+from app.services.VirtualDay import crossed_virtual_day
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -83,13 +84,9 @@ class InternalService:
         now = datetime.now(tz=ZoneInfo("Europe/Berlin"))
 
         # Reset timestamps at 5am if we crossed the virtual day boundary
-        reset_hour = 5
-        if self._last_updated:
-            last_virtual_day = (self._last_updated - timedelta(hours=reset_hour)).date()
-            now_virtual_day = (now - timedelta(hours=reset_hour)).date()
-            if last_virtual_day < now_virtual_day:
-                self._internal_data.first_device_on_site = None
-                self._internal_data.last_device_on_site = None
+        if crossed_virtual_day(self._last_updated, now):
+            self._internal_data.first_device_on_site = None
+            self._internal_data.last_device_on_site = None
 
         # Set first device timestamp when we see the first activity after reset
         if self._internal_data.first_device_on_site is None and new_active_devices_ct > 0:

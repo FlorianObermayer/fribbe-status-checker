@@ -5,7 +5,12 @@ from typing import Self
 from pydantic import BaseModel, Field
 
 from app import env
-from app.services.occupancy.Model import Occupancy, OccupancySource, OccupancyType
+from app.services.occupancy.Model import (
+    DailyOccupancy,
+    Occupancy,
+    OccupancySource,
+    OccupancyType,
+)
 from app.services.PresenceLevel import PresenceLevel
 
 
@@ -26,6 +31,18 @@ class OccupancyResponse(BaseResponse):
     messages: list[str]
     events: list[Occupancy]
     for_date: date
+
+    @classmethod
+    def from_daily(cls, daily: DailyOccupancy) -> "OccupancyResponse":
+        return cls(
+            last_updated=daily.last_updated,
+            last_error=str(daily.error) if daily.error is not None else None,
+            type=daily.occupancy_type,
+            source=daily.occupancy_source,
+            messages=daily.lines,
+            events=daily.events,
+            for_date=daily.date,
+        )
 
 
 class StatusResponse(BaseModel):

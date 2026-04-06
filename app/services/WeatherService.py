@@ -78,7 +78,10 @@ def _weather_from_owm(weather_id: int, temp_celsius: float) -> Weather:
 
 
 class WeatherService:
-    def __init__(self) -> None:
+    def __init__(self, api_key: str, lat: float, lon: float) -> None:
+        self._api_key = api_key
+        self._lat = lat
+        self._lon = lon
         self._lock = threading.Lock()
         self._fetch_condition = threading.Condition(self._lock)
         self._fetch_in_progress = False
@@ -93,12 +96,9 @@ class WeatherService:
         return age < env.WEATHER_CACHE_TTL_SECONDS
 
     def _fetch(self) -> Weather | None:
-        api_key = env.OPENWEATHERMAP_API_KEY
-        lat = env.WEATHER_LAT
-        lon = env.WEATHER_LON
-
-        if not api_key or lat is None or lon is None:
-            return None
+        api_key = self._api_key
+        lat = self._lat
+        lon = self._lon
 
         current_weather_url = f"{CURRENT_WEATHER_URL}?lat={lat}&lon={lon}&appid={api_key}&units=metric"
         try:
