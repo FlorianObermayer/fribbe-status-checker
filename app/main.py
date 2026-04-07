@@ -62,10 +62,14 @@ _csp = (
     ContentSecurityPolicy()
     .default_src("'self'", "https://*.fribbe-beach.de")
     .script_src("'self'", "https://*.fribbe-beach.de")
-    .style_src("'self'", "https://*.fribbe-beach.de", "https://fonts.googleapis.com")
+    .style_src(
+        "'self'",
+        "https://*.fribbe-beach.de",
+        "https://fonts.googleapis.com",
+    )
     .font_src("'self'", "https://*.fribbe-beach.de", "https://fonts.gstatic.com")
     .object_src("'none'")
-    .img_src("'self'", "https://*.fribbe-beach.de", "data:")
+    .img_src("'self'", "https://*.fribbe-beach.de", "https://img.shields.io", "data:")
 )
 secure_headers = Secure(csp=_csp)
 

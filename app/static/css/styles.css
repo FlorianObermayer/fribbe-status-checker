@@ -802,3 +802,15 @@ body.status-many {
         display: flex !important;
     }
 }
+/* GitHub badge positioning (moved from inline styles) */
+.github-badge {
+
+    opacity: 0.35;
+    border-radius: 4px;
+    display: block;
+}
+
+.github-badge img {
+    display: block;
+    height: 20px;
+}
