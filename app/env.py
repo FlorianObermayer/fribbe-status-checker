@@ -5,6 +5,7 @@ Required variables are validated at application startup via validate().
 Optional variables fall back to their stated defaults.
 """
 
+import logging
 import os
 
 from app.version import VERSION as _version
@@ -25,6 +26,17 @@ _REQUIRED: list[str] = [
     "LOCAL_DATA_PATH",
     "API_KEYS_PATH",
 ]
+
+_SENSITIVE: list[str] = [
+    "SESSION_SECRET_KEY",
+    "ROUTER_USERNAME",
+    "ROUTER_PASSWORD",
+    "ADMIN_TOKEN",
+    "VAPID_PRIVATE_KEY",
+    "VAPID_PUBLIC_KEY",
+    "OPENWEATHERMAP_API_KEY",
+]
+
 
 # ---------------------------------------------------------------------------
 # Optional (with defaults)
@@ -109,6 +121,23 @@ def load() -> None:
     g["WEATHER_LON"] = float(_lon) if _lon else None
 
     g["WEATHER_CACHE_TTL_SECONDS"] = int(os.environ.get("WEATHER_CACHE_TTL_SECONDS") or 1800)  # 30 minutes
+    _log()
+
+
+def _log() -> None:
+    """Log all loaded env vars, masking sensitive ones."""
+
+    logger = logging.getLogger("uvicorn.error")
+
+    logger.info("Loaded environment variables:")
+
+    for var in [v for v in globals() if v.isupper() and not v.startswith("_")]:
+        value = globals().get(var)
+        if var in _SENSITIVE and value is not None and isinstance(value, str):
+            masked = "******" if value else ""
+            logger.info(f"{var}={masked}")
+        else:
+            logger.info(f"{var}={value}")
 
 
 def validate() -> None:
