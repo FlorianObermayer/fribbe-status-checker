@@ -21,6 +21,7 @@ from fastapi import (
 )
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from secure import ContentSecurityPolicy, Secure
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -107,6 +108,8 @@ async def log_requests(request: Request, call_next: Callable[[Request], Awaitabl
 
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+templates = Jinja2Templates(directory="app/templates")
 
 occupancy_service = OccupancyService()
 occupancy_service.start_polling(env.OCCUPANCY_POLLING_INTERVAL_SECONDS)
