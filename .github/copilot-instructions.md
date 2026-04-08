@@ -60,6 +60,7 @@ README.md                  # Project overview, setup, conventions, instructions
 - **Weather types**: `WeatherService.get_condition()` → `Weather | None` with `temperature: Temperature` (HOT/WARM/MILD/COLD) and `state: WeatherState` (CLEAR/CLOUDY/MILD_RAIN/HEAVY_RAIN/THUNDERSTORM/SNOW). In `MessageService`, precipitation states take priority over temperature messages.
 - **Type checking**: PyRight strict. All public functions need return-type annotations. Avoid `# type: ignore` except at already-annotated OWM JSON index sites.
 - **Linting**: Line length 120. Ruff rules: `E, W, F, I, UP, B, S, C4, RUF, PIE, SIM, TRY, PTH`. Suppress `S311`/`S101` inline with `# noqa`. Use hyphens (`-`) not en-dashes (`–`) in strings.
+- **Licenses**: After adding or removing any dependency in `pyproject.toml`, run `uv run generate-licenses` and commit the updated `app/licenses.json`. The CI lint job fails if this file is out of date.
 
 ## Copilot Instructions
 - always write tests for new features and bug fixes, update existing tests if the change affects their behavior

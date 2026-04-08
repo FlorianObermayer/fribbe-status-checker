@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Generate third-party license metadata for the OpenAPI schema.
+"""Generate third-party license metadata for the app's /api/licenses endpoint.
 
 Reads direct production dependencies from pyproject.toml and uses
-pip-licenses to resolve their SPDX identifiers and project URLs.
+pip-licenses to resolve their license identifiers and project URLs.
 
 Usage:
     uv run generate-licenses          # writes app/licenses.json
