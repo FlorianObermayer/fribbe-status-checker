@@ -283,8 +283,8 @@ async def get_status(for_date: str = "today"):
     )
 
 
-@app.get("/api/presence/history", tags=["Status"])
-async def get_presence_history(limit: int = Query(168, ge=1, le=8760)):
+@app.get("/api/presence/history", tags=["Status"], openapi_extra=requires_auth_extra())
+async def get_presence_history(limit: int = Query(168, ge=1, le=8760), _: str = Depends(HybridAuth())):
     """Return recent hourly device-count records from the database.
 
     Each record represents the last observed device count within a 1-hour bucket.
