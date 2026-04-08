@@ -40,6 +40,7 @@ from app.api.Responses import (
     WardenResponse,
 )
 from app.api.Schema import requires_auth_extra, update_openapi_schema
+from app.db import init_db
 from app.services.internal.InternalService import InternalService
 from app.services.internal.Model import Warden
 from app.services.internal.WardenStore import WardenStore
@@ -47,6 +48,7 @@ from app.services.MessageService import MessageService
 from app.services.NotificationService import NotificationService
 from app.services.occupancy.Model import OccupancyType
 from app.services.occupancy.OccupancyService import OccupancyService
+from app.services.OccupancyRecordService import OccupancyRecordService
 from app.services.PresenceLevelService import (
     PresenceLevelService,
 )
@@ -56,6 +58,7 @@ from app.services.WeatherService import WeatherService
 from app.version import VERSION
 
 env.validate()
+init_db()
 
 app = FastAPI(version=VERSION)
 _csp = (
@@ -140,7 +143,11 @@ if env.VAPID_PRIVATE_KEY and env.VAPID_PUBLIC_KEY and env.VAPID_CLAIM_SUBJECT:
 else:
     logging.getLogger("uvicorn.error").warning("VAPID keys not configured; push notifications disabled")
 
-presence_service = PresenceLevelService(weather_service, message_service, push_subscription_service, occupancy_service)
+occupancy_record_service = OccupancyRecordService()
+
+presence_service = PresenceLevelService(
+    weather_service, message_service, push_subscription_service, occupancy_service, occupancy_record_service
+)
 
 presence_service.start_polling(
     env.ROUTER_IP,
@@ -274,6 +281,18 @@ async def get_status(for_date: str = "today"):
         occupancy=occupancy_response,
         presence=presence_response,
     )
+
+
+@app.get("/api/presence/history", tags=["Status"], openapi_extra=requires_auth_extra())
+async def get_presence_history(limit: int = Query(168, ge=1, le=8760), _: str = Depends(HybridAuth())):
+    """Return recent hourly device-count records from the database.
+
+    Each record represents the last observed device count within a 1-hour bucket.
+    The default limit of 168 covers the last 7 days (7 x 24 hours). The maximum
+    allowed limit is 8760 (365 days).  Results are ordered newest-first.
+    """
+    records = occupancy_record_service.get_recent(limit)
+    return [{"timestamp": r.timestamp, "count": r.count, "created_at": r.created_at} for r in records]
 
 
 @app.get(

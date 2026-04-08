@@ -4,7 +4,7 @@ import asyncio
 import logging
 import threading
 import time
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import TYPE_CHECKING, Protocol
 from zoneinfo import ZoneInfo
 
@@ -15,6 +15,7 @@ from readerwriterlock import rwlock
 from app.services.MacAddressHelper import should_ignore_device
 from app.services.occupancy.Model import OccupancyType
 from app.services.occupancy.OccupancyService import OccupancyService
+from app.services.OccupancyRecordService import OccupancyRecordService
 from app.services.PresenceLevel import PresenceLevel
 from app.services.PresenceThresholds import PresenceThresholds
 from app.services.VirtualDay import get_virtual_date
@@ -38,12 +39,14 @@ class PresenceLevelService:
         message_service: MessageService,
         push_sender: PushSender | None,
         occupancy_service: OccupancyService,
+        occupancy_record_service: OccupancyRecordService | None = None,
     ) -> None:
 
         self._message_service: MessageService = message_service
         self._weather_service: WeatherService | None = weather_service
         self._push_sender: PushSender | None = push_sender
         self._occupancy_service: OccupancyService = occupancy_service
+        self._occupancy_record_service: OccupancyRecordService | None = occupancy_record_service
 
         self._last_updated: datetime | None = None
         self._interval_thread = None
@@ -93,6 +96,11 @@ class PresenceLevelService:
                 self._try_send_first_active_push(prev_level, new_level)
             except Exception as e:
                 logger.error(f"Error sending first active push: {e}", exc_info=True)
+            if self._occupancy_record_service is not None:
+                try:
+                    self._occupancy_record_service.upsert(datetime.now(tz=UTC), active_member_devices_ct)
+                except Exception as e:
+                    logger.warning(f"Failed to record presence count to DB: {e}", exc_info=True)
         except Exception as e:
             logger.error(f"Error during presence detection: {e}", exc_info=True)
             with self._rwlock.gen_wlock():
