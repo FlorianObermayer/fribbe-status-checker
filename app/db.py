@@ -67,6 +67,11 @@ CREATE TABLE IF NOT EXISTS tournament_events (
 );
 """
 
+_CREATE_TOURNAMENT_EVENTS_DATE_IDX = """
+CREATE INDEX IF NOT EXISTS idx_tournament_events_date
+    ON tournament_events (date);
+"""
+
 _CREATE_FORECAST_RESULTS = """
 CREATE TABLE IF NOT EXISTS forecast_results (
     id            INTEGER PRIMARY KEY,
@@ -80,19 +85,14 @@ CREATE TABLE IF NOT EXISTS forecast_results (
 );
 """
 
-_CREATE_FORECAST_RESULTS_IDX = """
-CREATE INDEX IF NOT EXISTS idx_forecast_results_date
-    ON forecast_results (date);
-"""
-
 _ALL_DDL: list[str] = [
     _CREATE_OCCUPANCY_RECORDS,
     _CREATE_OCCUPANCY_RECORDS_IDX,
     _CREATE_WEATHER_RECORDS,
     _CREATE_WEATHER_RECORDS_IDX,
     _CREATE_TOURNAMENT_EVENTS,
+    _CREATE_TOURNAMENT_EVENTS_DATE_IDX,
     _CREATE_FORECAST_RESULTS,
-    _CREATE_FORECAST_RESULTS_IDX,
 ]
 
 

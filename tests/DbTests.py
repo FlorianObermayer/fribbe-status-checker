@@ -96,8 +96,8 @@ def test_init_db_creates_indexes(db_url: str) -> None:
 
     expected_indexes = {
         "idx_occupancy_records_timestamp",
-        "idx_weather_records_timestamp",
-        "idx_forecast_results_date",
+        "idx_weather_records_timestamp_is_forecast",
+        "idx_tournament_events_date",
     }
 
     with get_connection() as conn:
