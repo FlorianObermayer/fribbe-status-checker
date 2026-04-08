@@ -43,14 +43,13 @@ CREATE TABLE IF NOT EXISTS weather_records (
     cloud_cover_pct     INTEGER,
     weather_code        INTEGER,
     is_forecast         INTEGER NOT NULL DEFAULT 0,
-    created_at          TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    UNIQUE (timestamp, is_forecast)
+    created_at          TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
 """
 
 _CREATE_WEATHER_RECORDS_IDX = """
-CREATE INDEX IF NOT EXISTS idx_weather_records_timestamp
-    ON weather_records (timestamp);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_weather_records_timestamp_is_forecast
+    ON weather_records (timestamp, is_forecast);
 """
 
 _CREATE_TOURNAMENT_EVENTS = """
