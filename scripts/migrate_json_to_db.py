@@ -74,7 +74,7 @@ def _migrate_file(conn: sqlite3.Connection, path: Path) -> int:
 
     rows: list[tuple[str, int]] = []
     for key, value in raw.items():
-        if not isinstance(value, int):
+        if type(value) is not int:
             logger.debug("Skipping %s — non-integer value for key %r", path, key)
             return 0
         utc_ts = _to_utc_iso(key)
