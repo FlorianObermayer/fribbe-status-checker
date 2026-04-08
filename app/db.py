@@ -4,8 +4,9 @@ Provides a connection factory with WAL mode and busy-timeout pragmas,
 plus a one-time schema initialisation function.
 
 All timestamps are stored as UTC ISO 8601 strings (SQLite has no native
-timestamp type). Unique constraints prevent duplicate ingestion; callers
-should use ``INSERT OR REPLACE`` for upserts.
+timestamp type). Unique constraints prevent duplicate ingestion; use
+``INSERT OR IGNORE`` to skip duplicates silently or ``INSERT OR REPLACE``
+to overwrite existing rows with fresh data.
 """
 
 import sqlite3

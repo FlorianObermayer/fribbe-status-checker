@@ -93,7 +93,8 @@ def _migrate_file(conn: sqlite3.Connection, path: Path) -> int:
                 "INSERT OR IGNORE INTO occupancy_records (timestamp, count) VALUES (?, ?)",
                 (utc_ts, count),
             )
-            if conn.execute("SELECT changes()").fetchone()[0]:
+            rows_affected: int = conn.execute("SELECT changes()").fetchone()[0]
+            if rows_affected > 0:
                 inserted += 1
         except sqlite3.Error as exc:
             logger.warning("Failed to insert %s / %s: %s", path, utc_ts, exc)
