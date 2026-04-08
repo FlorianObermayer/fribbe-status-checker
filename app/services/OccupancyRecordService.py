@@ -56,7 +56,10 @@ class OccupancyRecordService:
                 "SELECT timestamp, count, created_at FROM occupancy_records ORDER BY timestamp DESC LIMIT ?",
                 (limit,),
             ).fetchall()
-        return [OccupancyRecord(timestamp=row["timestamp"], count=row["count"], created_at=row["created_at"]) for row in rows]
+        return [
+            OccupancyRecord(timestamp=row["timestamp"], count=row["count"], created_at=row["created_at"])
+            for row in rows
+        ]
 
     def get_by_date_range(self, start: str, end: str) -> list[OccupancyRecord]:
         """Return records whose bucket timestamp falls within [*start*, *end*] (inclusive).
@@ -72,4 +75,7 @@ class OccupancyRecordService:
                    ORDER BY timestamp""",
                 (start, end),
             ).fetchall()
-        return [OccupancyRecord(timestamp=row["timestamp"], count=row["count"], created_at=row["created_at"]) for row in rows]
+        return [
+            OccupancyRecord(timestamp=row["timestamp"], count=row["count"], created_at=row["created_at"])
+            for row in rows
+        ]

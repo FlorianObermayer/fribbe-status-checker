@@ -143,8 +143,10 @@ if env.VAPID_PRIVATE_KEY and env.VAPID_PUBLIC_KEY and env.VAPID_CLAIM_SUBJECT:
 else:
     logging.getLogger("uvicorn.error").warning("VAPID keys not configured; push notifications disabled")
 
+occupancy_record_service = OccupancyRecordService()
+
 presence_service = PresenceLevelService(
-    weather_service, message_service, push_subscription_service, occupancy_service, OccupancyRecordService()
+    weather_service, message_service, push_subscription_service, occupancy_service, occupancy_record_service
 )
 
 presence_service.start_polling(
@@ -289,7 +291,6 @@ async def get_presence_history(limit: int = Query(168, ge=1, le=8760)):
     The default limit of 168 covers the last 7 days (7 x 24 hours). The maximum
     allowed limit is 8760 (365 days).  Results are ordered newest-first.
     """
-    occupancy_record_service = OccupancyRecordService()
     records = occupancy_record_service.get_recent(limit)
     return [{"timestamp": r.timestamp, "count": r.count, "created_at": r.created_at} for r in records]
 
