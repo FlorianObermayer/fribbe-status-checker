@@ -57,7 +57,17 @@ from app.version import VERSION
 
 env.validate()
 
-app = FastAPI(version=VERSION)
+_licenses_path = Path(__file__).parent / "licenses.json"
+_third_party_licenses: list[dict[str, str]] = json.loads(_licenses_path.read_text()) if _licenses_path.exists() else []
+
+app = FastAPI(
+    title="Fribbe Status Checker",
+    version=VERSION,
+    license_info={
+        "name": "MIT",
+        "url": "https://github.com/FlorianObermayer/fribbe-status-checker/blob/main/LICENSE",
+    },
+)
 _csp = (
     ContentSecurityPolicy()
     .default_src("'self'", "https://*.fribbe-beach.de")
@@ -154,6 +164,11 @@ presence_service.start_polling(
 @app.get("/api/version")
 async def version():
     return {"version": app.version}
+
+
+@app.get("/api/licenses")
+async def licenses():
+    return _third_party_licenses
 
 
 @app.get("/favicon.ico", include_in_schema=False)

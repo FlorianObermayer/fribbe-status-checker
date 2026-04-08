@@ -40,6 +40,14 @@ jobs:
         run: uv sync --frozen --all-groups
       - name: Lint
         run: uv run lint --check
+      - name: Check licenses.json is up-to-date
+        run: |
+          uv run generate-licenses
+          if ! git diff --quiet app/licenses.json; then
+            echo "::error::app/licenses.json is out of date. Run 'uv run generate-licenses' locally and commit the result."
+            git diff app/licenses.json
+            exit 1
+          fi
 
   test:
     runs-on: ubuntu-latest
