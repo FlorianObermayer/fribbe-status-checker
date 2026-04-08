@@ -76,6 +76,9 @@ WEATHER_LAT: float | None = None
 WEATHER_LON: float | None = None
 WEATHER_CACHE_TTL_SECONDS: int = 1800  # 30 minutes
 
+# SQLite database URL (default: sqlite:///./app-data/fribbe.db)
+DATABASE_URL: str = "sqlite:///./app-data/fribbe.db"
+
 
 def load() -> None:
     """Load (or reload) all env var values into the module-level globals.
@@ -121,6 +124,8 @@ def load() -> None:
     g["WEATHER_LON"] = float(_lon) if _lon else None
 
     g["WEATHER_CACHE_TTL_SECONDS"] = int(os.environ.get("WEATHER_CACHE_TTL_SECONDS") or 1800)  # 30 minutes
+
+    g["DATABASE_URL"] = os.environ.get("DATABASE_URL") or "sqlite:///./app-data/fribbe.db"
     _log()
 
 
