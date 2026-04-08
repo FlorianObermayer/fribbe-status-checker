@@ -1,5 +1,7 @@
 # fribbe-status-checker
 
+[![Coverity Scan Build Status](https://img.shields.io/coverity/scan/33029.svg)](https://scan.coverity.com/projects/florianobermayer-fribbe-status-checker)
+
 A FastAPI-based status checker for [Fribbe Beach](https://fribbebeach.de), running at [status.fribbe-beach.de](https://status.fribbe-beach.de). It combines real-time presence detection with occupancy data scraped from the Fribbe Beach website to give a live status overview.
 
 ## Features
