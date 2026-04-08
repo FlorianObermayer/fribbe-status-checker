@@ -3,16 +3,13 @@ name: Coverity Scan
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
   schedule:
-    - cron: '0 2 * * 0'  # Weekly on Sunday at 02:00 UTC
+    - cron: '0 10 * * *'  # Daily 10:00 UTC
   workflow_dispatch:
 
 jobs:
   coverity:
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     permissions:
       contents: read
 
