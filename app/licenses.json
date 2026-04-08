@@ -1,0 +1,47 @@
+[
+  {
+    "name": "beautifulsoup4",
+    "license": "MIT License",
+    "url": "https://www.crummy.com/software/BeautifulSoup/bs4/"
+  },
+  {
+    "name": "dateparser",
+    "license": "BSD License",
+    "url": "https://github.com/scrapinghub/dateparser"
+  },
+  {
+    "name": "fastapi",
+    "license": "MIT",
+    "url": "https://github.com/fastapi/fastapi"
+  },
+  {
+    "name": "huawei-lte-api",
+    "license": "GNU Lesser General Public License v3 (LGPLv3)",
+    "url": "https://github.com/Salamek/huawei-lte-api"
+  },
+  {
+    "name": "Markdown",
+    "license": "BSD-3-Clause",
+    "url": "https://Python-Markdown.github.io/"
+  },
+  {
+    "name": "pywebpush",
+    "license": "MPL-2.0",
+    "url": "https://github.com/web-push-libs/pywebpush"
+  },
+  {
+    "name": "readerwriterlock",
+    "license": "MIT License",
+    "url": "https://github.com/elarivie/pyReaderWriterLock"
+  },
+  {
+    "name": "secure",
+    "license": "MIT License",
+    "url": "https://github.com/TypeError/secure"
+  },
+  {
+    "name": "starlette-session",
+    "license": "MIT License",
+    "url": "https://github.com/auredentan/starlette-session"
+  }
+]
