@@ -1,0 +1,27 @@
+name: Coverity Scan
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    - cron: '0 2 * * 0'  # Weekly on Sunday at 02:00 UTC
+  workflow_dispatch:
+
+jobs:
+  coverity:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Coverity Scan
+        uses: vapier/coverity-scan-action@v1
+        with:
+          project: florianobermayer-fribbe-status-checker
+          token: ${{ secrets.COVERITY_SCAN_TOKEN }}
+          email: ${{ secrets.COVERITY_SCAN_EMAIL }}
+          # Python projects: capture source without a build command
+          command: >-
+            cov-build --no-command --fs-capture-search .
