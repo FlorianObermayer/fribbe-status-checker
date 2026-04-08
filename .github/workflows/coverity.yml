@@ -1,0 +1,39 @@
+name: Coverity Scan
+
+on:
+  push:
+    branches: [ "main" ]
+  schedule:
+    - cron: '0 10 * * *'  # Daily 10:00 UTC
+  workflow_dispatch:
+
+jobs:
+  coverity:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Coverity tools
+        run: |
+          curl -fLsS \
+            --output /tmp/cov-analysis.tar.gz \
+            --data "token=${{ secrets.COVERITY_SCAN_TOKEN }}&project=FlorianObermayer%2Ffribbe-status-checker" \
+            https://scan.coverity.com/download/other/linux64
+          mkdir /tmp/cov-analysis
+          tar -xzf /tmp/cov-analysis.tar.gz --strip 1 -C /tmp/cov-analysis
+          echo "/tmp/cov-analysis/bin" >> $GITHUB_PATH
+
+      - name: Coverity Scan
+        run: |
+          coverity capture --dir cov-int
+          tar czf cov-int.tar.gz cov-int
+          curl \
+            --form "token=${{ secrets.COVERITY_SCAN_TOKEN }}" \
+            --form "email=${{ secrets.COVERITY_SCAN_EMAIL }}" \
+            --form "file=@cov-int.tar.gz" \
+            --form "version=$GITHUB_SHA" \
+            --form "description=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            "https://scan.coverity.com/builds?project=FlorianObermayer%2Ffribbe-status-checker"
