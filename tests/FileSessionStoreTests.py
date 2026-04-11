@@ -1,5 +1,6 @@
 """Tests for FileSessionStore."""
 
+import hashlib
 import os
 import time
 from pathlib import Path
@@ -16,8 +17,7 @@ def store(tmp_path: Path) -> FileSessionStore:
 
 def _session_file(store: FileSessionStore, session_id: str) -> Path:
     """Derive the on-disk path for a session (mirrors the store's naming logic)."""
-    safe_id = "".join(c for c in session_id if c.isalnum() or c in "-_")
-    return Path(store._path) / safe_id  # pyright: ignore[reportPrivateUsage]
+    return Path(store._path) / hashlib.sha256(session_id.encode()).hexdigest()  # pyright: ignore[reportPrivateUsage]
 
 
 # ---------------------------------------------------------------------------
@@ -118,8 +118,18 @@ async def test_cleanup_with_zero_lifetime_removes_nothing(store: FileSessionStor
 
 
 @pytest.mark.asyncio()
-async def test_path_traversal_characters_stripped(store: FileSessionStore) -> None:
-    await store.write("../../etc/passwd", b"evil", lifetime=3600, ttl=3600)
-    # Should be stored as a safe filename, not escape the session dir
-    assert await store.read("../../etc/passwd", lifetime=3600) == b"evil"
-    assert Path("/etc/passwd").read_bytes() != b"evil"
+async def test_path_traversal_is_contained_to_session_dir(store: FileSessionStore, tmp_path: Path) -> None:
+    traversal_id = "../../outside/passwd"
+    await store.write(traversal_id, b"evil", lifetime=3600, ttl=3600)
+
+    # The derived file path must be inside the session directory
+    file_path = _session_file(store, traversal_id)
+    session_dir = Path(store._path)  # pyright: ignore[reportPrivateUsage]
+    assert file_path.is_relative_to(session_dir), "Session file must be inside the session directory"
+
+    # No files must have been created outside the session directory
+    outside_files = [p for p in tmp_path.rglob("*") if p.is_file() and not p.is_relative_to(session_dir)]
+    assert outside_files == [], f"Files written outside session dir: {outside_files}"
+
+    # Data is still readable back via the same session ID
+    assert await store.read(traversal_id, lifetime=3600) == b"evil"

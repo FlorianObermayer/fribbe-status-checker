@@ -5,12 +5,13 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 import app.dependencies as deps
+from tests.test_utils import reset_dependency_singletons
 
 
 @pytest.fixture(autouse=True)
 def reset_singletons() -> None:
     """Ensure every test starts with a clean slate and pollers are stopped."""
-    deps.reset_for_testing()
+    reset_dependency_singletons()
 
 
 # ---------------------------------------------------------------------------

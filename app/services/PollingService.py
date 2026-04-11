@@ -3,6 +3,8 @@ import logging
 import threading
 from abc import ABC, abstractmethod
 
+from app import env
+
 logger = logging.getLogger("uvicorn.error")
 
 
@@ -58,5 +60,5 @@ class PollingService(ABC):
     def stop_polling(self) -> None:
         if self._interval_thread and self._interval_thread.is_alive():
             self._stop_event.set()
-            self._interval_thread.join()
+            self._interval_thread.join(timeout=env.POLLING_STOP_TIMEOUT_SECONDS)
             self._interval_thread = None

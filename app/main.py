@@ -2,7 +2,7 @@
 import asyncio
 import logging
 from collections.abc import AsyncGenerator, Awaitable, Callable
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 from urllib.parse import quote
 
@@ -46,6 +46,8 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None]:
     cleanup_task = asyncio.create_task(_session_cleanup_loop())
     yield
     cleanup_task.cancel()
+    with suppress(asyncio.CancelledError):
+        await cleanup_task
     shutdown()
 
 

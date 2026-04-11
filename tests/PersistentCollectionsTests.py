@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from app.services.PersistentCollections import (
+    ConversionHelper,
     DictSerializable,
     PersistentDescriptor,
     PersistentDict,
@@ -584,3 +585,240 @@ def test_batch_write_other_thread_still_locks():
         # After batch_write exits, the other thread should complete.
         t.join(timeout=2)
         assert other_value[0] == 42
+
+
+def test_batch_write_concurrent_no_lost_lock():
+    """Two threads entering batch_write concurrently must not lose a lock handle."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = str(Path(tmpdir) / "race.json")
+        d: PersistentDict[int] = PersistentDict(path, int)
+        d["x"] = 0
+
+        barrier = threading.Barrier(2, timeout=5)
+        results: list[int] = []
+
+        def worker(val: int) -> None:
+            barrier.wait()
+            with d.batch_write() as store:
+                cur = store["x"]
+                store["x"] = cur + val
+            results.append(val)
+
+        t1 = threading.Thread(target=worker, args=(1,))
+        t2 = threading.Thread(target=worker, args=(2,))
+        t1.start()
+        t2.start()
+        t1.join(timeout=5)
+        t2.join(timeout=5)
+
+        assert not t1.is_alive(), "Thread 1 appears deadlocked"
+        assert not t2.is_alive(), "Thread 2 appears deadlocked"
+        assert len(results) == 2
+        assert d["x"] == 3
+
+
+def test_batch_write_nested_same_thread():
+    """Nested batch_write on the same thread increments depth without re-acquiring the lock."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = str(Path(tmpdir) / "nested_batch.json")
+        d: PersistentDict[int] = PersistentDict(path, int)
+        with d.batch_write() as outer:
+            outer["a"] = 1
+            with d.batch_write() as inner:
+                inner["b"] = 2
+                assert inner["a"] == 1
+            # inner exited, but outer still holds the lock — no save yet
+            outer["c"] = 3
+        # All three values saved once when outermost exits
+        d2: PersistentDict[int] = PersistentDict(path, int)
+        assert d2["a"] == 1
+        assert d2["b"] == 2
+        assert d2["c"] == 3
+
+
+# --- ConversionHelper tests ---
+
+
+def test_list_to_range_single_element():
+    r = ConversionHelper.list_to_range([5])
+    assert r == range(5, 6)
+
+
+def test_list_to_range_even_step():
+    r = ConversionHelper.list_to_range([2, 4, 6, 8])
+    assert r == range(2, 10, 2)
+
+
+def test_list_to_range_uneven_raises():
+    with pytest.raises(ValueError, match="not evenly spaced"):
+        ConversionHelper.list_to_range([1, 2, 5])
+
+
+# --- Tuple / Set / Range / Float / Bool serialization ---
+
+
+def test_persistentdict_with_range():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = str(Path(tmpdir) / "range.json")
+        d = PersistentDict(path, range)
+        d["r"] = range(0, 10, 2)
+        d2 = PersistentDict(path, range)
+        assert d2["r"] == range(0, 10, 2)
+
+
+def test_persistentdict_with_float():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = str(Path(tmpdir) / "float.json")
+        d = PersistentDict(path, float)
+        d["pi"] = 3.14
+        d2 = PersistentDict(path, float)
+        assert d2["pi"] == pytest.approx(3.14)  # pyright: ignore[reportUnknownMemberType]
+
+
+def test_persistentdict_with_bool():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = str(Path(tmpdir) / "bool.json")
+        d = PersistentDict(path, bool)
+        d["flag"] = True
+        d2 = PersistentDict(path, bool)
+        assert d2["flag"] is True
+
+
+def test_persistentdict_with_tuple():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = str(Path(tmpdir) / "tuple.json")
+        d = PersistentDict(path, tuple[int, str])
+        d["t"] = (1, "hello")
+        d2 = PersistentDict(path, tuple[int, str])
+        assert d2["t"] == (1, "hello")
+
+
+def test_persistentdict_with_variadic_tuple():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = str(Path(tmpdir) / "vartuple.json")
+        d = PersistentDict(path, tuple[int, ...])
+        d["t"] = (1, 2, 3)
+        d2 = PersistentDict(path, tuple[int, ...])
+        assert d2["t"] == (1, 2, 3)
+
+
+def test_persistentdict_with_set():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = str(Path(tmpdir) / "set.json")
+        d = PersistentDict(path, set[int])
+        d["s"] = {1, 2, 3}
+        d2 = PersistentDict(path, set[int])
+        assert d2["s"] == {1, 2, 3}
+
+
+# --- Non-batch accessor coverage ---
+
+
+def test_persistentdict_values_and_items():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = str(Path(tmpdir) / "accessors.json")
+        d: PersistentDict[int] = PersistentDict(path, int)
+        d["a"] = 1
+        d["b"] = 2
+        assert sorted(d.values()) == [1, 2]
+        assert sorted(d.items()) == [("a", 1), ("b", 2)]
+
+
+def test_persistentdict_contains():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = str(Path(tmpdir) / "contains.json")
+        d: PersistentDict[int] = PersistentDict(path, int)
+        d["x"] = 1
+        assert "x" in d
+        assert "y" not in d
+
+
+def test_persistentdict_clear_outside_batch():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = str(Path(tmpdir) / "clear.json")
+        d: PersistentDict[int] = PersistentDict(path, int)
+        d["a"] = 1
+        d["b"] = 2
+        d.clear()
+        assert len(d) == 0
+        d2: PersistentDict[int] = PersistentDict(path, int)
+        assert len(d2) == 0
+
+
+def test_persistentdict_reload():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = str(Path(tmpdir) / "reload.json")
+        d1: PersistentDict[int] = PersistentDict(path, int)
+        d1["a"] = 1
+        # Second instance writes directly
+        d2: PersistentDict[int] = PersistentDict(path, int)
+        d2["a"] = 99
+        # d1 still sees stale value
+        assert d1["a"] == 1
+        d1.reload()
+        assert d1["a"] == 99
+
+
+# --- PersistentList gap coverage ---
+
+
+def test_persistentlist_extend():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = str(Path(tmpdir) / "extend.json")
+        lst = PersistentList(path, int)
+        lst.extend([10, 20, 30])
+        assert list(lst) == [10, 20, 30]
+
+
+def test_persistentlist_setitem_and_delitem():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = str(Path(tmpdir) / "setdel.json")
+        lst = PersistentList(path, int)
+        lst.append(1)
+        lst.append(2)
+        lst.append(3)
+        lst[1] = 99
+        assert lst[1] == 99
+        del lst[0]
+        assert list(lst) == [99, 3]
+
+
+def test_persistentlist_to_list():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = str(Path(tmpdir) / "tolist.json")
+        lst = PersistentList(path, str)
+        lst.append("a")
+        lst.append("b")
+        assert lst.to_list() == ["a", "b"]
+
+
+# --- PersistentDescriptor gap coverage ---
+
+
+def test_persistent_descriptor_class_access_returns_default():
+    """Accessing the descriptor on the class (not an instance) returns the default value."""
+    assert DecoratedConfig.name == "default"
+    assert DecoratedConfig.count == 0
+
+
+def test_persistent_descriptor_set_updates_storage():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config = DecoratedConfig(tmpdir)
+        config.name = "updated"
+        config.count = 42
+        # Verify persistence via new instance
+        config2 = DecoratedConfig(tmpdir)
+        assert config2.name == "updated"
+        assert config2.count == 42
+
+
+class NotAPersistentPathProvider:
+    pass
+
+
+def test_persistent_descriptor_raises_on_non_provider():
+    """PersistentDescriptor raises TypeError when used on a class that doesn't implement PersistentPathProvider."""
+    desc: PersistentDescriptor[str] = persistent(str, "test", "default")
+    obj = NotAPersistentPathProvider()
+    with pytest.raises(TypeError, match="must implement PersistentPathProvider"):
+        desc.__get__(obj, type(obj))

@@ -10,12 +10,18 @@ import os
 
 from app.version import VERSION as _version
 
+# ----------------------------------------------------------------------------
+# Constants
+# ----------------------------------------------------------------------------
+
 # Minimum token length for all generated and configured tokens.
 MIN_TOKEN_LENGTH: int = 48
 
 # Session cookie max age in seconds (7 days).
 SESSION_MAX_AGE_SECONDS: int = 60 * 60 * 24 * 7
 SESSION_CLEANUP_INTERVAL_SECONDS: int = 60 * 60  # 1 hour
+
+POLLING_STOP_TIMEOUT_SECONDS: int = 10
 
 # ---------------------------------------------------------------------------
 # Required

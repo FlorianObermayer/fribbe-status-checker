@@ -183,7 +183,7 @@ class NotificationService(PollingService):
                 logger.info("No old notifications found.")
             logger.info("Cleaning old notifications... DONE")
         except Exception as e:
-            logger.error(f"Error during occupancy check: {e}", exc_info=True)
+            logger.error(f"Error during notification cleanup: {e}", exc_info=True)
 
     def start_cleanup_job(self, interval: int = 3600) -> None:
         self.start_polling(interval)

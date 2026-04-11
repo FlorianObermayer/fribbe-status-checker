@@ -53,6 +53,7 @@ class PersistentDict[V](MutableMapping[str, V]):
         self._lock = rwlock.RWLockFair()
         self._batch_owner: int | None = None
         self._batch_depth = 0
+        self._batch_wlock: rwlock.RWLockFair._aWriter | None = None  # pyright: ignore[reportPrivateUsage]
 
         if not self._is_type_supported(value_type):
             raise TypeError(
@@ -307,25 +308,38 @@ class PersistentDict[V](MutableMapping[str, V]):
 
     @contextmanager
     def batch_write(self) -> Iterator["PersistentDict[V]"]:
-        """Hold the write lock across multiple mutations, saving once at the end.
+        """Hold the write lock across multiple mutations, saving once when the block exits.
 
         Inside the block, direct dict-style access (``d[k] = v``, ``del d[k]``)
-        skips per-operation locking and saving. A single ``_save()`` is performed
-        when the block exits successfully.
+        skips per-operation locking and saving. A single ``_save()`` is always
+        performed when the outermost batch block exits, regardless of whether
+        the block raised an exception (i.e. in a ``finally`` clause).
 
         The "in batch" state is scoped to the owning thread so that other
-        threads still acquire the RW lock normally.
+        threads still acquire the RW lock normally.  Nested calls on the same
+        thread only increment the depth counter — they do not attempt to
+        re-acquire the write lock, which is not re-entrant.
         """
-        with self._lock.gen_wlock():
+        is_outermost = threading.get_ident() != self._batch_owner
+        if is_outermost:
+            wlock = self._lock.gen_wlock()
+            wlock.acquire()
+            self._batch_wlock = wlock
             self._batch_owner = threading.get_ident()
-            self._batch_depth += 1
-            try:
-                yield self
-            finally:
-                self._batch_depth -= 1
-                if self._batch_depth == 0:
-                    self._batch_owner = None
+        self._batch_depth += 1
+        try:
+            yield self
+        finally:
+            self._batch_depth -= 1
+            if self._batch_depth == 0:
+                self._batch_owner = None
+                wlock = self._batch_wlock
+                self._batch_wlock = None
+                try:
                     self._save()
+                finally:
+                    if wlock is not None:
+                        wlock.release()
 
 
 class PersistentList[V]:

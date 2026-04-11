@@ -3,7 +3,7 @@ from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.api.EphemeralAPIKeyStore import EphemeralAPIKeyStore
+from app.api.EphemeralAPIKeyStore import EphemeralAPIKeyStore, RemoveResult
 from app.api.HybridAuth import HybridAuth
 from app.api.Requests import CreateApiKeyRequest, DeleteApiKeyRequest
 from app.api.Responses import ApiKey, ApiKeys, MaskedApiKey
@@ -50,15 +50,11 @@ def delete_api_key(
     """
     if len(request.key) < 5:
         raise HTTPException(status_code=400, detail="Key prefix must be at least 5 characters long")
-    keys = EphemeralAPIKeyStore.load()
-    matches = [k for k in keys if k.key.startswith(request.key)]
-    if len(matches) == 0:
+    result = EphemeralAPIKeyStore.remove(request.key)
+    if result == RemoveResult.NOT_FOUND:
         raise HTTPException(status_code=404, detail="Api key not found")
-    if len(matches) > 1:
+    if result == RemoveResult.AMBIGUOUS:
         raise HTTPException(status_code=409, detail="Ambiguous key prefix: multiple matches found")
-    key_to_delete = matches[0].key
-    keys = [k for k in keys if k.key != key_to_delete]
-    EphemeralAPIKeyStore.save(keys)
 
 
 @router.get(

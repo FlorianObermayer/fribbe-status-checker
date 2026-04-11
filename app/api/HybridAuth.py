@@ -2,6 +2,7 @@ import hashlib
 import secrets
 
 from fastapi import HTTPException, Request
+from starsessions import regenerate_session_id
 
 import app.env as env
 from app.api.EphemeralAPIKeyHeader import EphemeralAPIKeyHeader
@@ -83,7 +84,7 @@ class HybridAuth:
             return session_subject
 
         # Remove legacy auth material from older cookies.
-        _legacy_keys = ("admin_token_hash", "api_key", "auth_session_id")
+        _legacy_keys = ("admin_token_hash", "api_key", "auth_session_id", "is_admin")
         if any(request.session.get(k) for k in _legacy_keys):
             request.session.clear()
 
@@ -101,6 +102,7 @@ class HybridAuth:
         if api_key:
             request.state.auth_via_session = False
             create_session(request, api_key)
+            regenerate_session_id(request)
             return api_key
 
         if self._auto_error:

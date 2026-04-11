@@ -16,8 +16,7 @@ from starsessions import InMemoryStore, SessionAutoloadMiddleware, SessionMiddle
 import app.env as env
 from app.routers import internal, notifications, pages, push, status
 
-# A fixed ≥48-character token used as the admin credential in router tests.
-TEST_ADMIN_TOKEN = "test-admin-routertests-AABBCCDD0123456789abcdef"  # noqa: S105
+TEST_ADMIN_TOKEN = "test-admin-token-" + "A" * 32
 
 _session_store = InMemoryStore()
 

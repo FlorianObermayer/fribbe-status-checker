@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 import pytest
 from pydantic import ValidationError
 
-from app.api.EphemeralAPIKeyStore import EphemeralAPIKeyStore
+from app.api.EphemeralAPIKeyStore import EphemeralAPIKeyStore, RemoveResult
 from app.api.Responses import ApiKey
 
 
@@ -107,3 +107,39 @@ def test_append_returns_false_when_save_raises(monkeypatch: pytest.MonkeyPatch):
     result = EphemeralAPIKeyStore.append(key)
 
     assert result is False
+
+
+def _make_key(comment: str = "") -> ApiKey:
+    return ApiKey.generate_new(
+        comment=comment, valid_until=datetime.now(tz=ZoneInfo("Europe/Berlin")) + timedelta(days=1)
+    )
+
+
+def test_remove_returns_not_found_when_no_match():
+    EphemeralAPIKeyStore.save([])
+    assert EphemeralAPIKeyStore.remove("nonexistent-prefix") == RemoveResult.NOT_FOUND
+
+
+def test_remove_deletes_unique_match():
+    key = _make_key()
+    EphemeralAPIKeyStore.save([key])
+
+    assert EphemeralAPIKeyStore.remove(key.key[:10]) == RemoveResult.DELETED
+    assert EphemeralAPIKeyStore.is_empty()
+
+
+def test_remove_returns_ambiguous_when_multiple_matches():
+    key_a = _make_key("a")
+    key_b = _make_key("b")
+    # Ensure both share a common prefix by constructing keys manually
+    from app import env
+
+    shared_prefix = "sharedprefix-"
+    suffix_a = "a" * (env.MIN_TOKEN_LENGTH - len(shared_prefix))
+    suffix_b = "b" * (env.MIN_TOKEN_LENGTH - len(shared_prefix))
+    key_a = ApiKey(key=shared_prefix + suffix_a, comment="a", valid_until=key_a.valid_until)
+    key_b = ApiKey(key=shared_prefix + suffix_b, comment="b", valid_until=key_b.valid_until)
+    EphemeralAPIKeyStore.save([key_a, key_b])
+
+    assert EphemeralAPIKeyStore.remove(shared_prefix) == RemoveResult.AMBIGUOUS
+    assert len(EphemeralAPIKeyStore.load()) == 2

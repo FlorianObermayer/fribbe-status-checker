@@ -304,14 +304,16 @@ def test_push_all_endpoints_return_503_when_not_configured(client: TestClient, t
     assert client.request("DELETE", "/api/push/unsubscribe", json={"auth": "x"}).status_code == 503
 
 
-def test_push_status_returns_subscribed_false(client: TestClient, test_app: FastAPI) -> None:
+def test_push_status_returns_subscribed_false(
+    client: TestClient, test_app: FastAPI, monkeypatch: pytest.MonkeyPatch
+) -> None:
     push_svc = MagicMock()
     push_svc.has.return_value = False
     test_app.dependency_overrides[get_push_subscription_service] = lambda: push_svc
 
     from app.services.PushSubscriptionService import PushSubscriptionService
 
-    PushSubscriptionService.validate_auth = staticmethod(lambda _auth: None)  # type: ignore[method-assign]
+    monkeypatch.setattr(PushSubscriptionService, "validate_auth", staticmethod(lambda _: None))  # type: ignore[reportUnknownLambdaType]
 
     response = client.post("/api/push/status", json={"auth": "dummyauth"})
 
@@ -396,6 +398,28 @@ def test_admin_session_invalidated_after_token_rotation(
 
     response = client.get("/api/internal/details")
     assert response.status_code == 401
+
+
+def test_header_auth_regenerates_session_id(
+    client: TestClient,
+    test_app: FastAPI,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Session ID must change when transitioning unauthenticated → authenticated via API key header."""
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    test_app.dependency_overrides[get_internal_service] = lambda: _mock_internal_svc()
+
+    # Sign in and immediately sign out to get an existing session cookie in unauthenticated state
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+    session_id_before = _get_session_cookie_value(client)
+    client.post("/signout", headers=_get_csrf_headers(client))
+
+    # Authenticate via header — session ID must be regenerated
+    response = client.get("/api/internal/details", headers={"api_key": TEST_ADMIN_TOKEN})
+    assert response.status_code == 200
+    session_id_after = _get_session_cookie_value(client)
+
+    assert session_id_before != session_id_after
 
 
 # ---------------------------------------------------------------------------

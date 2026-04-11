@@ -114,20 +114,6 @@ def shutdown() -> None:
         _presence_service.stop_polling()
 
 
-def reset_for_testing() -> None:
-    """Reset all service singletons to ``None``.  **Test-only.**"""
-    global _occupancy_service, _internal_service, _message_service
-    global _notification_service, _weather_service, _push_subscription_service, _presence_service
-
-    _occupancy_service = None
-    _internal_service = None
-    _message_service = None
-    _notification_service = None
-    _weather_service = None
-    _push_subscription_service = None
-    _presence_service = None
-
-
 # ---------------------------------------------------------------------------
 # Dependency providers (use these in routers via Annotated[T, Depends(...)])
 # ---------------------------------------------------------------------------

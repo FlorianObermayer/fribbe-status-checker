@@ -36,8 +36,18 @@
             method: 'POST',
             headers: csrfToken ? { 'X-CSRF-Token': csrfToken } : {},
         });
-        const data = await response.json();
-        window.location.href = data.redirect;
+        if (!response.ok) {
+            setError('Sign-out failed. Please try again.');
+            return;
+        }
+        let redirect = '/';
+        try {
+            const data = await response.json();
+            if (data.redirect) redirect = data.redirect;
+        } catch {
+            // Non-JSON body — fall back to root
+        }
+        window.location.href = redirect;
     }
 
     if (signedIn) {

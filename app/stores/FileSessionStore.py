@@ -1,7 +1,8 @@
 """File-based session store for starsessions.
 
 Stores serialised session data as individual files on disk.  The file name
-is derived from the session ID after stripping any path-traversal characters.
+is the SHA-256 hex digest of the session ID, which is stable, collision-free,
+never empty, and contains only filesystem-safe characters.
 
 IO is offloaded to a thread-pool so the ASGI event loop is never blocked.
 Each session file's mtime is checked against the ``lifetime`` / ``ttl``
@@ -10,8 +11,10 @@ orphaned files.
 """
 
 import asyncio
+import hashlib
 import logging
 import os
+import tempfile
 import time
 from pathlib import Path
 
@@ -26,8 +29,7 @@ class FileSessionStore(SessionStore):
         self._path.mkdir(parents=True, exist_ok=True)
 
     def _file_path(self, session_id: str) -> Path:
-        safe_id = "".join(c for c in session_id if c.isalnum() or c in "-_")
-        return self._path / safe_id
+        return self._path / hashlib.sha256(session_id.encode()).hexdigest()
 
     # -- sync helpers (run inside the thread-pool) --------------------------
 
@@ -42,7 +44,14 @@ class FileSessionStore(SessionStore):
             return b""
 
     def _write_sync(self, file_path: Path, data: bytes) -> None:
-        file_path.write_bytes(data)
+        fd, tmp = tempfile.mkstemp(dir=file_path.parent)
+        try:
+            with os.fdopen(fd, "wb") as f:
+                f.write(data)
+            Path(tmp).replace(file_path)
+        except Exception:
+            Path(tmp).unlink(missing_ok=True)
+            raise
 
     def _remove_sync(self, file_path: Path) -> None:
         file_path.unlink(missing_ok=True)
