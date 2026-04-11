@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import asyncio
 import logging
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
@@ -21,6 +22,8 @@ from app.routers.pages import sanitize_next
 from app.stores.FileSessionStore import FileSessionStore
 from app.version import VERSION
 
+_logger = logging.getLogger("uvicorn.error")
+
 _csp = (
     ContentSecurityPolicy()
     .default_src("'self'", "https://*.fribbe-beach.de")
@@ -40,8 +43,20 @@ secure_headers = Secure(csp=_csp)
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncGenerator[None]:
     startup()
+    cleanup_task = asyncio.create_task(_session_cleanup_loop())
     yield
+    cleanup_task.cancel()
     shutdown()
+
+
+async def _session_cleanup_loop() -> None:
+    """Periodically remove expired session files."""
+    while True:
+        await asyncio.sleep(env.SESSION_CLEANUP_INTERVAL_SECONDS)
+        try:
+            await _session_store.cleanup(env.SESSION_MAX_AGE_SECONDS)
+        except Exception:
+            _logger.exception("Session cleanup failed")
 
 
 app = FastAPI(
