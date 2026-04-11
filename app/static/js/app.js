@@ -613,7 +613,33 @@ async function initPushNotifications() {
     }
 
     const existingSub = await swReg.pushManager.getSubscription();
-    setPushButtonState(existingSub ? 'subscribed' : 'unsubscribed');
+    if (existingSub) {
+        const auth = arrayBufferToBase64Url(existingSub.getKey('auth'));
+        let serverKnows = false;
+        try {
+            const statusResp = await fetch(`/api/push/status?auth=${encodeURIComponent(auth)}`);
+            serverKnows = statusResp.ok && (await statusResp.json()).subscribed;
+        } catch { /* on network error assume server knows to avoid spurious re-registration */ }
+        if (!serverKnows) {
+            try {
+                const reRegResp = await fetch('/api/push/subscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        endpoint: existingSub.endpoint,
+                        p256dh: arrayBufferToBase64Url(existingSub.getKey('p256dh')),
+                        auth,
+                    }),
+                });
+                if (!reRegResp.ok) console.error('Push subscription re-registration failed:', reRegResp.status);
+            } catch (e) {
+                console.error('Push subscription re-registration failed:', e);
+            }
+        }
+        setPushButtonState('subscribed');
+    } else {
+        setPushButtonState('unsubscribed');
+    }
 
     const btn = document.getElementById('push-subscribe-btn');
     if (!btn) return;

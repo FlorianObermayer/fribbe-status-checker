@@ -77,6 +77,9 @@ class PushSubscriptionService:
         )
         self._store[auth] = sub
 
+    def has(self, auth: str) -> bool:
+        return auth in self._store
+
     def remove(self, auth: str) -> bool:
         if auth not in self._store:
             return False
