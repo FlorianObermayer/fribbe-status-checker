@@ -1,10 +1,6 @@
 (function auth() {
     const next = document.body.dataset.next || '/';
     const signedIn = document.body.dataset.signedIn === 'true';
-    function getCsrfToken() {
-        const match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]*)/);
-        return match ? decodeURIComponent(match[1]) : '';
-    }
     const form = document.getElementById('auth-form');
     const tokenInput = document.getElementById('token-input');
     const errorBox = document.getElementById('auth-error');
