@@ -637,7 +637,8 @@ async function initPushNotifications() {
                 let browserUnsubscribed = false;
                 try {
                     browserUnsubscribed = await currentSub.unsubscribe();
-                } catch {
+                } catch (e) {
+                    console.error('Browser unsubscribe threw:', e);
                     browserUnsubscribed = false;
                 }
                 if (!browserUnsubscribed) {
@@ -652,8 +653,8 @@ async function initPushNotifications() {
                                 auth,
                             }),
                         });
-                    } catch {
-                        // Best-effort restore; ignore failure
+                    } catch (e) {
+                        console.error('Failed to restore server subscription:', e);
                     }
                     console.error('Browser unsubscribe returned false');
                     showToast('Fehler beim Deaktivieren', 'error');
