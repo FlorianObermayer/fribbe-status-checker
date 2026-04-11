@@ -1,4 +1,5 @@
 import tempfile
+import threading
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -556,3 +557,30 @@ def test_batch_write_read_within_batch():
             assert store["x"] == 20
             assert "x" in store
             assert len(store) == 1
+
+
+def test_batch_write_other_thread_still_locks():
+    """Non-batch threads must not skip locking while another thread holds batch_write."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = str(Path(tmpdir) / "thread_safety.json")
+        d: PersistentDict[int] = PersistentDict(path, int)
+        d["x"] = 1
+
+        other_done = threading.Event()
+        other_value: list[int | None] = [None]
+
+        def other_thread() -> None:
+            # This should block until batch_write releases the write lock.
+            other_value[0] = d.get("x")
+            other_done.set()
+
+        with d.batch_write() as store:
+            store["x"] = 42
+            t = threading.Thread(target=other_thread)
+            t.start()
+            # Give the other thread a moment to attempt the read (it should block).
+            assert not other_done.wait(timeout=0.15), "Other thread should be blocked by the write lock"
+
+        # After batch_write exits, the other thread should complete.
+        t.join(timeout=2)
+        assert other_value[0] == 42

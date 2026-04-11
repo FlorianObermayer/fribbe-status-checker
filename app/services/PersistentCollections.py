@@ -1,6 +1,7 @@
 import json
 import os
 import tempfile
+import threading
 from collections.abc import Iterator, MutableMapping
 from contextlib import contextmanager, suppress
 from datetime import datetime
@@ -50,6 +51,7 @@ class PersistentDict[V](MutableMapping[str, V]):
         self._value_type = value_type
         self._data: dict[str, V] = {}
         self._lock = rwlock.RWLockFair()
+        self._batch_owner: int | None = None
         self._batch_depth = 0
 
         if not self._is_type_supported(value_type):
@@ -227,14 +229,19 @@ class PersistentDict[V](MutableMapping[str, V]):
                 Path(tmp_path).unlink()
             raise
 
+    @property
+    def _in_batch(self) -> bool:
+        """True only when the *current* thread owns the batch write lock."""
+        return self._batch_owner == threading.get_ident() and self._batch_depth > 0
+
     def __getitem__(self, key: str) -> V:
-        if self._batch_depth > 0:
+        if self._in_batch:
             return self._data[key]
         with self._lock.gen_rlock():
             return self._data[key]
 
     def __setitem__(self, key: str, value: V) -> None:
-        if self._batch_depth > 0:
+        if self._in_batch:
             self._data[key] = value
             return
         with self._lock.gen_wlock():
@@ -242,7 +249,7 @@ class PersistentDict[V](MutableMapping[str, V]):
             self._save()
 
     def __delitem__(self, key: str) -> None:
-        if self._batch_depth > 0:
+        if self._in_batch:
             del self._data[key]
             return
         with self._lock.gen_wlock():
@@ -250,43 +257,43 @@ class PersistentDict[V](MutableMapping[str, V]):
             self._save()
 
     def __iter__(self):
-        if self._batch_depth > 0:
+        if self._in_batch:
             return iter(list(self._data))
         with self._lock.gen_rlock():
             return iter(list(self._data))
 
     def __len__(self) -> int:
-        if self._batch_depth > 0:
+        if self._in_batch:
             return len(self._data)
         with self._lock.gen_rlock():
             return len(self._data)
 
     def __contains__(self, key: object) -> bool:
-        if self._batch_depth > 0:
+        if self._in_batch:
             return key in self._data
         with self._lock.gen_rlock():
             return key in self._data
 
     def values(self):  # type: ignore[override]
-        if self._batch_depth > 0:
+        if self._in_batch:
             return list(self._data.values())
         with self._lock.gen_rlock():
             return list(self._data.values())
 
     def items(self):  # type: ignore[override]
-        if self._batch_depth > 0:
+        if self._in_batch:
             return list(self._data.items())
         with self._lock.gen_rlock():
             return list(self._data.items())
 
     def get(self, key: str, default: V | None = None) -> V | None:  # type: ignore[override]
-        if self._batch_depth > 0:
+        if self._in_batch:
             return self._data.get(key, default)
         with self._lock.gen_rlock():
             return self._data.get(key, default)
 
     def clear(self) -> None:
-        if self._batch_depth > 0:
+        if self._in_batch:
             self._data.clear()
             return
         with self._lock.gen_wlock():
@@ -305,14 +312,19 @@ class PersistentDict[V](MutableMapping[str, V]):
         Inside the block, direct dict-style access (``d[k] = v``, ``del d[k]``)
         skips per-operation locking and saving. A single ``_save()`` is performed
         when the block exits successfully.
+
+        The "in batch" state is scoped to the owning thread so that other
+        threads still acquire the RW lock normally.
         """
         with self._lock.gen_wlock():
+            self._batch_owner = threading.get_ident()
             self._batch_depth += 1
             try:
                 yield self
             finally:
                 self._batch_depth -= 1
                 if self._batch_depth == 0:
+                    self._batch_owner = None
                     self._save()
 
 
