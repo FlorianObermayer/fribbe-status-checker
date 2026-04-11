@@ -631,7 +631,9 @@ async function initPushNotifications() {
                 body: JSON.stringify({ auth }),
             });
             serverKnows = statusResp.ok && (await statusResp.json()).subscribed;
-        } catch { /* on network error assume server knows to avoid spurious re-registration */ }
+        } catch {
+            serverKnows = true; // on network error assume server knows to avoid spurious re-registration
+        }
         if (!serverKnows) {
             try {
                 const reRegResp = await fetch('/api/push/subscribe', {
