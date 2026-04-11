@@ -11,10 +11,7 @@
     "features": {
         "ghcr.io/devcontainers-extra/features/uv:1": {}
     },
-    "postCreateCommand": {
-        "uv_sync": "uv sync --all-groups",
-        "install_playwright_mcp": "npm install -g @microsoft/mcp-server-playwright@latest"
-    },
+    "postCreateCommand": "uv sync --all-groups",
     "customizations": {
         "vscode": {
             "extensions": [
@@ -30,9 +27,6 @@
             ]
         }
     },
-    "containerEnv": {
-        "NODE_OPTIONS": ""
-    }
     // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
     // "remoteUser": "root"
 }

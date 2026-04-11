@@ -19,9 +19,7 @@ Integration tests (`tests/integration/`) are `@pytest.mark.skip` — do not remo
 
 For larger frontend changes, validate against `http://localhost:8007`.
 
-- Prefer built-in tooling first (VS Code Simple Browser or Copilot browser tools) for quick visual/content checks.
-- Add an MCP browser server only when you need repeatable, scripted DOM interaction across multiple pages/states.
-- Workspace MCP config is in `.vscode/mcp.json` as `playwright-localhost` (for localhost:8007 UI checks).
+- Use VS Code Simple Browser or Copilot browser tools for quick visual/content checks.
 - Keep localhost access read-only for verification; do not rely on live/manual checks as the only test signal.
 
 ## File Structure
