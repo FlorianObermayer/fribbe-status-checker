@@ -24,12 +24,21 @@ class PollingService(ABC):
     def _poll_loop(self, interval: int) -> None:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        while not self._stop_event.is_set():
+        try:
+            while not self._stop_event.is_set():
+                try:
+                    loop.run_until_complete(self._run_poll())
+                except Exception:
+                    logger.exception("Error in polling iteration")
+                self._stop_event.wait(timeout=interval)
+        finally:
             try:
-                loop.run_until_complete(self._run_poll())
+                loop.run_until_complete(loop.shutdown_asyncgens())
             except Exception:
-                logger.exception("Error in polling iteration")
-            self._stop_event.wait(timeout=interval)
+                logger.exception("Error shutting down polling event loop async generators")
+            finally:
+                asyncio.set_event_loop(None)
+                loop.close()
 
     def start_polling(self, interval: int, delay: int = 0) -> None:
         if self._interval_thread is not None and self._interval_thread.is_alive():
