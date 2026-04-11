@@ -192,8 +192,8 @@ async def get_vapid_key():
     return {"public_key": push_subscription_service.get_public_key()}
 
 
-@app.get("/api/push/status", tags=["Push Notifications"])
-async def push_status(auth: str = Query(...)):
+@app.post("/api/push/status", tags=["Push Notifications"])
+async def push_status(auth: str = Body(..., embed=True)):
     if push_subscription_service is None:
         raise HTTPException(status_code=503, detail="Push notifications not configured")
     try:

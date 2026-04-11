@@ -625,7 +625,11 @@ async function initPushNotifications() {
         const auth = arrayBufferToBase64Url(existingSub.getKey('auth'));
         let serverKnows = false;
         try {
-            const statusResp = await fetch(`/api/push/status?auth=${encodeURIComponent(auth)}`);
+            const statusResp = await fetch('/api/push/status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ auth }),
+            });
             serverKnows = statusResp.ok && (await statusResp.json()).subscribed;
         } catch { /* on network error assume server knows to avoid spurious re-registration */ }
         if (!serverKnows) {
