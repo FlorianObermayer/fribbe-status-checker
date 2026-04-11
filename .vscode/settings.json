@@ -83,5 +83,8 @@
             "source.fixAll.ruff": "explicit",
             "source.organizeImports.ruff": "explicit"
         }
+    },
+    "chat.tools.terminal.autoApprove": {
+        "uv": true
     }
 }
