@@ -659,7 +659,6 @@ async function initPushNotifications() {
             // Unsubscribe
             try {
                 const auth = arrayBufferToBase64Url(currentSub.getKey('auth'));
-                await currentSub.unsubscribe();
                 const resp = await fetch('/api/push/unsubscribe', {
                     method: 'DELETE',
                     headers: { 'Content-Type': 'application/json' },
@@ -667,6 +666,11 @@ async function initPushNotifications() {
                 });
                 if (!resp.ok) {
                     throw new Error(`Unsubscribe request failed with status ${resp.status}`);
+                }
+                try {
+                    await currentSub.unsubscribe();
+                } catch (e) {
+                    console.error('Browser unsubscribe failed:', e);
                 }
                 setPushButtonState('unsubscribed');
                 showToast('Benachrichtigungen deaktiviert!');
