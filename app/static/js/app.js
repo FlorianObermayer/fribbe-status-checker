@@ -569,8 +569,16 @@ function setPushButtonState(state) {
     if (!row || !btn || !label) return;
 
     row.classList.remove('hidden');
-    btn.classList.remove('subscribed', 'denied');
+    btn.classList.remove('subscribed', 'denied', 'loading');
     btn.disabled = false;
+
+    if (state === 'loading') {
+        btn.classList.add('loading');
+        btn.disabled = true;
+        label.textContent = 'Bitte warten...';
+        btn.title = '';
+        return;
+    }
 
     if (state === 'subscribed') {
         btn.classList.add('subscribed');
@@ -613,18 +621,66 @@ async function initPushNotifications() {
     }
 
     const existingSub = await swReg.pushManager.getSubscription();
-    setPushButtonState(existingSub ? 'subscribed' : 'unsubscribed');
+    if (existingSub) {
+        const auth = arrayBufferToBase64Url(existingSub.getKey('auth'));
+        let serverKnows = false;
+        try {
+            const statusResp = await fetch('/api/push/status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ auth }),
+            });
+            serverKnows = statusResp.ok && (await statusResp.json()).subscribed;
+        } catch {
+            serverKnows = true; // on network error assume server knows to avoid spurious re-registration
+        }
+        if (!serverKnows) {
+            let reRegOk = false;
+            try {
+                const reRegResp = await fetch('/api/push/subscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        endpoint: existingSub.endpoint,
+                        p256dh: arrayBufferToBase64Url(existingSub.getKey('p256dh')),
+                        auth,
+                    }),
+                });
+                reRegOk = reRegResp.ok;
+                if (!reRegOk) console.error('Push subscription re-registration failed:', reRegResp.status);
+            } catch (e) {
+                console.error('Push subscription re-registration failed:', e);
+            }
+            if (!reRegOk) {
+                setPushButtonState('unsubscribed');
+                showToast('Fehler beim Aktivieren', 'error');
+                return;
+            }
+        }
+        setPushButtonState('subscribed');
+    } else {
+        setPushButtonState('unsubscribed');
+    }
 
     const btn = document.getElementById('push-subscribe-btn');
     if (!btn) return;
 
     btn.addEventListener('click', async () => {
-        const currentSub = await swReg.pushManager.getSubscription();
+        setPushButtonState('loading');
+
+        let currentSub;
+        try {
+            currentSub = await swReg.pushManager.getSubscription();
+        } catch (e) {
+            console.error('Failed to get push subscription:', e);
+            setPushButtonState(existingSub ? 'subscribed' : 'unsubscribed');
+            showToast('Fehler beim Laden des Benachrichtigungsstatus', 'error');
+            return;
+        }
         if (currentSub) {
             // Unsubscribe
             try {
                 const auth = arrayBufferToBase64Url(currentSub.getKey('auth'));
-                await currentSub.unsubscribe();
                 const resp = await fetch('/api/push/unsubscribe', {
                     method: 'DELETE',
                     headers: { 'Content-Type': 'application/json' },
@@ -633,9 +689,15 @@ async function initPushNotifications() {
                 if (!resp.ok) {
                     throw new Error(`Unsubscribe request failed with status ${resp.status}`);
                 }
+                const unsubscribed = await currentSub.unsubscribe();
+                if (!unsubscribed) {
+                    throw new Error('Browser unsubscribe returned false');
+                }
                 setPushButtonState('unsubscribed');
+                showToast('Benachrichtigungen deaktiviert!');
             } catch (e) {
                 console.error('Unsubscribe failed:', e);
+                setPushButtonState('subscribed');
                 showToast('Fehler beim Deaktivieren', 'error');
             }
         } else {
@@ -665,6 +727,7 @@ async function initPushNotifications() {
                     setPushButtonState('denied');
                 } else {
                     console.error('Subscribe failed:', e);
+                    setPushButtonState('unsubscribed');
                     showToast('Fehler beim Aktivieren', 'error');
                 }
             }

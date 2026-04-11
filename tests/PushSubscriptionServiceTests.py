@@ -1,4 +1,7 @@
-"""Tests for PushSubscription.validate_subscription."""
+"""Tests for PushSubscriptionService.validate_subscription and has/add/remove behavior."""
+
+import tempfile
+from unittest.mock import patch
 
 import pytest
 
@@ -44,3 +47,43 @@ def test_auth_too_short():
 def test_auth_invalid_chars():
     with pytest.raises(ValueError, match="auth"):
         PushSubscriptionService.validate_subscription(_VALID_ENDPOINT, _VALID_P256DH, "invalid chars!!")
+
+
+def test_validate_auth_only_valid_does_not_raise():
+    PushSubscriptionService.validate_auth(_VALID_AUTH)
+
+
+def test_validate_auth_only_too_short():
+    with pytest.raises(ValueError, match="auth"):
+        PushSubscriptionService.validate_auth("short")
+
+
+def test_validate_auth_only_invalid_chars():
+    with pytest.raises(ValueError, match="auth"):
+        PushSubscriptionService.validate_auth("invalid chars!!")
+
+
+def _make_service(tmpdir: str) -> PushSubscriptionService:
+    with patch("app.env.LOCAL_DATA_PATH", tmpdir):
+        return PushSubscriptionService("fake-private", "fake-public", "mailto:test@example.com")
+
+
+def test_has_returns_false_when_not_present():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        svc = _make_service(tmpdir)
+        assert svc.has(_VALID_AUTH) is False
+
+
+def test_has_returns_true_after_add():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        svc = _make_service(tmpdir)
+        svc.add(_VALID_ENDPOINT, _VALID_P256DH, _VALID_AUTH)
+        assert svc.has(_VALID_AUTH) is True
+
+
+def test_has_returns_false_after_remove():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        svc = _make_service(tmpdir)
+        svc.add(_VALID_ENDPOINT, _VALID_P256DH, _VALID_AUTH)
+        svc.remove(_VALID_AUTH)
+        assert svc.has(_VALID_AUTH) is False
