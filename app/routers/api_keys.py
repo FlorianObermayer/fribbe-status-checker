@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.api.EphemeralAPIKeyStore import EphemeralAPIKeyStore
 from app.api.HybridAuth import HybridAuth
 from app.api.Requests import CreateApiKeyRequest, DeleteApiKeyRequest
-from app.api.Responses import ApiKey, ApiKeys
+from app.api.Responses import ApiKey, ApiKeys, MaskedApiKey
 from app.api.Schema import requires_auth_extra
 
 router = APIRouter(prefix="/api/internal", tags=["API Keys"])
@@ -68,7 +68,7 @@ def delete_api_key(
 )
 def list_api_keys(_: str | None = Depends(HybridAuth())) -> ApiKeys:
     """
-    Returns all API keys as a list. Requires a valid API key for authentication.
+    Returns all API keys as a masked list. Full key values are only shown at creation time.
     """
     keys = EphemeralAPIKeyStore.load()
-    return ApiKeys(api_keys=keys)
+    return ApiKeys(api_keys=[MaskedApiKey.from_api_key(k) for k in keys])

@@ -1,4 +1,5 @@
 import logging
+import secrets
 import threading
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -62,7 +63,7 @@ class EphemeralAPIKeyStore:
         now = datetime.now(tz=ZoneInfo("Europe/Berlin"))
         entries = EphemeralAPIKeyStore.load()
         for entry in entries:
-            if entry.key != key:
+            if not secrets.compare_digest(entry.key, key):
                 continue
 
             logger.info(

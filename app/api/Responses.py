@@ -91,8 +91,20 @@ class ApiKey(BaseModel):
         }
 
 
+class MaskedApiKey(BaseModel):
+    key_prefix: str
+    comment: str
+    valid_until: datetime
+
+    @staticmethod
+    def from_api_key(api_key: "ApiKey") -> "MaskedApiKey":
+        return MaskedApiKey(
+            key_prefix=api_key.key[:4] + "...", comment=api_key.comment, valid_until=api_key.valid_until
+        )
+
+
 class ApiKeys(BaseModel):
-    api_keys: list[ApiKey]
+    api_keys: list[MaskedApiKey]
 
 
 class PostNotificationResponse(BaseModel):

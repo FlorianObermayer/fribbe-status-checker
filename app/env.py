@@ -149,6 +149,8 @@ def validate() -> None:
     _missing = [v for v in _REQUIRED if not os.environ.get(v)]
     if _missing:
         raise RuntimeError(f"Missing required environment variable(s): {', '.join(_missing)}")
+    if len(SESSION_SECRET_KEY) < MIN_TOKEN_LENGTH:
+        raise RuntimeError(f"SESSION_SECRET_KEY must be at least {MIN_TOKEN_LENGTH} characters long")
     if ADMIN_TOKEN is not None and len(ADMIN_TOKEN) < MIN_TOKEN_LENGTH:
         raise RuntimeError(f"ADMIN_TOKEN must be at least {MIN_TOKEN_LENGTH} characters long")
 
