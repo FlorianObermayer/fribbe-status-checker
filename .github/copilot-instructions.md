@@ -34,7 +34,8 @@ For larger frontend changes, validate against `http://localhost:8007`.
     codeql.yml             # CodeQL security analysis
   dependabot.yml           # Dependabot config for dependency updates
 app/
-  main.py                  # FastAPI app, routing, service wiring
+  main.py                  # FastAPI app, routing, service wiring, lifespan handler
+  dependencies.py          # Service singletons & DI; startup()/shutdown() called from lifespan
   env.py                   # ALL env vars declared here; validate() called at startup
   api/                     # Auth (HybridAuth, EphemeralAPIKeyStore), request/response schemas
   services/                # Domain services (presence, occupancy, push, messages, weather)
@@ -47,6 +48,7 @@ README.md                  # Project overview, setup, conventions, instructions
 ```
 ## Architecture
 
+- **Lifecycle**: `app.dependencies.startup()` / `shutdown()` are called from the FastAPI lifespan in `main.py`. Service singletons and background pollers are created/stopped there - never at import time. This keeps module imports side-effect free so tests can import routers without spawning threads.
 - `PresenceLevelService` polls router → `PresenceLevel` (empty/few/many) → on first daily EMPTY→active transition fires push notification via `PushSubscriptionService`
 - `MessageService` provides German-language text; uses `Weather` from `WeatherService` (OWM, 30-min cache)
 - `HybridAuth` checks an opaque server-side session referenced by the session cookie first, then `api_key` header; one-time bootstrap bypass when key store is empty

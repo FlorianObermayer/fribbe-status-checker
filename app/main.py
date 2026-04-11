@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import logging
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncGenerator, Awaitable, Callable
+from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import quote
 
@@ -14,6 +15,7 @@ from starsessions import SessionAutoloadMiddleware, SessionMiddleware
 import app.env as env
 from app.api.HybridAuth import AuthRedirectException
 from app.api.Schema import update_openapi_schema
+from app.dependencies import shutdown, startup
 from app.routers import api_keys, internal, misc, notifications, pages, push, status, wardens
 from app.routers.pages import sanitize_next
 from app.stores.FileSessionStore import FileSessionStore
@@ -34,9 +36,18 @@ _csp = (
 )
 secure_headers = Secure(csp=_csp)
 
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncGenerator[None]:
+    startup()
+    yield
+    shutdown()
+
+
 app = FastAPI(
     title="Fribbe Status Checker",
     version=VERSION,
+    lifespan=lifespan,
     license_info={
         "name": "MIT",
         "url": "https://github.com/FlorianObermayer/fribbe-status-checker/blob/main/LICENSE",

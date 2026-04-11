@@ -46,8 +46,7 @@ python_files = ["*Test.py", "*Tests.py", "*_test.py", "*_tests.py"]
 env_files = [".env.test"]
 env_override_existing_values = true
 filterwarnings = [
-    "error",                                        # turn all warnings into errors …
-    "ignore::ResourceWarning",                      # unclosed event loops from daemon polling threads
+    "error" # turn all warnings into errors
 ]
 
 [tool.ruff]
