@@ -4,6 +4,13 @@ services:
       context: .
     ports:
       - 8007:80
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
     volumes:
       - secrets-data:/code/secrets
       - app-data:/code/app-data
