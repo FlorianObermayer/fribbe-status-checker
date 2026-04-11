@@ -624,7 +624,7 @@ async function initPushNotifications() {
             // Unsubscribe
             try {
                 const auth = arrayBufferToBase64Url(currentSub.getKey('auth'));
-                await currentSub.unsubscribe();
+                // Step 1: Remove from server first so we can roll back if the browser fails
                 const resp = await fetch('/api/push/unsubscribe', {
                     method: 'DELETE',
                     headers: { 'Content-Type': 'application/json' },
@@ -633,7 +633,34 @@ async function initPushNotifications() {
                 if (!resp.ok) {
                     throw new Error(`Unsubscribe request failed with status ${resp.status}`);
                 }
+                // Step 2: Remove the browser push subscription and check the boolean result
+                let browserUnsubscribed = false;
+                try {
+                    browserUnsubscribed = await currentSub.unsubscribe();
+                } catch {
+                    browserUnsubscribed = false;
+                }
+                if (!browserUnsubscribed) {
+                    // Browser unsubscribe failed - restore the server subscription so state stays consistent
+                    try {
+                        await fetch('/api/push/subscribe', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                endpoint: currentSub.endpoint,
+                                p256dh: arrayBufferToBase64Url(currentSub.getKey('p256dh')),
+                                auth,
+                            }),
+                        });
+                    } catch {
+                        // Best-effort restore; ignore failure
+                    }
+                    console.error('Browser unsubscribe returned false');
+                    showToast('Fehler beim Deaktivieren', 'error');
+                    return;
+                }
                 setPushButtonState('unsubscribed');
+                showToast('Benachrichtigungen deaktiviert!');
             } catch (e) {
                 console.error('Unsubscribe failed:', e);
                 showToast('Fehler beim Deaktivieren', 'error');
