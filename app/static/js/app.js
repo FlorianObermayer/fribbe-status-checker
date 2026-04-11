@@ -569,8 +569,16 @@ function setPushButtonState(state) {
     if (!row || !btn || !label) return;
 
     row.classList.remove('hidden');
-    btn.classList.remove('subscribed', 'denied');
+    btn.classList.remove('subscribed', 'denied', 'loading');
     btn.disabled = false;
+
+    if (state === 'loading') {
+        btn.classList.add('loading');
+        btn.disabled = true;
+        label.textContent = 'Bitte warten...';
+        btn.title = '';
+        return;
+    }
 
     if (state === 'subscribed') {
         btn.classList.add('subscribed');
@@ -645,6 +653,7 @@ async function initPushNotifications() {
     if (!btn) return;
 
     btn.addEventListener('click', async () => {
+        setPushButtonState('loading');
         const currentSub = await swReg.pushManager.getSubscription();
         if (currentSub) {
             // Unsubscribe
@@ -660,8 +669,10 @@ async function initPushNotifications() {
                     throw new Error(`Unsubscribe request failed with status ${resp.status}`);
                 }
                 setPushButtonState('unsubscribed');
+                showToast('Benachrichtigungen deaktiviert!');
             } catch (e) {
                 console.error('Unsubscribe failed:', e);
+                setPushButtonState('subscribed');
                 showToast('Fehler beim Deaktivieren', 'error');
             }
         } else {
@@ -691,6 +702,7 @@ async function initPushNotifications() {
                     setPushButtonState('denied');
                 } else {
                     console.error('Subscribe failed:', e);
+                    setPushButtonState('unsubscribed');
                     showToast('Fehler beim Aktivieren', 'error');
                 }
             }
