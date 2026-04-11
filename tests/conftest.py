@@ -1,6 +1,6 @@
 """Shared fixtures for router-level HTTP tests.
 
-Creates a minimal FastAPI test app (SessionMiddleware + all tested routers)
+Creates a minimal FastAPI test app (starsessions + starlette-csrf + all tested routers)
 with ``dependency_overrides`` cleared before and after each test so that
 individual tests can inject mocks cleanly via ``app.dependency_overrides``.
 """
@@ -10,29 +10,45 @@ from collections.abc import Generator
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from starlette.middleware.sessions import SessionMiddleware
+from starlette_csrf.middleware import CSRFMiddleware
+from starsessions import InMemoryStore, SessionAutoloadMiddleware, SessionMiddleware
 
 import app.env as env
-from app.routers import internal, notifications, push, status
+from app.routers import internal, notifications, pages, push, status
 
 # A fixed ≥48-character token used as the admin credential in router tests.
 TEST_ADMIN_TOKEN = "test-admin-routertests-AABBCCDD0123456789abcdef"  # noqa: S105
+
+_session_store = InMemoryStore()
 
 
 @pytest.fixture(scope="session")
 def test_app() -> FastAPI:
     """Minimal FastAPI instance with real routers but no polling side-effects."""
-    app = FastAPI()
-    app.add_middleware(
-        SessionMiddleware,
-        secret_key=env.SESSION_SECRET_KEY,
-        session_cookie="test_session",
+    test_app = FastAPI()
+    test_app.add_middleware(
+        CSRFMiddleware,
+        secret=env.SESSION_SECRET_KEY,
+        sensitive_cookies={"session_cookie"},
+        header_name="x-csrf-token",
+        cookie_secure=False,
+        cookie_samesite="lax",
     )
-    app.include_router(status.router)
-    app.include_router(push.router)
-    app.include_router(internal.router)
-    app.include_router(notifications.router)
-    return app
+    test_app.add_middleware(SessionAutoloadMiddleware)
+    test_app.add_middleware(
+        SessionMiddleware,
+        store=_session_store,
+        cookie_name="session_cookie",
+        lifetime=env.SESSION_MAX_AGE_SECONDS,
+        cookie_https_only=False,
+        cookie_same_site="lax",
+    )
+    test_app.include_router(status.router)
+    test_app.include_router(push.router)
+    test_app.include_router(internal.router)
+    test_app.include_router(notifications.router)
+    test_app.include_router(pages.router)
+    return test_app
 
 
 @pytest.fixture()

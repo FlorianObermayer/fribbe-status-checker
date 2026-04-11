@@ -13,7 +13,9 @@ dependencies = [
     "dateparser>=1.2.1",
     "readerwriterlock>=1.0.9",
     "markdown>=3.8.2",
-    "starlette-session>=0.4.3",
+    "nh3>=0.2.21",
+    "starsessions>=2.2.1",
+    "starlette-csrf>=3.0.0",
     "secure>=1.0.1",
     "pywebpush>=2.3.0",
 ]

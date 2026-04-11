@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
 import logging
 from collections.abc import Awaitable, Callable
+from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from secure import ContentSecurityPolicy, Secure
-from starlette.middleware.sessions import SessionMiddleware
+from starlette_csrf.middleware import CSRFMiddleware
+from starsessions import SessionAutoloadMiddleware, SessionMiddleware
 
 import app.env as env
 from app.api.HybridAuth import AuthRedirectException
 from app.api.Schema import update_openapi_schema
 from app.routers import api_keys, internal, misc, notifications, pages, push, status, wardens
 from app.routers.pages import sanitize_next
+from app.stores.FileSessionStore import FileSessionStore
 from app.version import VERSION
 
 _csp = (
@@ -41,11 +44,26 @@ app = FastAPI(
 )
 
 app.add_middleware(
+    CSRFMiddleware,
+    secret=env.SESSION_SECRET_KEY,
+    sensitive_cookies={"session_cookie"},
+    header_name="x-csrf-token",
+    cookie_secure=env.HTTPS_ONLY,
+    cookie_samesite="lax",
+)
+
+app.add_middleware(SessionAutoloadMiddleware)
+
+_session_store = FileSessionStore(str(Path(env.LOCAL_DATA_PATH) / "sessions"))
+
+app.add_middleware(
     SessionMiddleware,
-    secret_key=env.SESSION_SECRET_KEY,
-    session_cookie="session_cookie",
-    max_age=60 * 60 * 24 * 7,  # 7 Days or until api key expires
-    https_only=env.HTTPS_ONLY,
+    store=_session_store,
+    cookie_name="session_cookie",
+    lifetime=env.SESSION_MAX_AGE_SECONDS,
+    cookie_https_only=env.HTTPS_ONLY,
+    cookie_same_site="lax",
+    rolling=True,
 )
 
 

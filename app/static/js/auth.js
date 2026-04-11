@@ -1,39 +1,95 @@
-(async function auth() {
+(function auth() {
     const next = document.body.dataset.next || '/';
     const signedIn = document.body.dataset.signedIn === 'true';
+    function getCsrfToken() {
+        const match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]*)/);
+        return match ? decodeURIComponent(match[1]) : '';
+    }
+    const form = document.getElementById('auth-form');
+    const tokenInput = document.getElementById('token-input');
+    const errorBox = document.getElementById('auth-error');
+    const submitButton = document.getElementById('auth-submit');
+    const cancelLink = document.getElementById('auth-cancel');
+    const signedInPanel = document.getElementById('signed-in-panel');
+    const continueButton = document.getElementById('continue-button');
+    const signoutButton = document.getElementById('signout-button');
 
-    if (signedIn) {
-        const wantsSignout = window.confirm('Du bist bereits angemeldet. Möchtest du dich abmelden?');
-        if (!wantsSignout) {
-            window.location.href = next;
-            return;
-        }
-        await fetch('/signout', { method: 'POST' });
-        window.location.href = '/';
+    if (!form || !tokenInput || !errorBox || !submitButton || !cancelLink || !signedInPanel || !continueButton || !signoutButton) {
         return;
     }
 
-    let message = 'API-Schlüssel eingeben:';
-    while (true) {
-        const token = window.prompt(message);
-        if (token === null) {
-            window.location.href = '/';
+    cancelLink.href = next;
+
+    function setError(message) {
+        if (!message) {
+            errorBox.hidden = true;
+            errorBox.textContent = '';
             return;
         }
+        errorBox.hidden = false;
+        errorBox.textContent = message;
+    }
+
+    async function signOut() {
+        const csrfToken = getCsrfToken();
+        const response = await fetch('/signout', {
+            method: 'POST',
+            headers: csrfToken ? { 'X-CSRF-Token': csrfToken } : {},
+        });
+        const data = await response.json();
+        window.location.href = data.redirect;
+    }
+
+    if (signedIn) {
+        form.hidden = true;
+        signedInPanel.hidden = false;
+        continueButton.addEventListener('click', () => {
+            window.location.href = next;
+        });
+        signoutButton.addEventListener('click', async () => {
+            signoutButton.disabled = true;
+            try {
+                await signOut();
+            } finally {
+                signoutButton.disabled = false;
+            }
+        });
+        return;
+    }
+
+    tokenInput.focus();
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const token = tokenInput.value.trim();
+        if (!token) {
+            setError('Bitte einen gültigen Schlüssel eingeben.');
+            tokenInput.focus();
+            return;
+        }
+
+        setError('');
+        submitButton.disabled = true;
+
         try {
             const resp = await fetch('/auth', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ token, next }),
             });
+
             if (resp.ok) {
                 const data = await resp.json();
                 window.location.href = data.redirect;
                 return;
             }
-            message = 'Ungültiger Schlüssel. Erneut versuchen:';
+
+            setError('Ungültiger Schlüssel. Erneut versuchen.');
+            tokenInput.select();
         } catch (_error) {
-            message = 'Anmeldung derzeit nicht möglich. Verbindung prüfen und erneut versuchen:';
+            setError('Anmeldung derzeit nicht möglich. Verbindung prüfen und erneut versuchen.');
+        } finally {
+            submitButton.disabled = false;
         }
-    }
+    });
 })();

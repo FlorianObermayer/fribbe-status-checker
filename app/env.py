@@ -13,6 +13,9 @@ from app.version import VERSION as _version
 # Minimum token length for all generated and configured tokens.
 MIN_TOKEN_LENGTH: int = 48
 
+# Session cookie max age in seconds (7 days).
+SESSION_MAX_AGE_SECONDS: int = 60 * 60 * 24 * 7
+
 # ---------------------------------------------------------------------------
 # Required
 # ---------------------------------------------------------------------------

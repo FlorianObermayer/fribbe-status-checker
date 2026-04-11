@@ -25,6 +25,11 @@
     "url": "https://Python-Markdown.github.io/"
   },
   {
+    "name": "nh3",
+    "license": "MIT",
+    "url": "UNKNOWN"
+  },
+  {
     "name": "pywebpush",
     "license": "MPL-2.0",
     "url": "https://github.com/web-push-libs/pywebpush"
@@ -40,8 +45,13 @@
     "url": "https://github.com/TypeError/secure"
   },
   {
-    "name": "starlette-session",
+    "name": "starlette-csrf",
     "license": "MIT License",
-    "url": "https://github.com/auredentan/starlette-session"
+    "url": "https://github.com/frankie567/starlette-csrf"
+  },
+  {
+    "name": "starsessions",
+    "license": "MIT License",
+    "url": "https://github.com/alex-oleshkevich/starsessions"
   }
 ]

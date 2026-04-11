@@ -1,6 +1,7 @@
 from typing import Annotated
 
 import markdown
+import nh3
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import HTMLResponse
 
@@ -58,8 +59,8 @@ async def get_notifications_as_html(
     if len(notifications) == 0:
         return HTMLResponse("")
 
-    # Combine all queried messages as markdown, convert to HTML
-    html = """
+    # Combine all queried messages as markdown, convert to sanitised HTML
+    rendered_html = """
 <style>
     img {
         max-width: 100%;
@@ -68,9 +69,9 @@ async def get_notifications_as_html(
     }
 </style>
 """ + "\n<hr/>".join(
-        [f'<div data-notification-id="{n.id}">{markdown.markdown(n.message)}</div>' for n in notifications]
+        [f'<div data-notification-id="{n.id}">{nh3.clean(markdown.markdown(n.message))}</div>' for n in notifications]
     )
-    return HTMLResponse(html)
+    return HTMLResponse(rendered_html)
 
 
 @router.post(

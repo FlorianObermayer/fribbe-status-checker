@@ -11,6 +11,7 @@ the ``api_key`` request header.
 """
 
 from datetime import date, datetime
+from pathlib import Path
 from unittest.mock import MagicMock
 from zoneinfo import ZoneInfo
 
@@ -19,6 +20,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 import app.env as env
+from app.api.EphemeralAPIKeyStore import EphemeralAPIKeyStore
+from app.api.Responses import ApiKey
 from app.dependencies import (
     get_internal_service,
     get_message_service,
@@ -89,6 +92,128 @@ def _mock_internal_svc() -> MagicMock:
 
 def _mock_notification_svc() -> MagicMock:
     return MagicMock()
+
+
+def _get_session_cookie_value(client: TestClient) -> str:
+    """Return the raw session cookie value (opaque starsessions ID)."""
+    cookie_value = client.cookies.get("session_cookie")
+    assert cookie_value is not None
+    return cookie_value
+
+
+def _get_csrf_headers(client: TestClient) -> dict[str, str]:
+    """Read the CSRF token from the ``csrftoken`` cookie set by starlette-csrf."""
+    csrf_cookie = client.cookies.get("csrftoken")
+    assert csrf_cookie is not None, "csrftoken cookie not set — make a GET request first"
+    return {"x-csrf-token": csrf_cookie}
+
+
+# ---------------------------------------------------------------------------
+# /auth (page login)
+# ---------------------------------------------------------------------------
+
+
+def test_post_auth_accepts_admin_token(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+
+    response = client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+
+    assert response.status_code == 200
+    assert response.json()["redirect"] == "/"
+    session_cookie = _get_session_cookie_value(client)
+    assert TEST_ADMIN_TOKEN not in session_cookie
+
+
+def test_post_auth_api_key_uses_opaque_session_cookie(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    keys_path = tmp_path / "api_keys.json"
+    monkeypatch.setattr(env, "API_KEYS_PATH", str(keys_path))
+    api_key = ApiKey.generate_new(comment="test", valid_until=datetime(2026, 12, 31, tzinfo=_UTC))
+    assert EphemeralAPIKeyStore.append(api_key)
+
+    response = client.post("/auth", json={"token": api_key.key, "next": "/"})
+
+    assert response.status_code == 200
+    session_cookie = _get_session_cookie_value(client)
+    assert api_key.key not in session_cookie
+
+
+def test_post_auth_rejects_wrong_token(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+
+    response = client.post("/auth", json={"token": "wrong-token", "next": "/"})
+
+    assert response.status_code == 401
+
+
+def test_post_auth_admin_token_grants_api_access(
+    client: TestClient,
+    test_app: FastAPI,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Logging in via the form with ADMIN_TOKEN should allow access to protected API endpoints."""
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    test_app.dependency_overrides[get_internal_service] = lambda: _mock_internal_svc()
+
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+
+    response = client.get("/api/internal/details")
+    assert response.status_code == 200
+
+
+def test_get_auth_page_renders_password_field(client: TestClient) -> None:
+    response = client.get("/auth")
+
+    assert response.status_code == 200
+    assert 'id="auth-form"' in response.text
+    assert 'type="password"' in response.text
+
+
+def test_get_auth_page_includes_csrf_cookie_when_signed_in(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+
+    response = client.get("/auth")
+
+    assert response.status_code == 200
+    assert client.cookies.get("csrftoken") is not None
+
+
+def test_signout_rejects_missing_csrf_for_session_auth(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+
+    response = client.post("/signout")
+
+    assert response.status_code == 403
+
+
+def test_signout_accepts_valid_csrf_for_session_auth(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+
+    response = client.post("/signout", headers=_get_csrf_headers(client))
+
+    assert response.status_code == 200
+    assert response.json()["redirect"] == "/"
 
 
 # ---------------------------------------------------------------------------
@@ -253,6 +378,26 @@ def test_internal_details_surfaces_active_device_count(
     assert body["wardens_on_site"] == ["Alice"]
 
 
+def test_admin_session_invalidated_after_token_rotation(
+    client: TestClient,
+    test_app: FastAPI,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """After ADMIN_TOKEN is rotated, an existing admin session must be rejected."""
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    test_app.dependency_overrides[get_internal_service] = lambda: _mock_internal_svc()
+
+    # Establish an admin session with the original token
+    response = client.get("/api/internal/details", headers={"api_key": TEST_ADMIN_TOKEN})
+    assert response.status_code == 200
+
+    # Rotate the token - subsequent session-only requests must now be rejected
+    monkeypatch.setattr(env, "ADMIN_TOKEN", "rotated-" + TEST_ADMIN_TOKEN)
+
+    response = client.get("/api/internal/details")
+    assert response.status_code == 401
+
+
 # ---------------------------------------------------------------------------
 # /api/notifications
 # ---------------------------------------------------------------------------
@@ -319,6 +464,43 @@ def test_notifications_post_returns_401_without_auth(client: TestClient, test_ap
     response = client.post("/api/notifications", json={"message": "test"})
 
     assert response.status_code == 401
+
+
+def test_notifications_post_rejects_missing_csrf_for_session_auth(
+    client: TestClient,
+    test_app: FastAPI,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    svc = _mock_notification_svc()
+    test_app.dependency_overrides[get_notification_service] = lambda: svc
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+
+    response = client.post("/api/notifications", json={"message": "Test message"})
+
+    assert response.status_code == 403
+    svc.add.assert_not_called()
+
+
+def test_notifications_post_accepts_valid_csrf_for_session_auth(
+    client: TestClient,
+    test_app: FastAPI,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    svc = _mock_notification_svc()
+    svc.add.return_value = "nid-session123"
+    test_app.dependency_overrides[get_notification_service] = lambda: svc
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+
+    response = client.post(
+        "/api/notifications",
+        json={"message": "Test message"},
+        headers=_get_csrf_headers(client),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["notification_id"] == "nid-session123"
 
 
 def test_notifications_post_returns_notification_id(

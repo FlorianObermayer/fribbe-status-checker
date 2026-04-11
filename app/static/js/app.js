@@ -3,6 +3,19 @@ function getForDateFromUrl() {
     return params.get('for_date');
 }
 
+function getCsrfToken() {
+    const match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]*)/);
+    return match ? decodeURIComponent(match[1]) : '';
+}
+
+function withCsrfHeaders(headers = {}) {
+    const csrfToken = getCsrfToken();
+    if (!csrfToken) {
+        return headers;
+    }
+    return { ...headers, 'X-CSRF-Token': csrfToken };
+}
+
 function getNotificationIdsFromUrl() {
     const params = new URLSearchParams(window.location.search);
     return params.getAll('n_ids');
@@ -19,9 +32,9 @@ function isNotificationsPreview() {
 async function enableNotification(notification_id) {
     const response = await fetch(`/api/notifications/${notification_id}`, {
         method: 'put',
-        headers: {
+        headers: withCsrfHeaders({
             'Content-Type': 'application/json',
-        },
+        }),
         body: JSON.stringify({ enabled: true })
     });
 
@@ -33,7 +46,8 @@ async function enableNotification(notification_id) {
 
 async function deleteNotification(notification_id) {
     const response = await fetch(`/api/notifications/${notification_id}`, {
-        method: 'delete'
+        method: 'delete',
+        headers: withCsrfHeaders(),
     });
 
     if (!response.ok) {
@@ -45,7 +59,8 @@ async function deleteNotification(notification_id) {
 async function deleteNotifications(notification_ids) {
     const query = notification_ids.map(id => `n_ids=${encodeURIComponent(id)}`).join('&');
     const response = await fetch(`/api/notifications?${query}`, {
-        method: 'delete'
+        method: 'delete',
+        headers: withCsrfHeaders(),
     });
 
     if (!response.ok) {
@@ -519,7 +534,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const signoutBtn = document.getElementById('signout-btn');
         if (signoutBtn) {
             signoutBtn.addEventListener('click', async () => {
-                await fetch('/signout', { method: 'POST' });
+                await fetch('/signout', {
+                    method: 'POST',
+                    headers: withCsrfHeaders(),
+                });
                 window.location.href = '/';
             });
         }

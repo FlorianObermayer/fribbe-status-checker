@@ -1,3 +1,4 @@
+import hashlib
 import secrets
 
 from fastapi import HTTPException, Request
@@ -14,6 +15,54 @@ class AuthRedirectException(Exception):
         self.next_url = next_url
 
 
+def resolve_session_subject(request: Request) -> str | None:
+    """Read session data from starsessions and validate it.
+
+    Returns the authenticated subject (admin token value or API key) on
+    success, or *None* after clearing an invalid / expired session.
+    """
+    kind = request.session.get("kind")
+
+    if kind == "admin":
+        admin_token = env.ADMIN_TOKEN
+        if admin_token:
+            subject_hash = request.session.get("subject_hash")
+            if subject_hash and secrets.compare_digest(hashlib.sha256(admin_token.encode()).hexdigest(), subject_hash):
+                return admin_token
+        request.session.clear()
+        return None
+
+    if kind == "api_key":
+        subject = request.session.get("subject")
+        if subject and EphemeralAPIKeyStore.is_key_valid(subject):
+            return subject
+        request.session.clear()
+        return None
+
+    if kind is not None:
+        request.session.clear()
+
+    return None
+
+
+def create_session(request: Request, token: str) -> bool:
+    """Populate *request.session* for *token*.  Returns True on success."""
+    admin_token = env.ADMIN_TOKEN
+    if admin_token and secrets.compare_digest(token, admin_token):
+        request.session.clear()
+        request.session["kind"] = "admin"
+        request.session["subject_hash"] = hashlib.sha256(admin_token.encode()).hexdigest()
+        return True
+
+    if not EphemeralAPIKeyStore.is_key_valid(token):
+        return False
+
+    request.session.clear()
+    request.session["kind"] = "api_key"
+    request.session["subject"] = token
+    return True
+
+
 class HybridAuth:
     def __init__(
         self,
@@ -27,24 +76,19 @@ class HybridAuth:
         self._bypass_on_empty_api_key_list = bypass_on_empty_api_key_list
 
     async def __call__(self, request: Request) -> str | None:
-        # 1. Check Session and remove if not valid anymore
-        admin_token = env.ADMIN_TOKEN
+        # 1. Check server-side session (starsessions).
+        session_subject = resolve_session_subject(request)
+        if session_subject is not None:
+            request.state.auth_via_session = True
+            return session_subject
 
-        # 1a. Admin session marker - token value is never stored in the session cookie
-        if request.session.get("is_admin"):
-            if admin_token:
-                return admin_token
-            # ADMIN_TOKEN was removed from env; invalidate the stale marker
-            request.session.pop("is_admin", None)
-
-        # 1b. Ephemeral key in session
-        api_key = request.session.get("api_key")
-        if EphemeralAPIKeyStore.is_key_valid(api_key):
-            return api_key
-        elif api_key:
+        # Remove legacy auth material from older cookies.
+        _legacy_keys = ("admin_token_hash", "api_key", "auth_session_id")
+        if any(request.session.get(k) for k in _legacy_keys):
             request.session.clear()
 
-        # 2. Check API Key Header
+        # 2. Check API key header and persist a session on success.
+        admin_token = env.ADMIN_TOKEN
         # Bootstrap bypass: store is empty and no ADMIN_TOKEN configured — allow through
         if self._bypass_on_empty_api_key_list and EphemeralAPIKeyStore.is_empty() and not admin_token:
             return None
@@ -55,11 +99,8 @@ class HybridAuth:
             auto_error=self._auto_error,
         )(request)
         if api_key:
-            if admin_token and secrets.compare_digest(api_key, admin_token):
-                # Store a boolean marker only - never persist the token value into the cookie
-                request.session["is_admin"] = True
-            else:
-                request.session["api_key"] = api_key
+            request.state.auth_via_session = False
+            create_session(request, api_key)
             return api_key
 
         if self._auto_error:
