@@ -667,7 +667,16 @@ async function initPushNotifications() {
 
     btn.addEventListener('click', async () => {
         setPushButtonState('loading');
-        const currentSub = await swReg.pushManager.getSubscription();
+
+        let currentSub;
+        try {
+            currentSub = await swReg.pushManager.getSubscription();
+        } catch (e) {
+            console.error('Failed to get push subscription:', e);
+            setPushButtonState(existingSub ? 'subscribed' : 'unsubscribed');
+            showToast('Fehler beim Laden des Benachrichtigungsstatus', 'error');
+            return;
+        }
         if (currentSub) {
             // Unsubscribe
             try {
