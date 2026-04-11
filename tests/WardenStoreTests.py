@@ -218,3 +218,15 @@ def test_json_structure_on_disk(tmp_path: Path):
     assert "wardens" in data
     assert data["wardens"][0]["name"] == "Alice"
     assert data["wardens"][0]["device_macs"] == ["aa:bb:cc:dd:ee:ff"]
+
+
+def test_atomic_write_no_temp_files_left(tmp_path: Path):
+    path = str(tmp_path / "wardens.json")
+    store = WardenStore(path)
+    store.add(Warden("Alice", ["aa:bb:cc:dd:ee:ff"]))
+    store.add(Warden("Bob"))
+    store.delete("Bob")
+    # Only the target JSON file should exist, no .tmp leftovers
+    files = list(tmp_path.iterdir())
+    assert len(files) == 1
+    assert files[0].name == "wardens.json"

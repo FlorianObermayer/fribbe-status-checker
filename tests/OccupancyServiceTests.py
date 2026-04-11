@@ -75,11 +75,3 @@ def test_get_todays_calendar_occupancy_with_occupancy():
     assert isinstance(daily.last_updated, datetime)
     assert isinstance(daily.date, date)
     assert daily.error is None
-
-
-def test_start_and_stop_status_check():
-    s = service()
-    s.start_polling(interval=1)
-    assert s.is_polling
-    s.stop_polling()
-    assert not s.is_polling

@@ -464,3 +464,95 @@ def test_persistent_decorator():
         config2.data = MyDataClass("nested", 789)
         assert config.data.foo == "nested"
         assert config.data.bar == 789
+
+
+def test_atomic_write_leaves_valid_file_on_success():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = str(Path(tmpdir) / "atomic.json")
+        d: PersistentDict[int] = PersistentDict(path, int)
+        d["a"] = 1
+        d["b"] = 2
+        # File should be valid JSON after writes
+        d2: PersistentDict[int] = PersistentDict(path, int)
+        assert d2["a"] == 1
+        assert d2["b"] == 2
+
+
+def test_atomic_write_no_temp_files_left():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = str(Path(tmpdir) / "atomic.json")
+        d: PersistentDict[int] = PersistentDict(path, int)
+        d["x"] = 42
+        # Only the target JSON file should exist, no .tmp leftovers
+        files = list(Path(tmpdir).iterdir())
+        assert len(files) == 1
+        assert files[0].name == "atomic.json"
+
+
+def test_batch_write_saves_once():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = str(Path(tmpdir) / "batch.json")
+        d: PersistentDict[int] = PersistentDict(path, int)
+        with d.batch_write() as store:
+            store["a"] = 1
+            store["b"] = 2
+            store["c"] = 3
+        # Verify all values persisted
+        d2: PersistentDict[int] = PersistentDict(path, int)
+        assert d2["a"] == 1
+        assert d2["b"] == 2
+        assert d2["c"] == 3
+
+
+def test_batch_write_delete():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = str(Path(tmpdir) / "batch_del.json")
+        d: PersistentDict[int] = PersistentDict(path, int)
+        d["a"] = 1
+        d["b"] = 2
+        d["c"] = 3
+        with d.batch_write() as store:
+            del store["a"]
+            del store["c"]
+        d2: PersistentDict[int] = PersistentDict(path, int)
+        assert "a" not in d2
+        assert d2["b"] == 2
+        assert "c" not in d2
+
+
+def test_batch_write_clear():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = str(Path(tmpdir) / "batch_clear.json")
+        d: PersistentDict[int] = PersistentDict(path, int)
+        d["a"] = 1
+        d["b"] = 2
+        with d.batch_write() as store:
+            store.clear()
+        d2: PersistentDict[int] = PersistentDict(path, int)
+        assert len(d2) == 0
+
+
+def test_batch_write_exception_still_saves():
+    """On exception the batch should still save whatever mutations happened."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = str(Path(tmpdir) / "batch_exc.json")
+        d: PersistentDict[int] = PersistentDict(path, int)
+        with pytest.raises(RuntimeError), d.batch_write() as store:
+            store["a"] = 1
+            raise RuntimeError("oops")
+        # The mutation should still be saved
+        d2: PersistentDict[int] = PersistentDict(path, int)
+        assert d2["a"] == 1
+
+
+def test_batch_write_read_within_batch():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = str(Path(tmpdir) / "batch_read.json")
+        d: PersistentDict[int] = PersistentDict(path, int)
+        d["x"] = 10
+        with d.batch_write() as store:
+            assert store["x"] == 10
+            store["x"] = 20
+            assert store["x"] == 20
+            assert "x" in store
+            assert len(store) == 1

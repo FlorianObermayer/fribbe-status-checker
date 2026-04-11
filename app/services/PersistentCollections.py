@@ -1,5 +1,8 @@
 import json
-from collections.abc import MutableMapping
+import os
+import tempfile
+from collections.abc import Iterator, MutableMapping
+from contextlib import contextmanager, suppress
 from datetime import datetime
 from inspect import isclass
 from pathlib import Path
@@ -46,6 +49,8 @@ class PersistentDict[V](MutableMapping[str, V]):
         self._path = path
         self._value_type = value_type
         self._data: dict[str, V] = {}
+        self._lock = rwlock.RWLockFair()
+        self._batch_depth = 0
 
         if not self._is_type_supported(value_type):
             raise TypeError(
@@ -209,36 +214,106 @@ class PersistentDict[V](MutableMapping[str, V]):
             self._data = {}
 
     def _save(self):
-        Path(self._path).parent.mkdir(parents=True, exist_ok=True)
-        with Path(self._path).open("w", encoding="utf-8") as f:
-            serialized = {k: self._serialize(v) for k, v in self._data.items()}
-            json.dump(
-                serialized,
-                f,
-                ensure_ascii=False,
-                indent=2,
-            )
+        parent = Path(self._path).parent
+        parent.mkdir(parents=True, exist_ok=True)
+        serialized = {k: self._serialize(v) for k, v in self._data.items()}
+        fd, tmp_path = tempfile.mkstemp(dir=str(parent), suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(serialized, f, ensure_ascii=False, indent=2)
+            Path(tmp_path).replace(self._path)
+        except BaseException:
+            with suppress(OSError):
+                Path(tmp_path).unlink()
+            raise
 
     def __getitem__(self, key: str) -> V:
-        return self._data[key]
+        if self._batch_depth > 0:
+            return self._data[key]
+        with self._lock.gen_rlock():
+            return self._data[key]
 
     def __setitem__(self, key: str, value: V) -> None:
-        self._data[key] = value
-        self._save()
+        if self._batch_depth > 0:
+            self._data[key] = value
+            return
+        with self._lock.gen_wlock():
+            self._data[key] = value
+            self._save()
 
     def __delitem__(self, key: str) -> None:
-        del self._data[key]
-        self._save()
+        if self._batch_depth > 0:
+            del self._data[key]
+            return
+        with self._lock.gen_wlock():
+            del self._data[key]
+            self._save()
 
     def __iter__(self):
-        return iter(self._data)
+        if self._batch_depth > 0:
+            return iter(list(self._data))
+        with self._lock.gen_rlock():
+            return iter(list(self._data))
 
     def __len__(self) -> int:
-        return len(self._data)
+        if self._batch_depth > 0:
+            return len(self._data)
+        with self._lock.gen_rlock():
+            return len(self._data)
+
+    def __contains__(self, key: object) -> bool:
+        if self._batch_depth > 0:
+            return key in self._data
+        with self._lock.gen_rlock():
+            return key in self._data
+
+    def values(self):  # type: ignore[override]
+        if self._batch_depth > 0:
+            return list(self._data.values())
+        with self._lock.gen_rlock():
+            return list(self._data.values())
+
+    def items(self):  # type: ignore[override]
+        if self._batch_depth > 0:
+            return list(self._data.items())
+        with self._lock.gen_rlock():
+            return list(self._data.items())
+
+    def get(self, key: str, default: V | None = None) -> V | None:  # type: ignore[override]
+        if self._batch_depth > 0:
+            return self._data.get(key, default)
+        with self._lock.gen_rlock():
+            return self._data.get(key, default)
+
+    def clear(self) -> None:
+        if self._batch_depth > 0:
+            self._data.clear()
+            return
+        with self._lock.gen_wlock():
+            self._data.clear()
+            self._save()
 
     def reload(self) -> None:
         """Reload the data from disk."""
-        self._load()
+        with self._lock.gen_wlock():
+            self._load()
+
+    @contextmanager
+    def batch_write(self) -> Iterator["PersistentDict[V]"]:
+        """Hold the write lock across multiple mutations, saving once at the end.
+
+        Inside the block, direct dict-style access (``d[k] = v``, ``del d[k]``)
+        skips per-operation locking and saving. A single ``_save()`` is performed
+        when the block exits successfully.
+        """
+        with self._lock.gen_wlock():
+            self._batch_depth += 1
+            try:
+                yield self
+            finally:
+                self._batch_depth -= 1
+                if self._batch_depth == 0:
+                    self._save()
 
 
 class PersistentList[V]:
