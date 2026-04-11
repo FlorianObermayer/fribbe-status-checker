@@ -645,7 +645,7 @@ async function initPushNotifications() {
         try {
             const statusResp = await fetch('/api/push/status', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: withCsrfHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({ auth }),
             });
             serverKnows = statusResp.ok && (await statusResp.json()).subscribed;
@@ -657,7 +657,7 @@ async function initPushNotifications() {
             try {
                 const reRegResp = await fetch('/api/push/subscribe', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: withCsrfHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify({
                         endpoint: existingSub.endpoint,
                         p256dh: arrayBufferToBase64Url(existingSub.getKey('p256dh')),
@@ -701,7 +701,7 @@ async function initPushNotifications() {
                 const auth = arrayBufferToBase64Url(currentSub.getKey('auth'));
                 const resp = await fetch('/api/push/unsubscribe', {
                     method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: withCsrfHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify({ auth }),
                 });
                 if (!resp.ok) {
@@ -727,7 +727,7 @@ async function initPushNotifications() {
                 });
                 const resp = await fetch('/api/push/subscribe', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: withCsrfHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify({
                         endpoint: sub.endpoint,
                         p256dh: arrayBufferToBase64Url(sub.getKey('p256dh')),
