@@ -1,5 +1,8 @@
 import json
+import os
+import tempfile
 import threading
+from contextlib import suppress
 from pathlib import Path
 from typing import ClassVar
 
@@ -45,9 +48,18 @@ class WardenStore:
             ]
 
     def _save(self) -> None:
-        Path(self._path).parent.mkdir(parents=True, exist_ok=True)
-        with Path(self._path).open("w", encoding="utf-8") as f:
-            json.dump({"wardens": [self._warden_to_raw(w) for w in self._wardens]}, f, indent=2, ensure_ascii=False)
+        parent = Path(self._path).parent
+        parent.mkdir(parents=True, exist_ok=True)
+        data = {"wardens": [self._warden_to_raw(w) for w in self._wardens]}
+        fd, tmp_path = tempfile.mkstemp(dir=str(parent), suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            Path(tmp_path).replace(self._path)
+        except BaseException:
+            with suppress(OSError):
+                Path(tmp_path).unlink()
+            raise
 
     def get_all(self) -> list[Warden]:
         with self._lock.gen_rlock():

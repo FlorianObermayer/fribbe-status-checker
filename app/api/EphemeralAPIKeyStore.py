@@ -1,6 +1,8 @@
 import logging
+import secrets
 import threading
 from datetime import datetime
+from enum import Enum
 from zoneinfo import ZoneInfo
 
 import app.env as env
@@ -10,6 +12,12 @@ from app.services.PersistentCollections import PersistentList
 _write_lock = threading.Lock()
 
 logger = logging.getLogger("uvicorn.error")
+
+
+class RemoveResult(Enum):
+    DELETED = "deleted"
+    NOT_FOUND = "not_found"
+    AMBIGUOUS = "ambiguous"
 
 
 class EphemeralAPIKeyStore:
@@ -53,6 +61,20 @@ class EphemeralAPIKeyStore:
             return True
 
     @staticmethod
+    def remove(key_prefix: str) -> RemoveResult:
+        """Remove a key whose value starts with *key_prefix* under the write lock."""
+        with _write_lock:
+            keys = EphemeralAPIKeyStore.load()
+            matches = [k for k in keys if k.key.startswith(key_prefix)]
+            if len(matches) == 0:
+                return RemoveResult.NOT_FOUND
+            if len(matches) > 1:
+                return RemoveResult.AMBIGUOUS
+            key_to_delete = matches[0].key
+            EphemeralAPIKeyStore.save([k for k in keys if k.key != key_to_delete])
+            return RemoveResult.DELETED
+
+    @staticmethod
     def is_key_valid(key: str | None) -> bool:
         log_key = key[:2] if key is not None else None
 
@@ -62,7 +84,7 @@ class EphemeralAPIKeyStore:
         now = datetime.now(tz=ZoneInfo("Europe/Berlin"))
         entries = EphemeralAPIKeyStore.load()
         for entry in entries:
-            if entry.key != key:
+            if not secrets.compare_digest(entry.key, key):
                 continue
 
             logger.info(

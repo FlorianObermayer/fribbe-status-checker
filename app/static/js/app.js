@@ -19,9 +19,9 @@ function isNotificationsPreview() {
 async function enableNotification(notification_id) {
     const response = await fetch(`/api/notifications/${notification_id}`, {
         method: 'put',
-        headers: {
+        headers: withCsrfHeaders({
             'Content-Type': 'application/json',
-        },
+        }),
         body: JSON.stringify({ enabled: true })
     });
 
@@ -33,7 +33,8 @@ async function enableNotification(notification_id) {
 
 async function deleteNotification(notification_id) {
     const response = await fetch(`/api/notifications/${notification_id}`, {
-        method: 'delete'
+        method: 'delete',
+        headers: withCsrfHeaders(),
     });
 
     if (!response.ok) {
@@ -45,7 +46,8 @@ async function deleteNotification(notification_id) {
 async function deleteNotifications(notification_ids) {
     const query = notification_ids.map(id => `n_ids=${encodeURIComponent(id)}`).join('&');
     const response = await fetch(`/api/notifications?${query}`, {
-        method: 'delete'
+        method: 'delete',
+        headers: withCsrfHeaders(),
     });
 
     if (!response.ok) {
@@ -519,7 +521,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const signoutBtn = document.getElementById('signout-btn');
         if (signoutBtn) {
             signoutBtn.addEventListener('click', async () => {
-                await fetch('/signout', { method: 'POST' });
+                await fetch('/signout', {
+                    method: 'POST',
+                    headers: withCsrfHeaders(),
+                });
                 window.location.href = '/';
             });
         }
@@ -627,7 +632,7 @@ async function initPushNotifications() {
         try {
             const statusResp = await fetch('/api/push/status', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: withCsrfHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({ auth }),
             });
             serverKnows = statusResp.ok && (await statusResp.json()).subscribed;
@@ -639,7 +644,7 @@ async function initPushNotifications() {
             try {
                 const reRegResp = await fetch('/api/push/subscribe', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: withCsrfHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify({
                         endpoint: existingSub.endpoint,
                         p256dh: arrayBufferToBase64Url(existingSub.getKey('p256dh')),
@@ -683,7 +688,7 @@ async function initPushNotifications() {
                 const auth = arrayBufferToBase64Url(currentSub.getKey('auth'));
                 const resp = await fetch('/api/push/unsubscribe', {
                     method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: withCsrfHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify({ auth }),
                 });
                 if (!resp.ok) {
@@ -709,7 +714,7 @@ async function initPushNotifications() {
                 });
                 const resp = await fetch('/api/push/subscribe', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: withCsrfHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify({
                         endpoint: sub.endpoint,
                         p256dh: arrayBufferToBase64Url(sub.getKey('p256dh')),

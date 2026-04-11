@@ -41,9 +41,9 @@ document.getElementById('submitBtn').addEventListener('click', async function ()
     try {
         const response = await fetch('/api/notifications', {
             method: 'POST',
-            headers: {
+            headers: withCsrfHeaders({
                 'Content-Type': 'application/json',
-            },
+            }),
             body: JSON.stringify(payload)
         });
 

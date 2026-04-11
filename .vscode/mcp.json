@@ -1,12 +1,3 @@
 {
-    "servers": {
-        "playwright-localhost": {
-            "type": "stdio",
-            "command": "npx",
-            "args": [
-                "-y",
-                "@microsoft/mcp-server-playwright"
-            ],
-        }
-    }
+    "servers": {}
 }

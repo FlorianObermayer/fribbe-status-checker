@@ -1,7 +1,8 @@
+from datetime import datetime
 from typing import Any
 
 from fastapi import Query
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 # Single source of truth for all keyword filter options.
 # Order here determines the order in the UI selector.
@@ -41,3 +42,52 @@ class NotificationQuery(BaseModel):
             if not (n_id in _keyword_ids or n_id.startswith("nid-")):
                 raise ValueError(f"Invalid ID: '{n_id}'. Must be any or multiple of: [{', '.join(_examples)}]")
         return value
+
+
+class PushAuthRequest(BaseModel):
+    auth: str
+
+
+class PushSubscribeRequest(BaseModel):
+    endpoint: str
+    p256dh: str
+    auth: str
+
+
+class CreateApiKeyRequest(BaseModel):
+    comment: str = ""
+    valid_until: datetime | None = None
+
+
+class DeleteApiKeyRequest(BaseModel):
+    key: str
+
+
+class PostNotificationRequest(BaseModel):
+    message: str
+    valid_from: datetime | None = None
+    valid_until: datetime | None = None
+    enabled: bool = True
+
+
+class UpdateNotificationRequest(BaseModel):
+    enabled: bool | None = None
+    valid_from: datetime | None = None
+    valid_until: datetime | None = None
+
+
+class ConfigRequest(BaseModel):
+    threshold_min_non_empty_ct: int | None = Field(None, gt=0)
+    threshold_min_many_ct: int | None = Field(None, gt=1)
+
+
+class CreateWardenRequest(BaseModel):
+    name: str
+    device_macs: list[str] = Field(default_factory=list)
+    device_names: list[str] = Field(default_factory=list)
+
+
+class UpdateWardenRequest(BaseModel):
+    new_name: str | None = None
+    device_macs: list[str] | None = None
+    device_names: list[str] | None = None

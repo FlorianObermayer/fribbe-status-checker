@@ -28,7 +28,7 @@ def test_validate_raises_when_required_vars_missing(monkeypatch: pytest.MonkeyPa
 
 
 def test_validate_passes_when_all_required_vars_set(monkeypatch: pytest.MonkeyPatch, env_paths: tuple[Path, Path]):
-    monkeypatch.setenv("SESSION_SECRET_KEY", "secret")
+    monkeypatch.setenv("SESSION_SECRET_KEY", "a" * env.MIN_TOKEN_LENGTH)
 
     env.validate()  # should not raise
 
@@ -119,7 +119,7 @@ def test_load_admin_token_override(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_validate_raises_when_admin_token_too_short(monkeypatch: pytest.MonkeyPatch, env_paths: tuple[Path, Path]):
-    monkeypatch.setenv("SESSION_SECRET_KEY", "secret")
+    monkeypatch.setenv("SESSION_SECRET_KEY", "a" * env.MIN_TOKEN_LENGTH)
     monkeypatch.setenv("ADMIN_TOKEN", "short")
     with pytest.raises(RuntimeError, match="ADMIN_TOKEN"):
         env.validate()
@@ -128,6 +128,14 @@ def test_validate_raises_when_admin_token_too_short(monkeypatch: pytest.MonkeyPa
 def test_validate_passes_when_admin_token_meets_minimum_length(
     monkeypatch: pytest.MonkeyPatch, env_paths: tuple[Path, Path]
 ):
-    monkeypatch.setenv("SESSION_SECRET_KEY", "secret")
+    monkeypatch.setenv("SESSION_SECRET_KEY", "a" * env.MIN_TOKEN_LENGTH)
     monkeypatch.setenv("ADMIN_TOKEN", "a" * env.MIN_TOKEN_LENGTH)
     env.validate()  # should not raise
+
+
+def test_validate_raises_when_session_secret_key_too_short(
+    monkeypatch: pytest.MonkeyPatch, env_paths: tuple[Path, Path]
+):
+    monkeypatch.setenv("SESSION_SECRET_KEY", "short")
+    with pytest.raises(RuntimeError, match="SESSION_SECRET_KEY"):
+        env.validate()

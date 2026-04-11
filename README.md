@@ -10,7 +10,7 @@ A FastAPI-based status checker for [Fribbe Beach](https://fribbebeach.de), runni
 - **Occupancy parsing** — Scrapes the Fribbe Beach weekly plan and event calendar to determine booking status for any given date
 - **Notifications** — Create and manage Markdown-formatted notifications with optional validity windows
 - **Push notifications** — Browser Web Push alerts when someone first arrives at the Fribbe on a given day
-- **REST API** — JSON API with API key + session-cookie hybrid authentication
+- **REST API** — JSON API with API key + session-cookie hybrid authentication using opaque server-side auth sessions
 - **Web UI** — Static HTML/CSS/JS frontend served directly by the app
 
 ## Development
@@ -93,13 +93,13 @@ ADMIN_TOKEN=<strong-random-secret>  # recommended for production
 
 ### Sign-in button on the home page (`SHOW_ADMIN_AUTH`)
 
-By default the home page (`/`) shows no sign-in affordance to keep the public-facing UI clean. Setting `SHOW_ADMIN_AUTH=true` makes a sign-in button appear in the bottom-right corner whenever the visitor is **not** authenticated. Clicking it leads to the `/auth` page.
+By default the home page (`/`) shows no sign-in affordance to keep the public-facing UI clean. Setting `SHOW_ADMIN_AUTH=true` makes a sign-in button appear in the bottom-right corner whenever the visitor is **not** authenticated. Clicking it leads to the `/auth` page, which renders a normal password-style form instead of using a browser prompt.
 
 ```sh
 SHOW_ADMIN_AUTH=true  # default: false
 ```
 
-Authenticated users always see the full admin button group regardless of this setting.
+Authenticated users always see the full admin button group regardless of this setting. Successful sign-in stores only an opaque session identifier in the browser cookie; the API key or `ADMIN_TOKEN` is kept server-side and revalidated on each request. Unsafe browser requests made with that cookie are additionally bound to a per-session CSRF token sent via `X-CSRF-Token`.
 
 ## Enable Push notifications (Web Push / VAPID)
 

@@ -1,7 +1,4 @@
-import asyncio
 import logging
-import threading
-import time
 from dataclasses import replace
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -15,19 +12,19 @@ from app.services.occupancy.OccupancyParser import (
     parse_event_calendar,
     parse_weekly_plan,
 )
+from app.services.PollingService import PollingService
 
 logger = logging.getLogger("uvicorn.error")
 
 
-class OccupancyService:
+class OccupancyService(PollingService):
     def __init__(self):
+        super().__init__()
         self.weekly_plan_url = "https://fribbebeach.de/fribbe/belegungsplan.html"
         self.event_calendar_url = "https://fribbebeach.de/fribbe/veranstaltungskalender.html"
         self._week_occupancy: list[Occupancy] = []
         self._event_occupancy: list[Occupancy] = []
         self._last_updated = datetime.now(tz=ZoneInfo("Europe/Berlin"))
-        self._interval_thread: threading.Thread | None = None
-        self._stop_event = threading.Event()
         self._last_error: Exception | None = None
         self._rwlock = rwlock.RWLockFair()
 
@@ -144,6 +141,9 @@ class OccupancyService:
                 result.append(shifted_occ)
         return result
 
+    async def _run_poll(self) -> None:
+        await self._run_get_latest_occupancy()
+
     async def _run_get_latest_occupancy(self):
         try:
             logger.info("Refresh occupancy...")
@@ -160,25 +160,5 @@ class OccupancyService:
                 self._last_error = e
             logger.error(f"Error during occupancy check: {e}", exc_info=True)
 
-    def _occupancy_loop(self, interval: int):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        while not self._stop_event.is_set():
-            loop.run_until_complete(self._run_get_latest_occupancy())
-            time.sleep(interval)
-
-    def start_polling(self, interval: int = 360):
-        if self._interval_thread is None or not self._interval_thread.is_alive():
-            self._stop_event.clear()
-            self._interval_thread = threading.Thread(
-                target=self._occupancy_loop,
-                args=[interval],
-                daemon=True,
-            )
-            self._interval_thread.start()
-
-    def stop_polling(self):
-        if self._interval_thread and self._interval_thread.is_alive():
-            self._stop_event.set()
-            self._interval_thread.join()
-            self._interval_thread = None
+    def start_polling(self, interval: int = 360) -> None:  # type: ignore[override]
+        super().start_polling(interval)

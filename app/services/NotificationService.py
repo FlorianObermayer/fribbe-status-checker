@@ -1,7 +1,4 @@
-import asyncio
 import logging
-import threading
-import time
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -9,10 +6,9 @@ from pathlib import Path
 from typing import Self
 from zoneinfo import ZoneInfo
 
-from readerwriterlock import rwlock
-
 import app.env as env
 from app.services.PersistentCollections import PersistentDict
+from app.services.PollingService import PollingService
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -66,29 +62,26 @@ class Notification:
         )
 
 
-class NotificationService:
+class NotificationService(PollingService):
     def __init__(self):
+        super().__init__()
         self._store: PersistentDict[Notification] = PersistentDict(
             str(Path(env.LOCAL_DATA_PATH) / "notifications.json"),
             value_type=Notification,
         )
-        self._interval_thread: threading.Thread | None = None
-        self._stop_event = threading.Event()
-        self._rwlock = rwlock.RWLockFair()
 
-    def add(self, message: str, valid_from: datetime, valid_until: datetime, enabled: bool) -> str:
-        with self._rwlock.gen_wlock():
-            nid = str(f"nid-{uuid.uuid4()}")
-            notification = Notification(
-                created=datetime.now(tz=ZoneInfo("Europe/Berlin")),
-                id=nid,
-                message=message,
-                valid_from=valid_from,
-                valid_until=valid_until,
-                enabled=enabled,
-            )
-            self._store[nid] = notification
-            return nid
+    def add(self, message: str, valid_from: datetime | None, valid_until: datetime | None, enabled: bool) -> str:
+        nid = str(f"nid-{uuid.uuid4()}")
+        notification = Notification(
+            created=datetime.now(tz=ZoneInfo("Europe/Berlin")),
+            id=nid,
+            message=message,
+            valid_from=valid_from,
+            valid_until=valid_until,
+            enabled=enabled,
+        )
+        self._store[nid] = notification
+        return nid
 
     def get(self, notification_ids: list[str] | None = None) -> list[Notification]:
         if notification_ids is None:
@@ -118,39 +111,34 @@ class NotificationService:
         return result
 
     def list_all(self) -> list[Notification]:
-        with self._rwlock.gen_rlock():
-            return list(self._store.values())
+        return list(self._store.values())
 
     def delete(self, nid: str) -> bool:
-        with self._rwlock.gen_wlock():
-            if nid in self._store:
-                del self._store[nid]
-                self._store.reload()
+        with self._store.batch_write() as store:
+            if nid in store:
+                del store[nid]
                 return True
             return False
 
     def delete_many(self, nids: list[str]) -> int:
-        with self._rwlock.gen_wlock():
+        with self._store.batch_write() as store:
             if "all" in nids:
-                count = len(self._store)
-                self._store.clear()
-                self._store.reload()
+                count = len(store)
+                store.clear()
                 return count
 
             if "all_active" in nids:
-                to_delete = [n.id for n in self._store.values() if n.is_active()]
+                to_delete = [n.id for n in store.values() if n.is_active()]
             elif "all_enabled" in nids:
-                to_delete = [n.id for n in self._store.values() if n.enabled]
+                to_delete = [n.id for n in store.values() if n.enabled]
             elif "all_inactive" in nids:
-                to_delete = [n.id for n in self._store.values() if not n.is_active()]
+                to_delete = [n.id for n in store.values() if not n.is_active()]
             else:
                 requested = {nid for nid in nids if nid.startswith("nid-")}
-                to_delete = [nid for nid in requested if nid in self._store]
+                to_delete = [nid for nid in requested if nid in store]
 
             for nid in to_delete:
-                del self._store[nid]
-            if to_delete:
-                self._store.reload()
+                del store[nid]
             return len(to_delete)
 
     def update(
@@ -160,21 +148,24 @@ class NotificationService:
         valid_from: datetime | None = None,
         valid_until: datetime | None = None,
     ) -> bool:
-        with self._rwlock.gen_wlock():
-            if nid not in self._store:
+        with self._store.batch_write() as store:
+            if nid not in store:
                 return False
-            notification = self._store[nid]
+            notification = store[nid]
             if enabled is not None:
                 notification.enabled = enabled
             if valid_from is not None:
                 notification.valid_from = valid_from
             if valid_until is not None:
                 notification.valid_until = valid_until
-            self._store[nid] = notification
+            store[nid] = notification
             return True
 
     def get_by_id(self, nid: str) -> Notification | None:
         return self._store.get(nid)
+
+    async def _run_poll(self) -> None:
+        await self._run_clean_old_notifications()
 
     async def _run_clean_old_notifications(self):
         try:
@@ -192,21 +183,7 @@ class NotificationService:
                 logger.info("No old notifications found.")
             logger.info("Cleaning old notifications... DONE")
         except Exception as e:
-            logger.error(f"Error during occupancy check: {e}", exc_info=True)
-
-    def _occupancy_loop(self, interval: int):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        while not self._stop_event.is_set():
-            loop.run_until_complete(self._run_clean_old_notifications())
-            time.sleep(interval)
+            logger.error(f"Error during notification cleanup: {e}", exc_info=True)
 
     def start_cleanup_job(self, interval: int = 3600) -> None:
-        if self._interval_thread is None or not self._interval_thread.is_alive():
-            self._stop_event.clear()
-            self._interval_thread = threading.Thread(
-                target=self._occupancy_loop,
-                args=[interval],
-                daemon=True,
-            )
-            self._interval_thread.start()
+        self.start_polling(interval)
