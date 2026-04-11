@@ -689,10 +689,9 @@ async function initPushNotifications() {
                 if (!resp.ok) {
                     throw new Error(`Unsubscribe request failed with status ${resp.status}`);
                 }
-                try {
-                    await currentSub.unsubscribe();
-                } catch (e) {
-                    console.error('Browser unsubscribe failed:', e);
+                const unsubscribed = await currentSub.unsubscribe();
+                if (!unsubscribed) {
+                    throw new Error('Browser unsubscribe returned false');
                 }
                 setPushButtonState('unsubscribed');
                 showToast('Benachrichtigungen deaktiviert!');
