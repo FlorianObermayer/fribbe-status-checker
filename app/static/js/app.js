@@ -635,6 +635,7 @@ async function initPushNotifications() {
             serverKnows = true; // on network error assume server knows to avoid spurious re-registration
         }
         if (!serverKnows) {
+            let reRegOk = false;
             try {
                 const reRegResp = await fetch('/api/push/subscribe', {
                     method: 'POST',
@@ -645,9 +646,15 @@ async function initPushNotifications() {
                         auth,
                     }),
                 });
-                if (!reRegResp.ok) console.error('Push subscription re-registration failed:', reRegResp.status);
+                reRegOk = reRegResp.ok;
+                if (!reRegOk) console.error('Push subscription re-registration failed:', reRegResp.status);
             } catch (e) {
                 console.error('Push subscription re-registration failed:', e);
+            }
+            if (!reRegOk) {
+                setPushButtonState('unsubscribed');
+                showToast('Fehler beim Aktivieren', 'error');
+                return;
             }
         }
         setPushButtonState('subscribed');
