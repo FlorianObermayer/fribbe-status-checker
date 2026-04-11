@@ -1,7 +1,4 @@
-import asyncio
 import logging
-import threading
-import time
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -13,6 +10,7 @@ from readerwriterlock import rwlock
 
 import app.env as env
 from app.services.PersistentCollections import PersistentDict
+from app.services.PollingService import PollingService
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -66,14 +64,13 @@ class Notification:
         )
 
 
-class NotificationService:
+class NotificationService(PollingService):
     def __init__(self):
+        super().__init__()
         self._store: PersistentDict[Notification] = PersistentDict(
             str(Path(env.LOCAL_DATA_PATH) / "notifications.json"),
             value_type=Notification,
         )
-        self._interval_thread: threading.Thread | None = None
-        self._stop_event = threading.Event()
         self._rwlock = rwlock.RWLockFair()
 
     def add(self, message: str, valid_from: datetime | None, valid_until: datetime | None, enabled: bool) -> str:
@@ -176,6 +173,9 @@ class NotificationService:
     def get_by_id(self, nid: str) -> Notification | None:
         return self._store.get(nid)
 
+    async def _run_poll(self) -> None:
+        await self._run_clean_old_notifications()
+
     async def _run_clean_old_notifications(self):
         try:
             logger.info("Cleaning old notifications...")
@@ -194,19 +194,5 @@ class NotificationService:
         except Exception as e:
             logger.error(f"Error during occupancy check: {e}", exc_info=True)
 
-    def _occupancy_loop(self, interval: int):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        while not self._stop_event.is_set():
-            loop.run_until_complete(self._run_clean_old_notifications())
-            time.sleep(interval)
-
     def start_cleanup_job(self, interval: int = 3600) -> None:
-        if self._interval_thread is None or not self._interval_thread.is_alive():
-            self._stop_event.clear()
-            self._interval_thread = threading.Thread(
-                target=self._occupancy_loop,
-                args=[interval],
-                daemon=True,
-            )
-            self._interval_thread.start()
+        self.start_polling(interval)

@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import asyncio
 import logging
-import threading
-import time
 from datetime import date, datetime
 from typing import TYPE_CHECKING, Protocol
 from zoneinfo import ZoneInfo
@@ -15,6 +12,7 @@ from readerwriterlock import rwlock
 from app.services.MacAddressHelper import should_ignore_device
 from app.services.occupancy.Model import OccupancyType
 from app.services.occupancy.OccupancyService import OccupancyService
+from app.services.PollingService import PollingService
 from app.services.PresenceLevel import PresenceLevel
 from app.services.PresenceThresholds import PresenceThresholds
 from app.services.VirtualDay import get_virtual_date
@@ -31,7 +29,7 @@ class PushSender(Protocol):
 logger = logging.getLogger("uvicorn.error")
 
 
-class PresenceLevelService:
+class PresenceLevelService(PollingService):
     def __init__(
         self,
         weather_service: WeatherService | None,
@@ -39,6 +37,7 @@ class PresenceLevelService:
         push_sender: PushSender | None,
         occupancy_service: OccupancyService,
     ) -> None:
+        super().__init__()
 
         self._message_service: MessageService = message_service
         self._weather_service: WeatherService | None = weather_service
@@ -46,8 +45,6 @@ class PresenceLevelService:
         self._occupancy_service: OccupancyService = occupancy_service
 
         self._last_updated: datetime | None = None
-        self._interval_thread = None
-        self._stop_event = threading.Event()
         self._last_error: Exception | None = None
         self._presence_level: PresenceLevel = PresenceLevel.EMPTY
 
@@ -56,6 +53,10 @@ class PresenceLevelService:
 
         self._push_initialized: bool = False
         self._last_push_virtual_date: date | None = None
+
+        self._router_ip: str = ""
+        self._username: str = ""
+        self._password: str = ""
 
     def get_level(self):
         with self._rwlock.gen_rlock():
@@ -68,6 +69,9 @@ class PresenceLevelService:
     def get_last_error(self):
         with self._rwlock.gen_rlock():
             return self._last_error
+
+    async def _run_poll(self) -> None:
+        await self._run_presence_detection(self._router_ip, self._username, self._password)
 
     async def _run_presence_detection(self, router_ip: str, username: str, password: str):
         try:
@@ -140,39 +144,18 @@ class PresenceLevelService:
         msg = self._message_service.get_push_message(level, occupancy_type, occupancy_time_str, weather=weather)
         return msg.title, msg.message
 
-    def _presence_detection_loop(self, interval: int, router_ip: str, username: str, password: str):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        while not self._stop_event.is_set():
-            loop.run_until_complete(self._run_presence_detection(router_ip, username, password))
-            time.sleep(interval)
-
-    def start_polling(
+    def start_polling(  # type: ignore[override]
         self,
         router_ip: str | None,
         username: str | None,
         password: str | None,
         interval: int = 60,
         delay_to_first_poll: int = 0,
-    ):
+    ) -> None:
         if not router_ip or not username or not password:
-            logger.warning("Router credentials not set — presence polling will not start")
+            logger.warning("Router credentials not set - presence polling will not start")
             return
-        if self._interval_thread is None or not self._interval_thread.is_alive():
-            self._stop_event.clear()
-
-            def delayed_start():
-                time.sleep(delay_to_first_poll)
-                self._presence_detection_loop(interval, router_ip, username, password)
-
-            self._interval_thread = threading.Thread(
-                target=delayed_start,
-                daemon=True,
-            )
-            self._interval_thread.start()
-
-    def stop_polling(self):
-        if self._interval_thread and self._interval_thread.is_alive():
-            self._stop_event.set()
-            self._interval_thread.join()
-            self._interval_thread = None
+        self._router_ip = router_ip
+        self._username = username
+        self._password = password
+        super().start_polling(interval, delay=delay_to_first_poll)

@@ -80,6 +80,6 @@ def test_get_todays_calendar_occupancy_with_occupancy():
 def test_start_and_stop_status_check():
     s = service()
     s.start_polling(interval=1)
-    assert s._interval_thread and s._interval_thread.is_alive()  # type: ignore
+    assert s.is_polling
     s.stop_polling()
-    assert not (s._interval_thread and s._interval_thread.is_alive())  # type: ignore
+    assert not s.is_polling
