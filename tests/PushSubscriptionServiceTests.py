@@ -1,4 +1,4 @@
-"""Tests for PushSubscription.validate_subscription."""
+"""Tests for PushSubscriptionService.validate_subscription and has/add/remove behavior."""
 
 import tempfile
 from unittest.mock import patch
