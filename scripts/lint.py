@@ -25,7 +25,7 @@ def run(args: list[str], env: dict[str, str] | None = None) -> None:
 def main() -> None:
     check = "--check" in sys.argv[1:]
     run(["ruff", "format", "--check", "."] if check else ["ruff", "format", "."])
-    run(["ruff", "check", "."] if check else ["ruff", "check", ".", "--fix"])
+    run(["ruff", "check", "."] if check else ["ruff", "check", ".", "--fix", "--unsafe-fixes"])
     run(["pyright"], env={**os.environ, "NODE_OPTIONS": ""})
     print("==> Done")
 
