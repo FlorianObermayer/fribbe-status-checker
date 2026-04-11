@@ -27,15 +27,34 @@ from starlette.middleware.sessions import SessionMiddleware
 import app.env as env
 from app.api.EphemeralAPIKeyStore import EphemeralAPIKeyStore
 from app.api.HybridAuth import AuthRedirectException, HybridAuth, PageAuth
-from app.api.Requests import NOTIFICATION_FILTERS, NotificationQuery
+from app.api.Requests import (
+    NOTIFICATION_FILTERS,
+    ConfigRequest,
+    CreateApiKeyRequest,
+    CreateWardenRequest,
+    DeleteApiKeyRequest,
+    NotificationQuery,
+    PostNotificationRequest,
+    PushAuthRequest,
+    PushSubscribeRequest,
+    UpdateNotificationRequest,
+    UpdateWardenRequest,
+)
 from app.api.Responses import (
     ApiKey,
     ApiKeys,
+    DeletedResponse,
     DetailsResponse,
+    LicenseEntry,
+    NotificationFilterResponse,
+    NotificationResponse,
     OccupancyResponse,
     PostNotificationResponse,
     PresenceResponse,
+    PushStatusResponse,
     StatusResponse,
+    VapidKeyResponse,
+    VersionResponse,
     WardenListResponse,
     WardenResponse,
 )
@@ -161,14 +180,14 @@ presence_service.start_polling(
 )
 
 
-@app.get("/api/version")
-async def version():
-    return {"version": app.version}
+@app.get("/api/version", response_model=VersionResponse)
+async def version() -> VersionResponse:
+    return VersionResponse(version=app.version)
 
 
-@app.get("/api/licenses")
-async def licenses():
-    return _third_party_licenses
+@app.get("/api/licenses", response_model=list[LicenseEntry])
+async def licenses() -> list[LicenseEntry]:
+    return [LicenseEntry(**e) for e in _third_party_licenses]
 
 
 @app.get("/favicon.ico", include_in_schema=False)
@@ -185,44 +204,40 @@ async def service_worker():
     )
 
 
-@app.get("/api/push/vapid-key", tags=["Push Notifications"])
-async def get_vapid_key():
+@app.get("/api/push/vapid-key", response_model=VapidKeyResponse, tags=["Push Notifications"])
+async def get_vapid_key() -> VapidKeyResponse:
     if push_subscription_service is None:
         raise HTTPException(status_code=503, detail="Push notifications not configured")
-    return {"public_key": push_subscription_service.get_public_key()}
+    return VapidKeyResponse(public_key=push_subscription_service.get_public_key())
 
 
-@app.post("/api/push/status", tags=["Push Notifications"])
-async def push_status(auth: str = Body(..., embed=True)):
+@app.post("/api/push/status", response_model=PushStatusResponse, tags=["Push Notifications"])
+async def push_status(request: PushAuthRequest) -> PushStatusResponse:
     if push_subscription_service is None:
         raise HTTPException(status_code=503, detail="Push notifications not configured")
     try:
-        PushSubscriptionService.validate_auth(auth)
+        PushSubscriptionService.validate_auth(request.auth)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
-    return {"subscribed": push_subscription_service.has(auth)}
+    return PushStatusResponse(subscribed=push_subscription_service.has(request.auth))
 
 
 @app.post("/api/push/subscribe", status_code=201, tags=["Push Notifications"])
-async def push_subscribe(
-    endpoint: str = Body(...),
-    p256dh: str = Body(...),
-    auth: str = Body(...),
-):
+async def push_subscribe(request: PushSubscribeRequest) -> None:
     if push_subscription_service is None:
         raise HTTPException(status_code=503, detail="Push notifications not configured")
     try:
-        PushSubscriptionService.validate_subscription(endpoint, p256dh, auth)
+        PushSubscriptionService.validate_subscription(request.endpoint, request.p256dh, request.auth)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
-    push_subscription_service.add(endpoint, p256dh, auth)
+    push_subscription_service.add(request.endpoint, request.p256dh, request.auth)
 
 
 @app.delete("/api/push/unsubscribe", tags=["Push Notifications"])
-async def push_unsubscribe(auth: str = Body(..., embed=True)):
+async def push_unsubscribe(request: PushAuthRequest) -> None:
     if push_subscription_service is None:
         raise HTTPException(status_code=503, detail="Push notifications not configured")
-    if not push_subscription_service.remove(auth):
+    if not push_subscription_service.remove(request.auth):
         raise HTTPException(status_code=404, detail="Subscription not found")
 
 
@@ -331,8 +346,7 @@ def details(_: str = Depends(HybridAuth())):
     openapi_extra=requires_auth_extra(),
 )
 def create_api_key(
-    comment: str = Body("", embed=True),
-    valid_until: datetime = Body(None, embed=True),
+    request: CreateApiKeyRequest,
     auth_subject: str | None = Depends(HybridAuth(bypass_on_empty_api_key_list=True)),
 ) -> ApiKey:
     """
@@ -341,10 +355,10 @@ def create_api_key(
     - valid_until: Optional datetime (default: 6 months from now)
     """
     # Generate a new key
-    valid_until = (valid_until or datetime.now(tz=ZoneInfo("Europe/Berlin")) + timedelta(days=180)).replace(
+    valid_until = (request.valid_until or datetime.now(tz=ZoneInfo("Europe/Berlin")) + timedelta(days=180)).replace(
         microsecond=0
     )
-    new_api_key = ApiKey.generate_new(comment, valid_until)
+    new_api_key = ApiKey.generate_new(request.comment, valid_until)
     bootstrap_mode = auth_subject is None
     appended = EphemeralAPIKeyStore.append(new_api_key, require_empty=bootstrap_mode)
     if not appended:
@@ -358,16 +372,16 @@ def create_api_key(
     openapi_extra=requires_auth_extra(),
 )
 def delete_api_key(
-    key: str = Body(..., embed=True),
+    request: DeleteApiKeyRequest,
     _: str = Depends(HybridAuth()),
 ):
     """
     Deletes an API key by its value or prefix (at least 5 characters). Only deletes if there is a unique match.
     """
-    if len(key) < 5:
+    if len(request.key) < 5:
         raise HTTPException(status_code=400, detail="Key prefix must be at least 5 characters long")
     keys = EphemeralAPIKeyStore.load()
-    matches = [k for k in keys if k.key.startswith(key)]
+    matches = [k for k in keys if k.key.startswith(request.key)]
     if len(matches) == 0:
         raise HTTPException(status_code=404, detail="Api key not found")
     if len(matches) > 1:
@@ -398,14 +412,13 @@ def list_api_keys(_: str | None = Depends(HybridAuth())):
     response_model=PostNotificationResponse,
 )
 async def post_notification(
-    message: str = Body(...),
-    valid_from: datetime = Body(None),
-    valid_until: datetime = Body(None),
-    enabled: bool = Body(True),
+    request: PostNotificationRequest,
     _: str = Depends(HybridAuth()),
 ):
-    notification_id = notification_service.add(message, valid_from, valid_until, enabled)
-    return {"notification_id": notification_id}
+    notification_id = notification_service.add(
+        request.message, request.valid_from, request.valid_until, request.enabled
+    )
+    return PostNotificationResponse(notification_id=notification_id)
 
 
 @app.get(
@@ -444,23 +457,22 @@ async def get_notifications_as_html(
 
 @app.get(
     "/api/notifications/filters",
-    response_class=JSONResponse,
+    response_model=list[NotificationFilterResponse],
     tags=["Notifications"],
     openapi_extra=requires_auth_extra(),
 )
-async def get_notification_filters(_: str = Depends(HybridAuth())):
-    return JSONResponse(NOTIFICATION_FILTERS)
+async def get_notification_filters(_: str = Depends(HybridAuth())) -> list[NotificationFilterResponse]:
+    return [NotificationFilterResponse(**f) for f in NOTIFICATION_FILTERS]
 
 
 @app.get(
     "/api/notifications/list",
-    response_class=JSONResponse,
+    response_model=list[NotificationResponse],
     tags=["Notifications"],
     openapi_extra=requires_auth_extra(),
 )
-async def list_notifications(_: str = Depends(HybridAuth())):
-    notifications = notification_service.list_all()
-    return JSONResponse([notify.to_dict() for notify in notifications])
+async def list_notifications(_: str = Depends(HybridAuth())) -> list[NotificationResponse]:
+    return [NotificationResponse.from_notification(n) for n in notification_service.list_all()]
 
 
 @app.delete(
@@ -475,17 +487,18 @@ async def delete_notification(notification_id: str, _: str = Depends(HybridAuth(
 
 @app.delete(
     "/api/notifications",
+    response_model=DeletedResponse,
     tags=["Notifications"],
     openapi_extra=requires_auth_extra(),
 )
 async def delete_notifications(
     request: Annotated[NotificationQuery, Query()],
     _: str = Depends(HybridAuth()),
-):
+) -> DeletedResponse:
     count = notification_service.delete_many(request.n_ids)
     if count == 0:
         raise HTTPException(status_code=404, detail="No matching notifications found")
-    return JSONResponse({"deleted": count})
+    return DeletedResponse(deleted=count)
 
 
 @app.put(
@@ -495,12 +508,10 @@ async def delete_notifications(
 )
 async def update_notification(
     notification_id: str,
-    enabled: bool = Body(None),
-    valid_from: datetime = Body(None),
-    valid_until: datetime = Body(None),
+    request: UpdateNotificationRequest,
     _: str = Depends(HybridAuth()),
 ):
-    if not notification_service.update(notification_id, enabled, valid_from, valid_until):
+    if not notification_service.update(notification_id, request.enabled, request.valid_from, request.valid_until):
         raise HTTPException(status_code=404, detail="Notification not found")
 
 
@@ -565,17 +576,17 @@ async def get_notification_builder(_: str = Depends(PageAuth())):
 
 
 @app.patch("/internal/config", response_class=HTMLResponse, tags=["Config"], openapi_extra=requires_auth_extra())
-async def config(threshold_min_non_empty_ct: int = Body(None, gt=0), threshold_min_many_ct: int = Body(None, gt=1)):
-    if not any((threshold_min_non_empty_ct, threshold_min_many_ct)):
+async def config(request: ConfigRequest) -> Response:
+    if not any((request.threshold_min_non_empty_ct, request.threshold_min_many_ct)):
         return Response(status_code=304)  # ^= Not Modified
 
     thresholds = PresenceThresholds()
 
-    if threshold_min_non_empty_ct:
-        thresholds.min_non_empty_ct = threshold_min_non_empty_ct
+    if request.threshold_min_non_empty_ct:
+        thresholds.min_non_empty_ct = request.threshold_min_non_empty_ct
 
-    if threshold_min_many_ct:
-        thresholds.min_many_ct = threshold_min_many_ct
+    if request.threshold_min_many_ct:
+        thresholds.min_many_ct = request.threshold_min_many_ct
 
     return Response()
 
@@ -588,9 +599,7 @@ async def config(threshold_min_non_empty_ct: int = Body(None, gt=0), threshold_m
 )
 def list_wardens(_: str = Depends(HybridAuth())) -> WardenListResponse:
     wardens = WardenStore.get_instance().get_all()
-    return WardenListResponse(
-        wardens=[WardenResponse(name=w.name, device_macs=w.device_macs, device_names=w.device_names) for w in wardens]
-    )
+    return WardenListResponse(wardens=[WardenResponse.from_warden(w) for w in wardens])
 
 
 @app.post(
@@ -601,17 +610,15 @@ def list_wardens(_: str = Depends(HybridAuth())) -> WardenListResponse:
     openapi_extra=requires_auth_extra(),
 )
 def create_warden(
-    name: str = Body(..., embed=True),
-    device_macs: list[str] = Body([], embed=True),
-    device_names: list[str] = Body([], embed=True),
+    request: CreateWardenRequest,
     _: str = Depends(HybridAuth()),
 ) -> WardenResponse:
-    warden = Warden(name, device_macs, device_names)
+    warden = Warden(request.name, request.device_macs, request.device_names)
     try:
         WardenStore.get_instance().add(warden)
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
-    return WardenResponse(name=warden.name, device_macs=warden.device_macs, device_names=warden.device_names)
+    return WardenResponse.from_warden(warden)
 
 
 @app.put(
@@ -622,9 +629,7 @@ def create_warden(
 )
 def update_warden(
     name: str,
-    new_name: str | None = Body(None, embed=True),
-    device_macs: list[str] | None = Body(None, embed=True),
-    device_names: list[str] | None = Body(None, embed=True),
+    request: UpdateWardenRequest,
     _: str = Depends(HybridAuth()),
 ) -> WardenResponse:
     store = WardenStore.get_instance()
@@ -633,15 +638,15 @@ def update_warden(
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     updated = Warden(
-        new_name if new_name is not None else existing.name,
-        device_macs if device_macs is not None else existing.device_macs,
-        device_names if device_names is not None else existing.device_names,
+        request.new_name if request.new_name is not None else existing.name,
+        request.device_macs if request.device_macs is not None else existing.device_macs,
+        request.device_names if request.device_names is not None else existing.device_names,
     )
     try:
         store.update(name, updated)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
-    return WardenResponse(name=updated.name, device_macs=updated.device_macs, device_names=updated.device_names)
+    return WardenResponse.from_warden(updated)
 
 
 @app.delete(

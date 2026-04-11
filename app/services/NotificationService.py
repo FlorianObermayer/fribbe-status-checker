@@ -76,7 +76,7 @@ class NotificationService:
         self._stop_event = threading.Event()
         self._rwlock = rwlock.RWLockFair()
 
-    def add(self, message: str, valid_from: datetime, valid_until: datetime, enabled: bool) -> str:
+    def add(self, message: str, valid_from: datetime | None, valid_until: datetime | None, enabled: bool) -> str:
         with self._rwlock.gen_wlock():
             nid = str(f"nid-{uuid.uuid4()}")
             notification = Notification(

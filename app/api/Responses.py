@@ -5,6 +5,8 @@ from typing import Self
 from pydantic import BaseModel, Field
 
 from app import env
+from app.services.internal.Model import Warden
+from app.services.NotificationService import Notification
 from app.services.occupancy.Model import (
     DailyOccupancy,
     Occupancy,
@@ -102,6 +104,57 @@ class WardenResponse(BaseModel):
     device_macs: list[str]
     device_names: list[str]
 
+    @classmethod
+    def from_warden(cls, w: Warden) -> "WardenResponse":
+        return cls(name=w.name, device_macs=w.device_macs, device_names=w.device_names)
+
 
 class WardenListResponse(BaseModel):
     wardens: list[WardenResponse]
+
+
+class VersionResponse(BaseModel):
+    version: str
+
+
+class LicenseEntry(BaseModel):
+    name: str
+    license: str
+    url: str
+
+
+class VapidKeyResponse(BaseModel):
+    public_key: str
+
+
+class PushStatusResponse(BaseModel):
+    subscribed: bool
+
+
+class DeletedResponse(BaseModel):
+    deleted: int
+
+
+class NotificationFilterResponse(BaseModel):
+    value: str
+    label: str
+
+
+class NotificationResponse(BaseModel):
+    id: str
+    message: str
+    enabled: bool
+    created: datetime
+    valid_from: datetime | None = None
+    valid_until: datetime | None = None
+
+    @classmethod
+    def from_notification(cls, n: Notification) -> "NotificationResponse":
+        return cls(
+            id=n.id,
+            message=n.message,
+            enabled=n.enabled,
+            created=n.created,
+            valid_from=n.valid_from,
+            valid_until=n.valid_until,
+        )
