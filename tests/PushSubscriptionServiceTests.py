@@ -49,6 +49,20 @@ def test_auth_invalid_chars():
         PushSubscriptionService.validate_subscription(_VALID_ENDPOINT, _VALID_P256DH, "invalid chars!!")
 
 
+def test_validate_auth_only_valid_does_not_raise():
+    PushSubscriptionService.validate_auth(_VALID_AUTH)
+
+
+def test_validate_auth_only_too_short():
+    with pytest.raises(ValueError, match="auth"):
+        PushSubscriptionService.validate_auth("short")
+
+
+def test_validate_auth_only_invalid_chars():
+    with pytest.raises(ValueError, match="auth"):
+        PushSubscriptionService.validate_auth("invalid chars!!")
+
+
 def _make_service(tmpdir: str) -> PushSubscriptionService:
     with patch("app.env.LOCAL_DATA_PATH", tmpdir):
         return PushSubscriptionService("fake-private", "fake-public", "mailto:test@example.com")

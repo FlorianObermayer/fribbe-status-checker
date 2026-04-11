@@ -197,7 +197,7 @@ async def push_status(auth: str = Body(..., embed=True)):
     if push_subscription_service is None:
         raise HTTPException(status_code=503, detail="Push notifications not configured")
     try:
-        PushSubscriptionService.validate_subscription("https://localhost", "A" * 87, auth)
+        PushSubscriptionService.validate_auth(auth)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
     return {"subscribed": push_subscription_service.has(auth)}

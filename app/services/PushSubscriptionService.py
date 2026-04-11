@@ -65,6 +65,11 @@ class PushSubscriptionService:
             raise ValueError("endpoint must be a valid https URL")
         if not _B64URL_RE.match(p256dh) or len(p256dh) < 10:
             raise ValueError("invalid p256dh")
+        PushSubscriptionService.validate_auth(auth)
+
+    @staticmethod
+    def validate_auth(auth: str) -> None:
+        """Validates auth field. Raises ValueError on invalid input."""
         if not _B64URL_RE.match(auth) or len(auth) < 10:
             raise ValueError("invalid auth")
 
