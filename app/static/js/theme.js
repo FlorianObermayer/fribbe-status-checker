@@ -9,6 +9,10 @@ function applyTheme(isDark) {
     } else {
         document.documentElement.classList.remove('dark-mode');
     }
+    const btn = document.getElementById('theme-toggle-btn');
+    if (btn) {
+        btn.setAttribute('aria-pressed', String(isDark));
+    }
 }
 
 function setupThemeToggle() {
