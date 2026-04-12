@@ -7,7 +7,7 @@ const easyMDE = new EasyMDE({
         timeFormat: "locale: de-DE, format: HH:mm",
         uniqueId: "unique-id",
     },
-    autoDownloadFontAwesome: true,
+    autoDownloadFontAwesome: false,
     previewImagesInEditor: true,
     spellChecker: false,
     toolbar: false,
