@@ -14,6 +14,7 @@ from starsessions import SessionAutoloadMiddleware, SessionMiddleware
 
 from app import env
 from app.api.hybrid_auth import AuthRedirectError
+from app.api.redact import redact_key
 from app.api.schema import update_openapi_schema
 from app.dependencies import shutdown, startup
 from app.routers import api_keys, internal, misc, notifications, pages, push, status, wardens
@@ -117,8 +118,7 @@ async def log_requests(request: Request, call_next: Callable[[Request], Awaitabl
     """Log incoming requests that carry an API key header."""
     logger = logging.getLogger("uvicorn.error")
     api_key = request.headers.get("api_key")
-    if api_key:
-        logger.info("-H api_key[:2]=%s", api_key[:2])
+    logger.info("-H api_key=%s", redact_key(api_key))
     return await call_next(request)
 
 
