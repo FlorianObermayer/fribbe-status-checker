@@ -12,7 +12,7 @@ from pathlib import Path
 
 PROJECT_ROOT = str(Path(__file__).resolve().parent.parent)
 JS_FILES = sorted(str(p) for p in Path(PROJECT_ROOT, "app/static/js").glob("*.js"))
-HTML_FILES = sorted(str(p) for p in Path(PROJECT_ROOT, "app/static").glob("*.html"))
+HTML_FILES = sorted(str(p) for p in Path(PROJECT_ROOT, "app/templates").glob("*.html"))
 CSS_FILES = sorted(str(p) for p in Path(PROJECT_ROOT, "app/static/css").glob("*.css"))
 NODE_BIN = Path(PROJECT_ROOT) / "node_modules" / ".bin"
 

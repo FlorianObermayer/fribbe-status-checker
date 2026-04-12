@@ -15,7 +15,7 @@
     <meta property="og:description"
         content="Aktuelle Auslastung und Status der Beachvolleyball-Anlage des DJK Augsburg-Hochzoll">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="__APP_URL__/">
+    <meta property="og:url" content="{{ app_url }}/">
 
     <!-- Zusätzliche SEO-relevante Meta-Tags -->
     <meta name="author" content="Fribbe Beach">
@@ -30,7 +30,7 @@
           "@type": "SportsActivityLocation",
           "name": "Fribbe Beach - Beachvolleyball DJK Augsburg-Hochzoll",
           "description": "Live-Status und Auslastungsanzeige der Beachvolleyball-Anlage des DJK Augsburg-Hochzoll",
-          "url": "__APP_URL__",
+          "url": "{{ app_url }}",
           "address": {
             "@type": "PostalAddress",
             "addressLocality": "Augsburg",
@@ -58,9 +58,9 @@
     <link rel="apple-touch-icon" href="/static/images/fribbe_logo_225x223.png">
 
     <!-- Canonical URL -->
-    <link rel="canonical" href="__APP_URL__/">
+    <link rel="canonical" href="{{ app_url }}/">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/styles.css?v=__VERSION__">
+    <link rel="stylesheet" href="/static/css/styles.css?v={{ version }}">
     <!-- Prevent flash of unstyled content when dark mode is active -->
     <script>
         (function () {
@@ -72,8 +72,8 @@
     </script>
 </head>
 
-<body id="status-body" data-signed-in="__SIGNED_IN__" data-show-admin-auth="__SHOW_ADMIN_AUTH__"
-    data-bootstrap-mode="__BOOTSTRAP_MODE__">
+<body id="status-body" data-signed-in="{{ signed_in | tojson }}" data-show-admin-auth="{{ show_admin_auth | tojson }}"
+    data-bootstrap-mode="{{ bootstrap_mode | tojson }}">
     <div id="bootstrap-banner" class="bootstrap-banner hidden" role="alert" aria-live="polite" aria-atomic="true">
         <strong>⚠ Setup mode active:</strong> No API keys configured. <a
             href="/docs#/API%20Keys/create_api_key_api_internal_api_key_post">Create the first key</a> to secure the
@@ -252,9 +252,9 @@
         </div>
     </div>
 
-    <script src="/static/js/csrf.js?v=__VERSION__"></script>
-    <script src="/static/js/theme.js?v=__VERSION__"></script>
-    <script src="/static/js/app.js?v=__VERSION__"></script>
+    <script src="/static/js/csrf.js?v={{ version }}"></script>
+    <script src="/static/js/theme.js?v={{ version }}"></script>
+    <script src="/static/js/app.js?v={{ version }}"></script>
     <!-- GitHub badge-->
     <a href="https://github.com/FlorianObermayer/fribbe-status-checker" target="_blank" rel="noopener noreferrer"
         aria-label="Open GitHub repository" title="GitHub: fribbe-status-checker" class="github-badge">
