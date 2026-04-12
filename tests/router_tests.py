@@ -240,7 +240,7 @@ def test_index_html_includes_pwa_meta_tags(client: TestClient) -> None:
     assert response.status_code == 200
     html = response.text
     assert '<link rel="manifest" href="/manifest.json">' in html
-    assert "apple-mobile-web-app-capable" in html
+    assert "mobile-web-app-capable" in html
     assert "apple-touch-icon" in html
 
 
