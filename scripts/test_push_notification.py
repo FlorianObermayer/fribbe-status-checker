@@ -1,8 +1,3 @@
-#!/usr/bin/env python3
-# /// script
-# requires-python = ">=3.12"
-# dependencies = ["pywebpush>=2.3.0"]
-# ///
 """Send a test push notification to all current subscribers.
 
 Reads VAPID keys and the subscription store from the same environment variables
@@ -31,7 +26,7 @@ from pywebpush import Response, WebPushException, webpush  # type: ignore[import
 from app import env
 
 
-def load_subscriptions(data_path: str) -> list[dict[str, str]]:
+def load_subscriptions(data_path: str | Path) -> list[dict[str, str]]:
     store_path = Path(data_path) / "push_subscriptions.json"
     if not store_path.exists():
         return []
@@ -49,19 +44,15 @@ def main() -> None:
     data_path = env.LOCAL_DATA_PATH
 
     if not vapid_private_key or not vapid_public_key or not vapid_claim_subject:
-        print("ERROR: VAPID_PRIVATE_KEY, VAPID_PUBLIC_KEY, and VAPID_CLAIM_SUBJECT must all be set.")
         sys.exit(1)
 
     title = sys.argv[1] if len(sys.argv) > 1 else "Fribbe Beach Test 🏐"
-    body = sys.argv[2] if len(sys.argv) > 2 else "Das ist eine Test-Benachrichtigung. " + secrets.token_hex(4)
+    body = sys.argv[2] if len(sys.argv) > 2 else "Das ist eine Test-Benachrichtigung. " + secrets.token_hex(4)  # noqa: PLR2004
 
-    store_path = Path(data_path) / "push_subscriptions.json"
-    subscriptions = load_subscriptions(data_path)
+    subscription_path = Path(data_path) / "push_subscriptions.json"
+    subscriptions = load_subscriptions(subscription_path)
     if not subscriptions:
-        print(f"No subscribers found in {store_path}")
         sys.exit(0)
-
-    print(f'Sending to {len(subscriptions)} subscriber(s): "{title}" — "{body}"\n')
 
     payload = json.dumps({"title": title, "body": body})
     vapid_claims: dict[str, str | int] = {"sub": vapid_claim_subject}
@@ -71,9 +62,9 @@ def main() -> None:
     errors = 0
 
     for sub in subscriptions:
-        auth_prefix = sub.get("auth", "?")[:8]
+        sub.get("auth", "?")[:8]
         endpoint = sub.get("endpoint", "")
-        host = urlparse(endpoint).netloc or endpoint
+        _ = urlparse(endpoint).netloc or endpoint
 
         try:
             result = webpush(
@@ -88,22 +79,16 @@ def main() -> None:
 
             if isinstance(result, Response):
                 result.raise_for_status()
-                print(f"  ✓  {host}  (auth={auth_prefix}...) - (HTTP {result.status_code})")
                 ok += 1
 
         except WebPushException as e:
-            status = e.response.status_code if e.response is not None else "?"  # type: ignore[union-attr]
             if e.response is not None and e.response.status_code in (404, 410):  # type: ignore[union-attr]
-                print(f"  ✗  {host}  (auth={auth_prefix}...) — stale subscription (HTTP {status})")
                 stale += 1
             else:
-                print(f"  ✗  {host}  (auth={auth_prefix}...) — HTTP {status}: {e}")
                 errors += 1
-        except Exception as e:
-            print(f"  ✗  {host}  (auth={auth_prefix}...) — {e}")
+        except Exception:
             errors += 1
 
-    print(f"\nDone: {ok} sent, {stale} stale, {errors} errors")
     if errors:
         sys.exit(1)
 

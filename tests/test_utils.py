@@ -6,15 +6,12 @@ import app.dependencies as _deps
 
 
 def reset_dependency_singletons() -> None:
-    """Stop any running pollers and clear all service singletons. Test-only.
-
-    Automatically discovers singletons by the ``_*_service`` naming convention
-    in ``app.dependencies``, so no update is needed when new services are added.
-    """
+    """Stop any running pollers and clear all service singletons. Test-only."""
     _deps.shutdown()
-    for name in vars(_deps):
-        if name.startswith("_") and name.endswith("_service"):
-            setattr(_deps, name, None)
+    svc = _deps._svc
+    for attr in vars(svc):
+        if not attr.startswith("_"):
+            setattr(svc, attr, None)
 
 
 def read_testdata_from_fs(relative_path: str) -> str:
@@ -24,9 +21,9 @@ def read_testdata_from_fs(relative_path: str) -> str:
 
 def get_weekly_mock_table() -> Tag:
     soup = BeautifulSoup(read_testdata_from_fs("occupancy_weekly_test_data.html"), "html.parser")
-    return soup.find("table")  # type: ignore
+    return soup.find("table")  # pyright: ignore[reportReturnType]
 
 
 def get_calendar_mock_table() -> Tag:
     soup = BeautifulSoup(read_testdata_from_fs("occupancy_calendar_test_data.html"), "html.parser")
-    return soup.find("table")  # type: ignore
+    return soup.find("table")  # pyright: ignore[reportReturnType]

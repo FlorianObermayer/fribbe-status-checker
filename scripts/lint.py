@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Format, lint, and type-check the project.
 
 Usage:
@@ -14,20 +13,18 @@ from pathlib import Path
 PROJECT_ROOT = str(Path(__file__).resolve().parent.parent)
 
 
-def run(args: list[str], env: dict[str, str] | None = None) -> None:
-    label = " ".join(args)
-    print(f"==> {label}")
-    result = subprocess.run(args, cwd=PROJECT_ROOT, env=env)  # noqa: S603
+def _run(args: list[str], env: dict[str, str] | None = None) -> None:
+    " ".join(args)
+    result = subprocess.run(args, cwd=PROJECT_ROOT, env=env, check=False)  # noqa: S603
     if result.returncode != 0:
         sys.exit(result.returncode)
 
 
 def main() -> None:
     check = "--check" in sys.argv[1:]
-    run(["ruff", "format", "--check", "."] if check else ["ruff", "format", "."])
-    run(["ruff", "check", "."] if check else ["ruff", "check", ".", "--fix", "--unsafe-fixes"])
-    run(["pyright"], env={**os.environ, "NODE_OPTIONS": ""})
-    print("==> Done")
+    _run(["ruff", "format", "--check", "."] if check else ["ruff", "format", "."])
+    _run(["ruff", "check", "."] if check else ["ruff", "check", ".", "--fix", "--unsafe-fixes"])
+    _run(["pyright"], env={**os.environ, "NODE_OPTIONS": ""})
 
 
 if __name__ == "__main__":

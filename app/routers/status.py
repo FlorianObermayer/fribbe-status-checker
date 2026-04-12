@@ -1,14 +1,14 @@
 from fastapi import APIRouter
 
-from app.api.Responses import OccupancyResponse, PresenceResponse, StatusResponse
+from app.api.responses import OccupancyResponse, PresenceResponse, StatusResponse
 from app.dependencies import MessageServiceDep, OccupancyServiceDep, PresenceServiceDep, WeatherServiceDep
-from app.services.occupancy.Model import OccupancyType
-from app.services.PresenceThresholds import PresenceThresholds
+from app.services.occupancy.model import OccupancyType
+from app.services.presence_thresholds import PresenceThresholds
 
 router = APIRouter(prefix="/api/status", tags=["Status"])
 
 
-@router.get("", response_model=StatusResponse)
+@router.get("")
 async def get_status(
     occupancy_svc: OccupancyServiceDep,
     presence_svc: PresenceServiceDep,
@@ -16,6 +16,7 @@ async def get_status(
     weather_svc: WeatherServiceDep,
     for_date: str = "today",
 ) -> StatusResponse:
+    """Return combined occupancy and presence status."""
     daily_occupancy = occupancy_svc.get_occupancy(for_date)
     occupancy_response = OccupancyResponse.from_daily(daily_occupancy)
 
@@ -27,7 +28,10 @@ async def get_status(
     presence_level = presence_svc.get_level()
     presence_last_updated = presence_svc.get_last_updated()
     presence_message = message_svc.get_status_message(
-        presence_level, daily_occupancy.occupancy_type, time_str, weather
+        presence_level,
+        daily_occupancy.occupancy_type,
+        time_str,
+        weather,
     ).message
     presence_last_error = presence_svc.get_last_error()
 

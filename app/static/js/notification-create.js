@@ -48,10 +48,9 @@ document.getElementById('submitBtn').addEventListener('click', async function ()
         });
 
         if (response.ok) {
-            if (response.ok) {
-                const result = await response.json();
-                const notification_id = result["notification_id"];
-                resultDiv.innerHTML = `
+            const result = await response.json();
+            const notification_id = result["notification_id"];
+            resultDiv.innerHTML = `
     <div class="success-message">
         Nachricht erfolgreich erstellt (nur als Vorschau)!
         <a href="${window.location.origin}/preview/notifications?n_ids=${notification_id}" 
@@ -61,8 +60,7 @@ document.getElementById('submitBtn').addEventListener('click', async function ()
            Vorschau öffnen
         </a>
     </div>`;
-                resultDiv.classList.add('success');
-            }
+            resultDiv.classList.add('success');
         } else {
             const errorData = await response.json();
             resultDiv.textContent = `Error: ${errorData.detail || response.statusText}`;

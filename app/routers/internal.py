@@ -1,24 +1,26 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, Response
 
-from app.api.HybridAuth import HybridAuth
-from app.api.Requests import ConfigRequest
-from app.api.Responses import DetailsResponse
-from app.api.Schema import requires_auth_extra
+from app.api.hybrid_auth import HybridAuth
+from app.api.requests import ConfigRequest
+from app.api.responses import DetailsResponse
+from app.api.schema import requires_auth_extra
 from app.dependencies import InternalServiceDep
-from app.services.PresenceThresholds import PresenceThresholds
+from app.services.presence_thresholds import PresenceThresholds
 
 router = APIRouter(tags=["Internal"])
 
 
 @router.get(
     "/api/internal/details",
-    response_model=DetailsResponse,
     openapi_extra=requires_auth_extra(),
 )
 def details(
     svc: InternalServiceDep,
-    _: str = Depends(HybridAuth()),
+    _: Annotated[str, Depends(HybridAuth())],
 ) -> DetailsResponse:
+    """Return detailed device-tracking information."""
     last_error = svc.get_last_error()
     wardens = svc.get_wardens_on_site()
 
@@ -39,7 +41,8 @@ def details(
     tags=["Config"],
     openapi_extra=requires_auth_extra(),
 )
-async def config(request: ConfigRequest, _: str = Depends(HybridAuth())) -> Response:
+async def config(request: ConfigRequest, _: Annotated[str, Depends(HybridAuth())]) -> Response:
+    """Update presence detection thresholds."""
     if not any((request.threshold_min_non_empty_ct, request.threshold_min_many_ct)):
         return Response(status_code=304)  # ^= Not Modified
 

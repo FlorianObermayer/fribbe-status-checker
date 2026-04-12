@@ -58,8 +58,8 @@ README.md                  # Project overview, setup, conventions, instructions
 - **Token length**: `env.MIN_TOKEN_LENGTH = 48` is character count (not bytes). Use with `Field(min_length=...)`. For generation: `secrets.token_urlsafe(env.MIN_TOKEN_LENGTH)` (byte param, yields ≥48 chars).
 - **Threading**: `EphemeralAPIKeyStore` has module-level `_write_lock`. Use `append(key, require_empty=True)` (not `save()`); returns `False` on failure.
 - **Weather types**: `WeatherService.get_condition()` → `Weather | None` with `temperature: Temperature` (HOT/WARM/MILD/COLD) and `state: WeatherState` (CLEAR/CLOUDY/MILD_RAIN/HEAVY_RAIN/THUNDERSTORM/SNOW). In `MessageService`, precipitation states take priority over temperature messages.
-- **Type checking**: PyRight strict. All public functions need return-type annotations. Avoid `# type: ignore` except at already-annotated OWM JSON index sites.
-- **Linting**: Line length 120. Ruff rules: `E, W, F, I, UP, B, S, C4, RUF, PIE, SIM, TRY, PTH`. Suppress `S311`/`S101` inline with `# noqa`. Use hyphens (`-`) not en-dashes (`–`) in strings.
+- **Type checking**: PyRight strict. All public functions need return-type annotations. Avoid `# type: ignore`.
+- **Linting**: Line length 120. Ruff rules: `ALL`. Tests rules differ. See `pyproject.toml` for details.
 - **Markdown linting**: `markdownlint-cli2` enforced in CI (warnings as errors). Config in `.markdownlint-cli2.yaml`. Run locally with `npx markdownlint-cli2`.
 - **Licenses**: After adding or removing any dependency in `pyproject.toml`, run `uv run generate-licenses` and commit the updated `app/licenses.json`. The CI lint job fails if this file is out of date.
 
