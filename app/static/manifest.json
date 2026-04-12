@@ -8,8 +8,8 @@
     "theme_color": "#4caf50",
     "icons": [
         {
-            "src": "/static/images/fribbe_logo_transparent_128x128.png",
-            "sizes": "128x128",
+            "src": "/static/images/fribbe_logo_225x223.png",
+            "sizes": "225x223",
             "type": "image/png"
         },
         {
