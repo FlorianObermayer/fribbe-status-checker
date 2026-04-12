@@ -31,6 +31,7 @@ def test_validate_passes_when_all_required_vars_set(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("SESSION_SECRET_KEY", "a" * env.MIN_TOKEN_LENGTH)
+    monkeypatch.setenv("APP_URL", "https://status.example.com")
 
     env.validate()  # should not raise
 

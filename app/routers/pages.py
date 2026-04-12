@@ -50,6 +50,7 @@ def get_html(request: Request, _for_date: str = "today") -> HTMLResponse:
     content = content.replace("__SIGNED_IN__", json.dumps(signed_in))
     content = content.replace("__SHOW_ADMIN_AUTH__", json.dumps(env.SHOW_ADMIN_AUTH))
     content = content.replace("__BOOTSTRAP_MODE__", json.dumps(bootstrap_mode))
+    content = content.replace("__APP_URL__", env.APP_URL)
     content = content.replace("__VERSION__", VERSION)
     return HTMLResponse(content)
 
@@ -115,5 +116,6 @@ def get_notification_preview(
     content = content.replace("__SIGNED_IN__", json.dumps(obj=True))
     content = content.replace("__SHOW_ADMIN_AUTH__", json.dumps(env.SHOW_ADMIN_AUTH))
     content = content.replace("__BOOTSTRAP_MODE__", json.dumps(obj=False))
+    content = content.replace("__APP_URL__", env.APP_URL)
     content = content.replace("__VERSION__", VERSION)
     return HTMLResponse(content)
