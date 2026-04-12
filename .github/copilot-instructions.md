@@ -1,6 +1,6 @@
 # fribbe-status-checker
 
-FastAPI beach volleyball status app: presence detection (router polling), occupancy scraping, push notifications, static web frontend.
+FastAPI beach volleyball status app: presence detection (router polling), occupancy scraping, push notifications, Jinja2-templated web frontend.
 
 ## Build & Test
 
@@ -39,7 +39,8 @@ app/
   services/                # Domain services (presence, occupancy, push, messages, weather)
     internal/              # Internal device-count tracking (WardenStore)
     occupancy/             # Web scraping for booking status
-  static/                  # Served HTML/CSS/JS frontend
+  templates/               # Jinja2 HTML templates (index, auth, notification-create)
+  static/                  # Served CSS/JS/images frontend assets
 scripts/                   # uv entry points (dev, lint, watch, generate-vapid-keys, …)
 tests/                     # Unit tests; test-data/ holds fixture files
 README.md                  # Project overview, setup, conventions, instructions

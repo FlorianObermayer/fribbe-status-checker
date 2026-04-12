@@ -15,7 +15,7 @@ A FastAPI-based status checker for [Fribbe Beach](https://fribbebeach.de), runni
 - **Push notifications** — Browser Web Push (VAPID) alerts when someone first arrives at the Fribbe on a given day or when a notification becomes active. Topic-based subscriptions (`presence`, `notifications`).
 - **Weather-aware messages** — Optional OpenWeatherMap integration for temperature- and weather-state-aware status and push messages.
 - **REST API** — JSON API with hybrid authentication (API key header or opaque server-side session cookie). Interactive docs at `/docs`.
-- **Web UI** — Static HTML/CSS/JS frontend with service worker support, served directly by the app. Supports **dark mode** (follows system preference, with a toggle button to override).
+- **Web UI** — Jinja2-templated HTML pages with CSS/JS frontend, service worker support, and **dark mode** (follows system preference, override via toggle). Static assets served directly by the app.
 
 ## Development
 

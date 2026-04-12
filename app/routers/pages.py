@@ -1,10 +1,8 @@
-import html
-import json
-from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.templating import Jinja2Templates
 from starsessions import regenerate_session_id
 
 from app import env
@@ -15,6 +13,7 @@ from app.api.schema import requires_auth_extra
 from app.version import VERSION
 
 router = APIRouter()
+_templates = Jinja2Templates(directory="app/templates")
 
 
 def _is_signed_in(request: Request) -> bool:
@@ -44,15 +43,18 @@ def sanitize_next(next_url: str) -> str:
 def get_html(request: Request, _for_date: str = "today") -> HTMLResponse:
     """Serve the main index page with injected runtime config."""
     signed_in = _is_signed_in(request)
-    with Path("app/static/index.html").open() as f:
-        content = f.read()
     bootstrap_mode = EphemeralAPIKeyStore.is_empty() and not env.ADMIN_TOKEN
-    content = content.replace("__SIGNED_IN__", json.dumps(signed_in))
-    content = content.replace("__SHOW_ADMIN_AUTH__", json.dumps(env.SHOW_ADMIN_AUTH))
-    content = content.replace("__BOOTSTRAP_MODE__", json.dumps(bootstrap_mode))
-    content = content.replace("__APP_URL__", env.APP_URL)
-    content = content.replace("__VERSION__", VERSION)
-    return HTMLResponse(content)
+    return _templates.TemplateResponse(
+        request,
+        "index.html",
+        context={
+            "signed_in": signed_in,
+            "show_admin_auth": env.SHOW_ADMIN_AUTH,
+            "bootstrap_mode": bootstrap_mode,
+            "app_url": env.APP_URL,
+            "version": VERSION,
+        },
+    )
 
 
 @router.get("/auth", response_class=HTMLResponse, include_in_schema=False)
@@ -60,13 +62,15 @@ def get_auth_page(request: Request, next_url: Annotated[str, Query(alias="next")
     """Serve the authentication page."""
     next_url = sanitize_next(next_url)
     signed_in = _is_signed_in(request)
-    with Path("app/static/auth.html").open() as f:
-        content = f.read()
-    safe_next = html.escape(next_url, quote=True)
-    content = content.replace("__NEXT_DATA__", safe_next)
-    content = content.replace("__SIGNED_IN__", json.dumps(signed_in))
-    content = content.replace("__VERSION__", VERSION)
-    return HTMLResponse(content)
+    return _templates.TemplateResponse(
+        request,
+        "auth.html",
+        context={
+            "next_url": next_url,
+            "signed_in": signed_in,
+            "version": VERSION,
+        },
+    )
 
 
 @router.post("/auth", include_in_schema=False)
@@ -92,12 +96,13 @@ async def signout(request: Request) -> JSONResponse:
 
 
 @router.get("/notification-create", response_class=HTMLResponse, tags=["Notifications", "HTML"])
-def get_notification_builder(_request: Request, _: Annotated[str, Depends(PageAuth())]) -> HTMLResponse:
+def get_notification_builder(request: Request, _: Annotated[str, Depends(PageAuth())]) -> HTMLResponse:
     """Serve the notification creation page."""
-    with Path("app/static/notification-create.html").open() as f:
-        content = f.read()
-    content = content.replace("__VERSION__", VERSION)
-    return HTMLResponse(content)
+    return _templates.TemplateResponse(
+        request,
+        "notification-create.html",
+        context={"version": VERSION},
+    )
 
 
 @router.get(
@@ -106,16 +111,19 @@ def get_notification_builder(_request: Request, _: Annotated[str, Depends(PageAu
     openapi_extra=requires_auth_extra(),
 )
 def get_notification_preview(
-    _request: Request,
+    request: Request,
     _query: Annotated[NotificationQuery, Query()],
     _auth: Annotated[str, Depends(PageAuth())],
 ) -> HTMLResponse:
     """Serve a notification preview page."""
-    with Path("app/static/index.html").open() as f:
-        content = f.read()
-    content = content.replace("__SIGNED_IN__", json.dumps(obj=True))
-    content = content.replace("__SHOW_ADMIN_AUTH__", json.dumps(env.SHOW_ADMIN_AUTH))
-    content = content.replace("__BOOTSTRAP_MODE__", json.dumps(obj=False))
-    content = content.replace("__APP_URL__", env.APP_URL)
-    content = content.replace("__VERSION__", VERSION)
-    return HTMLResponse(content)
+    return _templates.TemplateResponse(
+        request,
+        "index.html",
+        context={
+            "signed_in": True,
+            "show_admin_auth": env.SHOW_ADMIN_AUTH,
+            "bootstrap_mode": False,
+            "app_url": env.APP_URL,
+            "version": VERSION,
+        },
+    )
