@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Generate third-party license metadata for the app's /api/licenses endpoint.
 
 Reads direct production dependencies from pyproject.toml and uses
@@ -44,7 +43,6 @@ def _read_packages() -> list[str]:
 def main() -> None:
     packages = _read_packages()
     if not packages:
-        print("No dependencies found in pyproject.toml")
         sys.exit(1)
 
     result = subprocess.run(  # noqa: S603
@@ -71,7 +69,6 @@ def main() -> None:
     ]
 
     OUTPUT_PATH.write_text(json.dumps(licenses, indent=2) + "\n")
-    print(f"Wrote {len(licenses)} license entries to {OUTPUT_PATH}")
 
 
 if __name__ == "__main__":

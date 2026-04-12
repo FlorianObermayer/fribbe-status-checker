@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 from starlette_csrf.middleware import CSRFMiddleware
 from starsessions import InMemoryStore, SessionAutoloadMiddleware, SessionMiddleware
 
-import app.env as env
+from app import env
 from app.routers import internal, misc, notifications, pages, push, status
 
 TEST_ADMIN_TOKEN = "test-admin-token-" + "A" * 32
@@ -51,7 +51,7 @@ def test_app() -> FastAPI:
     return test_app
 
 
-@pytest.fixture()
+@pytest.fixture
 def client(test_app: FastAPI) -> Generator[TestClient, None, None]:
     """TestClient with a clean dependency_overrides slate for each test."""
     test_app.dependency_overrides.clear()

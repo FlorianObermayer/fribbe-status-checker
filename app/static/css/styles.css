@@ -646,11 +646,6 @@ body.status-many {
     text-align: start;
 }
 
-.notification-controls {
-    /* Legacy — no longer used, kept for safety */
-    display: none;
-}
-
 /* Filter select styled as pill matching admin-btn aesthetic */
 .filter-wrapper {
     position: relative;

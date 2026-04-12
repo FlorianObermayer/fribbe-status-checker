@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import asyncio
 import logging
 from collections.abc import AsyncGenerator, Awaitable, Callable
@@ -13,13 +12,13 @@ from secure import ContentSecurityPolicy, Secure
 from starlette_csrf.middleware import CSRFMiddleware
 from starsessions import SessionAutoloadMiddleware, SessionMiddleware
 
-import app.env as env
-from app.api.HybridAuth import AuthRedirectException
-from app.api.Schema import update_openapi_schema
+from app import env
+from app.api.hybrid_auth import AuthRedirectError
+from app.api.schema import update_openapi_schema
 from app.dependencies import shutdown, startup
 from app.routers import api_keys, internal, misc, notifications, pages, push, status, wardens
 from app.routers.pages import sanitize_next
-from app.stores.FileSessionStore import FileSessionStore
+from app.stores.file_session_store import FileSessionStore
 from app.version import VERSION
 
 _logger = logging.getLogger("uvicorn.error")
@@ -42,6 +41,7 @@ secure_headers = Secure(csp=_csp)
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncGenerator[None]:
+    """Start and stop services around the application lifetime."""
     startup()
     cleanup_task = asyncio.create_task(_session_cleanup_loop())
     yield
@@ -95,28 +95,31 @@ app.add_middleware(
 )
 
 
-@app.exception_handler(AuthRedirectException)
-async def auth_redirect_handler(request: Request, exc: AuthRedirectException) -> RedirectResponse:
+@app.exception_handler(AuthRedirectError)
+async def auth_redirect_handler(_request: Request, exc: AuthRedirectError) -> RedirectResponse:
+    """Redirect unauthenticated page requests to /auth."""
     safe_next = sanitize_next(exc.next_url)
     return RedirectResponse(url=f"/auth?next={quote(safe_next, safe='/:?=&')}", status_code=302)
 
 
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+    """Attach security headers to non-documentation responses."""
     response = await call_next(request)
     if request.url.path not in ("/docs", "/redoc", "/openapi.json"):
-        await secure_headers.set_headers_async(response)  # type: ignore
+        for name, value in secure_headers.headers.items():
+            response.headers[name] = value
     return response
 
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+    """Log incoming requests that carry an API key header."""
     logger = logging.getLogger("uvicorn.error")
     api_key = request.headers.get("api_key")
     if api_key:
-        logger.info(f"-H api_key[:2]={api_key[:2]}")
-    response = await call_next(request)
-    return response
+        logger.info("-H api_key[:2]=%s", api_key[:2])
+    return await call_next(request)
 
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
