@@ -63,5 +63,6 @@ README.md                  # Project overview, setup, conventions, instructions
 - **Licenses**: After adding or removing any dependency in `pyproject.toml`, run `uv run generate-licenses` and commit the updated `app/licenses.json`. The CI lint job fails if this file is out of date.
 
 ## Copilot Instructions
-- always write tests for new features and bug fixes, update existing tests if the change affects their behavior
-- update `README.md` and `.github/copilot-instructions.md` as needed
+- Always write tests for new features and bug fixes; update existing tests if the change affects their behavior.
+- Update `README.md` on every UI feature update.
+- Update `.github/copilot-instructions.md` if needed.
