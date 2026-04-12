@@ -9,7 +9,8 @@
         "source=fribbe-status-checker-bashhistory,target=/commandhistory,type=volume"
     ],
     "features": {
-        "ghcr.io/devcontainers-extra/features/uv:1": {}
+        "ghcr.io/devcontainers-extra/features/uv:1": {},
+        "ghcr.io/devcontainers/features/node:1": {}
     },
     "postCreateCommand": "uv sync --all-groups",
     "customizations": {
