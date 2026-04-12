@@ -6,6 +6,7 @@ from enum import Enum
 from zoneinfo import ZoneInfo
 
 from app import env
+from app.api.redact import redact_key
 from app.api.responses import ApiKey
 from app.services.persistent_collections import PersistentList
 
@@ -84,10 +85,8 @@ class EphemeralAPIKeyStore:
     @staticmethod
     def is_key_valid(key: str | None) -> bool:
         """Check whether a key is present and not expired."""
-        log_key = key[:2] if key is not None else None
-
         if key is None:
-            logger.info("EphemeralAPIKeyStore::is_key_valid(api_key=%s...) - key is None)", log_key)
+            logger.info("EphemeralAPIKeyStore::is_key_valid(api_key=%s) - key is None", redact_key(key))
             return False
         now = datetime.now(tz=ZoneInfo("Europe/Berlin"))
         entries = EphemeralAPIKeyStore.load()
@@ -96,31 +95,33 @@ class EphemeralAPIKeyStore:
                 continue
 
             logger.info(
-                "EphemeralAPIKeyStore::is_key_valid(api_key=%s...) - found key (comment: %s)",
-                log_key,
+                "EphemeralAPIKeyStore::is_key_valid(api_key=%s) - found key (comment: %s)",
+                redact_key(key),
                 entry.comment or "None",
             )
             valid_until = entry.valid_until
             if not valid_until:
                 logger.error(
-                    "EphemeralAPIKeyStore::is_key_valid(api_key=%s...) - key is missing [valid_until] property",
-                    log_key,
+                    "EphemeralAPIKeyStore::is_key_valid(api_key=%s) - key is missing [valid_until] property",
+                    redact_key(key),
                 )
                 return False
             try:
                 now_with_tz = now if valid_until.tzinfo is None else datetime.now(valid_until.tzinfo)
                 if valid_until >= now_with_tz:
-                    logger.info("EphemeralAPIKeyStore::is_key_valid(api_key=%s...) - key is valid", log_key)
+                    logger.info("EphemeralAPIKeyStore::is_key_valid(api_key=%s) - key is valid", redact_key(key))
                     return True
 
-                logger.warning("EphemeralAPIKeyStore::is_key_valid(api_key=%s...) - key is outdated", log_key)
+                logger.warning("EphemeralAPIKeyStore::is_key_valid(api_key=%s) - key is outdated", redact_key(key))
                 return False
             except (TypeError, OverflowError) as e:
                 logger.warning(
-                    "EphemeralAPIKeyStore::is_key_valid(api_key=%s...) - failed to compare datetime objects: %s",
-                    log_key,
+                    "EphemeralAPIKeyStore::is_key_valid(api_key=%s) - failed to compare datetime objects: %s",
+                    redact_key(key),
                     e,
                 )
                 return False
-        logger.warning("EphemeralAPIKeyStore::is_key_valid(api_key=%s...) - key not found in registered keys", log_key)
+        logger.warning(
+            "EphemeralAPIKeyStore::is_key_valid(api_key=%s) - key not found in registered keys", redact_key(key)
+        )
         return False
