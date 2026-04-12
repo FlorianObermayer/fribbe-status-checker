@@ -11,7 +11,7 @@ import app.env as env
 from app.services.NotificationService import _PUSH_TITLE, NotificationService, _push_message
 
 _TZ = ZoneInfo("Europe/Berlin")
-_NOW = datetime(2026, 4, 12, 12, 0, 0, tzinfo=_TZ)
+_NOW = datetime.now(tz=_TZ)
 _FUTURE = _NOW + timedelta(hours=2)
 
 
