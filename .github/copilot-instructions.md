@@ -24,7 +24,7 @@ For larger frontend changes, validate against `http://localhost:8007`.
 
 ## File Structure
 
-```
+```text
 .github/
   copilot-instructions.md  # Instructions for Copilot
   workflows/
@@ -33,8 +33,7 @@ For larger frontend changes, validate against `http://localhost:8007`.
   dependabot.yml           # Dependabot config for dependency updates
 app/
   main.py                  # FastAPI app, routing, service wiring, lifespan handler
-  dependencies.py          # Service singletons & DI; startup()/shutdown() called from lifespan
-  env.py                   # ALL env vars declared here; validate() called at startup
+  dependencies.py          # Service singletons & DI; startup()/shutdown() c  env.py                   # ALL env vars declared here; validate() called at startup
   api/                     # Auth (HybridAuth, EphemeralAPIKeyStore), request/response schemas
   services/                # Domain services (presence, occupancy, push, messages, weather)
     internal/              # Internal device-count tracking (WardenStore)
@@ -44,6 +43,7 @@ scripts/                   # uv entry points (dev, lint, watch, generate-vapid-k
 tests/                     # Unit tests; test-data/ holds fixture files
 README.md                  # Project overview, setup, conventions, instructions
 ```
+
 ## Architecture
 
 - **Lifecycle**: `app.dependencies.startup()` / `shutdown()` are called from the FastAPI lifespan in `main.py`. Service singletons and background pollers are created/stopped there - never at import time. This keeps module imports side-effect free so tests can import routers without spawning threads.
@@ -60,9 +60,11 @@ README.md                  # Project overview, setup, conventions, instructions
 - **Weather types**: `WeatherService.get_condition()` → `Weather | None` with `temperature: Temperature` (HOT/WARM/MILD/COLD) and `state: WeatherState` (CLEAR/CLOUDY/MILD_RAIN/HEAVY_RAIN/THUNDERSTORM/SNOW). In `MessageService`, precipitation states take priority over temperature messages.
 - **Type checking**: PyRight strict. All public functions need return-type annotations. Avoid `# type: ignore` except at already-annotated OWM JSON index sites.
 - **Linting**: Line length 120. Ruff rules: `E, W, F, I, UP, B, S, C4, RUF, PIE, SIM, TRY, PTH`. Suppress `S311`/`S101` inline with `# noqa`. Use hyphens (`-`) not en-dashes (`–`) in strings.
+- **Markdown linting**: `markdownlint-cli2` enforced in CI (warnings as errors). Config in `.markdownlint-cli2.yaml`. Run locally with `npx markdownlint-cli2`.
 - **Licenses**: After adding or removing any dependency in `pyproject.toml`, run `uv run generate-licenses` and commit the updated `app/licenses.json`. The CI lint job fails if this file is out of date.
 
 ## Copilot Instructions
+
 - Always write tests for new features and bug fixes; update existing tests if the change affects their behavior.
 - Update `README.md` on every UI feature update.
 - Update `.github/copilot-instructions.md` if needed.

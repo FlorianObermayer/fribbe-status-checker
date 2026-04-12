@@ -1,0 +1,14 @@
+# markdownlint-cli2 configuration
+# Warnings treated as errors in CI (--no-progress exit code)
+
+config:
+  # Disable line-length — prose uses single-line paragraphs, code convention is 120
+  line-length: false
+
+globs:
+  - "**/*.md"
+
+ignores:
+  - ".venv/**"
+  - "node_modules/**"
+  - "fribbe_status_checker.egg-info/**"
