@@ -4,6 +4,8 @@ from typing import Any
 from fastapi import Query
 from pydantic import BaseModel, Field, field_validator
 
+from app.services.PushSubscriptionService import ALL_TOPICS, VALID_TOPICS, PushTopic
+
 # Single source of truth for all keyword filter options.
 # Order here determines the order in the UI selector.
 NOTIFICATION_FILTERS: list[dict[str, str]] = [
@@ -48,10 +50,35 @@ class PushAuthRequest(BaseModel):
     auth: str
 
 
+def _validate_topics(v: list[str]) -> list[PushTopic]:
+    invalid = set(v) - VALID_TOPICS
+    if invalid:
+        raise ValueError(f"Invalid topics: {sorted(invalid)}")
+    if not v:
+        raise ValueError("At least one topic is required")
+    return sorted(set(v))  # type: ignore[return-value]
+
+
 class PushSubscribeRequest(BaseModel):
     endpoint: str
     p256dh: str
     auth: str
+    topics: list[PushTopic] = Field(default_factory=lambda: list(ALL_TOPICS))
+
+    @field_validator("topics")
+    @classmethod
+    def validate_topics(cls, v: list[str]) -> list[PushTopic]:
+        return _validate_topics(v)
+
+
+class PatchPushTopicsRequest(BaseModel):
+    auth: str
+    topics: list[PushTopic]
+
+    @field_validator("topics")
+    @classmethod
+    def validate_topics(cls, v: list[str]) -> list[PushTopic]:
+        return _validate_topics(v)
 
 
 class CreateApiKeyRequest(BaseModel):

@@ -1,4 +1,5 @@
 import logging
+import re
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -6,11 +7,32 @@ from pathlib import Path
 from typing import Self
 from zoneinfo import ZoneInfo
 
+import markdown
+import nh3
+
 import app.env as env
 from app.services.PersistentCollections import PersistentDict
 from app.services.PollingService import PollingService
+from app.services.PushSender import PushSender
 
 logger = logging.getLogger("uvicorn.error")
+
+_PUSH_TITLE = "Neues aus'm Fribbe"
+
+
+def _push_message(markdown_text: str) -> str:
+    """Convert Markdown to plain text for push notification bodies."""
+    html = markdown.markdown(markdown_text)
+    sanitized = nh3.clean(html)
+    stripped = re.sub(r"<[^>]+>", "", sanitized)
+    # limit to 200 chars for push notifications, as some platforms have limits and we want to avoid cutting in the middle of a word
+    if len(stripped) > 200:
+        stripped = stripped[:199]
+        # cut off any trailing incomplete word
+        stripped = re.sub(r"\s+\S*$", "", stripped)
+        # add ellipsis to indicate truncation
+        stripped += "…"
+    return stripped.strip()
 
 
 @dataclass
@@ -63,8 +85,10 @@ class Notification:
 
 
 class NotificationService(PollingService):
-    def __init__(self):
+    def __init__(self, push_sender: PushSender | None = None):
         super().__init__()
+        self._push_sender = push_sender
+        self._known_active_nids: set[str] | None = None  # None until first poll; avoids re-pushing on startup
         self._store: PersistentDict[Notification] = PersistentDict(
             str(Path(env.LOCAL_DATA_PATH) / "notifications.json"),
             value_type=Notification,
@@ -81,6 +105,11 @@ class NotificationService(PollingService):
             enabled=enabled,
         )
         self._store[nid] = notification
+        if notification.is_active() and self._push_sender is not None:
+            self._push_sender.send_to_topic_sync("notifications", _PUSH_TITLE, _push_message(message))
+            known_active_nids = self._known_active_nids
+            if known_active_nids is not None:
+                self._known_active_nids = {*known_active_nids, nid}
         return nid
 
     def get(self, notification_ids: list[str] | None = None) -> list[Notification]:
@@ -152,6 +181,7 @@ class NotificationService(PollingService):
             if nid not in store:
                 return False
             notification = store[nid]
+            was_active = notification.is_active()
             if enabled is not None:
                 notification.enabled = enabled
             if valid_from is not None:
@@ -159,13 +189,35 @@ class NotificationService(PollingService):
             if valid_until is not None:
                 notification.valid_until = valid_until
             store[nid] = notification
+            if not was_active and notification.is_active() and self._push_sender is not None:
+                self._push_sender.send_to_topic_sync("notifications", _PUSH_TITLE, _push_message(notification.message))
+                if self._known_active_nids is not None:
+                    self._known_active_nids = set(self._known_active_nids) | {nid}
             return True
 
     def get_by_id(self, nid: str) -> Notification | None:
         return self._store.get(nid)
 
     async def _run_poll(self) -> None:
+        await self._check_newly_active_notifications()
         await self._run_clean_old_notifications()
+
+    async def _check_newly_active_notifications(self) -> None:
+        """Fire push notifications for notifications that became active since the last poll."""
+        if self._push_sender is None:
+            return
+        current_active = {n.id for n in self._store.values() if n.is_active()}
+        if self._known_active_nids is None:
+            # First poll - record current state without pushing to avoid re-notifying on startup
+            self._known_active_nids = current_active
+            return
+        newly_active = current_active - self._known_active_nids
+        self._known_active_nids = current_active
+        for nid in newly_active:
+            notification = self._store.get(nid)
+            if notification is not None:
+                logger.info(f"Notification {nid} became active - sending push")
+                self._push_sender.send_to_topic_sync("notifications", _PUSH_TITLE, _push_message(notification.message))
 
     async def _run_clean_old_notifications(self):
         try:
@@ -185,5 +237,5 @@ class NotificationService(PollingService):
         except Exception as e:
             logger.error(f"Error during notification cleanup: {e}", exc_info=True)
 
-    def start_cleanup_job(self, interval: int = 3600) -> None:
+    def start_cleanup_job(self, interval: int = 60) -> None:
         self.start_polling(interval)

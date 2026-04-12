@@ -1,6 +1,7 @@
 """Tests for PushSubscriptionService.validate_subscription and has/add/remove behavior."""
 
 import tempfile
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -87,3 +88,76 @@ def test_has_returns_false_after_remove():
         svc.add(_VALID_ENDPOINT, _VALID_P256DH, _VALID_AUTH)
         svc.remove(_VALID_AUTH)
         assert svc.has(_VALID_AUTH) is False
+
+
+def test_add_stores_custom_topics():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        svc = _make_service(tmpdir)
+        svc.add(_VALID_ENDPOINT, _VALID_P256DH, _VALID_AUTH, topics=["presence"])
+        assert svc.get_topics(_VALID_AUTH) == ["presence"]
+
+
+def test_add_defaults_to_all_topics():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        svc = _make_service(tmpdir)
+        svc.add(_VALID_ENDPOINT, _VALID_P256DH, _VALID_AUTH)
+        topics = svc.get_topics(_VALID_AUTH)
+        assert set(topics) == {"presence", "notifications"}
+
+
+def test_get_topics_returns_empty_for_unknown_auth():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        svc = _make_service(tmpdir)
+        assert svc.get_topics(_VALID_AUTH) == []
+
+
+def test_update_topics_returns_true_when_found():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        svc = _make_service(tmpdir)
+        svc.add(_VALID_ENDPOINT, _VALID_P256DH, _VALID_AUTH)
+        assert svc.update_topics(_VALID_AUTH, ["presence"]) is True
+        assert svc.get_topics(_VALID_AUTH) == ["presence"]
+
+
+def test_update_topics_returns_false_when_not_found():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        svc = _make_service(tmpdir)
+        assert svc.update_topics(_VALID_AUTH, ["presence"]) is False
+
+
+_VALID_AUTH_2 = "GTaYpIIoXyzABCDF"
+_VALID_ENDPOINT_2 = "https://fcm.googleapis.com/fcm/send/xyz789"
+
+
+def test_send_to_topic_sync_skips_non_matching_subscribers():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        svc = _make_service(tmpdir)
+        svc.add(_VALID_ENDPOINT, _VALID_P256DH, _VALID_AUTH, topics=["presence"])
+        svc.add(_VALID_ENDPOINT_2, _VALID_P256DH, _VALID_AUTH_2, topics=["notifications"])
+
+        sent_to: list[str] = []
+
+        def _fake_webpush(subscription_info: Any, data: Any, vapid_private_key: Any, vapid_claims: Any) -> None:
+            sent_to.append(subscription_info["keys"]["auth"])
+
+        with patch("app.services.PushSubscriptionService.webpush", _fake_webpush):
+            svc.send_to_topic_sync("presence", "T", "B")
+
+        assert sent_to == [_VALID_AUTH]
+
+
+def test_send_to_topic_sync_sends_to_all_matching_subscribers():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        svc = _make_service(tmpdir)
+        svc.add(_VALID_ENDPOINT, _VALID_P256DH, _VALID_AUTH, topics=["notifications", "presence"])
+        svc.add(_VALID_ENDPOINT_2, _VALID_P256DH, _VALID_AUTH_2, topics=["notifications"])
+
+        sent_to: list[str] = []
+
+        def _fake_webpush(subscription_info: Any, data: Any, vapid_private_key: Any, vapid_claims: Any) -> None:
+            sent_to.append(subscription_info["keys"]["auth"])
+
+        with patch("app.services.PushSubscriptionService.webpush", _fake_webpush):
+            svc.send_to_topic_sync("notifications", "T", "B")
+
+        assert set(sent_to) == {_VALID_AUTH, _VALID_AUTH_2}

@@ -14,10 +14,10 @@ from app.services.PresenceLevelService import PresenceLevelService
 
 class _FakePushSender:
     def __init__(self) -> None:
-        self.calls: list[tuple[str, str]] = []
+        self.calls: list[tuple[str, str, str]] = []
 
-    def send_to_all_sync(self, title: str, body: str) -> None:
-        self.calls.append((title, body))
+    def send_to_topic_sync(self, topic: str, title: str, body: str) -> None:
+        self.calls.append((topic, title, body))
 
 
 def _make_service(push: _FakePushSender | None = None) -> PresenceLevelService:
@@ -119,7 +119,8 @@ def test_push_body(level):  # type: ignore
 
     svc._try_send_first_active_push(PresenceLevel.EMPTY, level)  # pyright: ignore[reportUnknownArgumentType]
 
-    assert push.calls[0][1] is not None
+    assert push.calls[0][0] == "presence"  # topic
+    assert push.calls[0][2] is not None  # body
 
 
 @pytest.mark.parametrize("level", [PresenceLevel.FEW, PresenceLevel.MANY])
@@ -130,7 +131,7 @@ def test_push_title(level):  # type: ignore
 
     svc._try_send_first_active_push(PresenceLevel.EMPTY, level)  # pyright: ignore[reportUnknownArgumentType]
 
-    assert push.calls[0][0] is not None
+    assert push.calls[0][1] is not None  # title
 
 
 # ---------------------------------------------------------------------------

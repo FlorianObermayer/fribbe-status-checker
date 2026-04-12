@@ -318,7 +318,60 @@ def test_push_status_returns_subscribed_false(
     response = client.post("/api/push/status", json={"auth": "dummyauth"})
 
     assert response.status_code == 200
-    assert response.json()["subscribed"] is False
+    body = response.json()
+    assert body["subscribed"] is False
+    assert body["topics"] == []
+
+
+def test_push_status_returns_topics_when_subscribed(
+    client: TestClient, test_app: FastAPI, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    push_svc = MagicMock()
+    push_svc.has.return_value = True
+    push_svc.get_topics.return_value = ["presence"]
+    test_app.dependency_overrides[get_push_subscription_service] = lambda: push_svc
+
+    from app.services.PushSubscriptionService import PushSubscriptionService
+
+    monkeypatch.setattr(PushSubscriptionService, "validate_auth", staticmethod(lambda _: None))  # type: ignore[reportUnknownLambdaType]
+
+    response = client.post("/api/push/status", json={"auth": "dummyauth"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["subscribed"] is True
+    assert body["topics"] == ["presence"]
+
+
+def test_push_topics_patch_returns_200(client: TestClient, test_app: FastAPI, monkeypatch: pytest.MonkeyPatch) -> None:
+    push_svc = MagicMock()
+    push_svc.update_topics.return_value = True
+    test_app.dependency_overrides[get_push_subscription_service] = lambda: push_svc
+
+    from app.services.PushSubscriptionService import PushSubscriptionService
+
+    monkeypatch.setattr(PushSubscriptionService, "validate_auth", staticmethod(lambda _: None))  # type: ignore[reportUnknownLambdaType]
+
+    response = client.patch("/api/push/topics", json={"auth": "dummyauth", "topics": ["presence"]})
+
+    assert response.status_code == 200
+    push_svc.update_topics.assert_called_once_with("dummyauth", ["presence"])
+
+
+def test_push_topics_patch_returns_404_when_not_found(
+    client: TestClient, test_app: FastAPI, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    push_svc = MagicMock()
+    push_svc.update_topics.return_value = False
+    test_app.dependency_overrides[get_push_subscription_service] = lambda: push_svc
+
+    from app.services.PushSubscriptionService import PushSubscriptionService
+
+    monkeypatch.setattr(PushSubscriptionService, "validate_auth", staticmethod(lambda _: None))  # type: ignore[reportUnknownLambdaType]
+
+    response = client.patch("/api/push/topics", json={"auth": "dummyauth", "topics": ["notifications"]})
+
+    assert response.status_code == 404
 
 
 def test_push_unsubscribe_returns_404_when_not_found(client: TestClient, test_app: FastAPI) -> None:
@@ -575,3 +628,20 @@ def test_notifications_delete_returns_200_when_found(
     response = client.request("DELETE", "/api/notifications/nid-abc123", headers={"api_key": TEST_ADMIN_TOKEN})
 
     assert response.status_code == 200
+
+
+def test_notifications_put_returns_404_when_not_found(
+    client: TestClient,
+    test_app: FastAPI,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    svc = _mock_notification_svc()
+    svc.update.return_value = False
+    test_app.dependency_overrides[get_notification_service] = lambda: svc
+
+    response = client.put(
+        "/api/notifications/nid-missing", json={"enabled": True}, headers={"api_key": TEST_ADMIN_TOKEN}
+    )
+
+    assert response.status_code == 404

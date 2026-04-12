@@ -571,11 +571,15 @@ function setPushButtonState(state) {
     const row = document.getElementById('push-notify-row');
     const btn = document.getElementById('push-subscribe-btn');
     const label = document.getElementById('push-btn-label');
+    const caret = document.getElementById('push-caret-icon');
+    const panel = document.getElementById('push-topic-panel');
     if (!row || !btn || !label) return;
 
     row.classList.remove('hidden');
     btn.classList.remove('subscribed', 'denied', 'loading');
     btn.disabled = false;
+    if (caret) { caret.classList.add('hidden'); caret.classList.remove('open'); }
+    if (panel) panel.classList.add('hidden');
 
     if (state === 'loading') {
         btn.classList.add('loading');
@@ -587,17 +591,33 @@ function setPushButtonState(state) {
 
     if (state === 'subscribed') {
         btn.classList.add('subscribed');
-        label.textContent = 'Benachrichtigung deaktivieren';
-        btn.title = 'Push-Benachrichtigungen deaktivieren';
+        label.textContent = 'Benachrichtigungen aktiv';
+        btn.title = 'Einstellungen';
+        if (caret) caret.classList.remove('hidden');
     } else if (state === 'denied') {
         btn.classList.add('denied');
         label.textContent = 'Benachrichtigungen blockiert';
         btn.title = 'Benachrichtigungen sind im Browser blockiert';
         btn.disabled = true;
     } else {
-        label.textContent = 'Benachrichtigung aktivieren';
-        btn.title = 'Push-Benachrichtigung, sobald die Meute ins Fribbe strömt!';
+        label.textContent = 'Benachrichtigungen aktivieren';
+        btn.title = 'Push-Benachrichtigungen, sobald es was Neues gibt oder die Meute ins Fribbe strömt!';
     }
+}
+
+function togglePushPanel() {
+    const panel = document.getElementById('push-topic-panel');
+    const caret = document.getElementById('push-caret-icon');
+    if (!panel) return;
+    const isOpen = !panel.classList.contains('hidden');
+    panel.classList.toggle('hidden', isOpen);
+    if (caret) caret.classList.toggle('open', !isOpen);
+}
+
+function setTopicCheckboxes(topics) {
+    document.querySelectorAll('.push-topic-checkbox').forEach(cb => {
+        cb.checked = topics.includes(cb.value);
+    });
 }
 
 async function initPushNotifications() {
@@ -629,13 +649,18 @@ async function initPushNotifications() {
     if (existingSub) {
         const auth = arrayBufferToBase64Url(existingSub.getKey('auth'));
         let serverKnows = false;
+        let currentTopics = ['notifications', 'presence'];
         try {
             const statusResp = await fetch('/api/push/status', {
                 method: 'POST',
                 headers: withCsrfHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({ auth }),
             });
-            serverKnows = statusResp.ok && (await statusResp.json()).subscribed;
+            if (statusResp.ok) {
+                const statusData = await statusResp.json();
+                serverKnows = statusData.subscribed;
+                if (serverKnows) currentTopics = statusData.topics ?? currentTopics;
+            }
         } catch {
             serverKnows = true; // on network error assume server knows to avoid spurious re-registration
         }
@@ -649,6 +674,7 @@ async function initPushNotifications() {
                         endpoint: existingSub.endpoint,
                         p256dh: arrayBufferToBase64Url(existingSub.getKey('p256dh')),
                         auth,
+                        topics: ['notifications', 'presence'],
                     }),
                 });
                 reRegOk = reRegResp.ok;
@@ -663,6 +689,7 @@ async function initPushNotifications() {
             }
         }
         setPushButtonState('subscribed');
+        setTopicCheckboxes(currentTopics);
     } else {
         setPushButtonState('unsubscribed');
     }
@@ -671,42 +698,19 @@ async function initPushNotifications() {
     if (!btn) return;
 
     btn.addEventListener('click', async () => {
-        setPushButtonState('loading');
-
         let currentSub;
         try {
             currentSub = await swReg.pushManager.getSubscription();
         } catch (e) {
             console.error('Failed to get push subscription:', e);
-            setPushButtonState(existingSub ? 'subscribed' : 'unsubscribed');
             showToast('Fehler beim Laden des Benachrichtigungsstatus', 'error');
             return;
         }
         if (currentSub) {
-            // Unsubscribe
-            try {
-                const auth = arrayBufferToBase64Url(currentSub.getKey('auth'));
-                const resp = await fetch('/api/push/unsubscribe', {
-                    method: 'DELETE',
-                    headers: withCsrfHeaders({ 'Content-Type': 'application/json' }),
-                    body: JSON.stringify({ auth }),
-                });
-                if (!resp.ok) {
-                    throw new Error(`Unsubscribe request failed with status ${resp.status}`);
-                }
-                const unsubscribed = await currentSub.unsubscribe();
-                if (!unsubscribed) {
-                    throw new Error('Browser unsubscribe returned false');
-                }
-                setPushButtonState('unsubscribed');
-                showToast('Benachrichtigungen deaktiviert!');
-            } catch (e) {
-                console.error('Unsubscribe failed:', e);
-                setPushButtonState('subscribed');
-                showToast('Fehler beim Deaktivieren', 'error');
-            }
+            togglePushPanel();
         } else {
             // Subscribe
+            setPushButtonState('loading');
             try {
                 const sub = await swReg.pushManager.subscribe({
                     userVisibleOnly: true,
@@ -719,6 +723,7 @@ async function initPushNotifications() {
                         endpoint: sub.endpoint,
                         p256dh: arrayBufferToBase64Url(sub.getKey('p256dh')),
                         auth: arrayBufferToBase64Url(sub.getKey('auth')),
+                        topics: ['notifications', 'presence'],
                     }),
                 });
                 if (!resp.ok) {
@@ -726,7 +731,8 @@ async function initPushNotifications() {
                     throw new Error(`Subscribe request failed with status ${resp.status}`);
                 }
                 setPushButtonState('subscribed');
-                showToast('Benachrichtigungen aktiviert!');
+                setTopicCheckboxes(['notifications', 'presence']);
+                showToast('Alle Push-Benachrichtigungen aktiviert!');
             } catch (e) {
                 if (Notification.permission === 'denied') {
                     setPushButtonState('denied');
@@ -736,6 +742,73 @@ async function initPushNotifications() {
                     showToast('Fehler beim Aktivieren', 'error');
                 }
             }
+        }
+    });
+
+    // Topic checkboxes: patch topics on change, prevent deselecting all
+    document.querySelectorAll('.push-topic-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', async () => {
+            const currentSub = await swReg.pushManager.getSubscription().catch(() => null);
+            if (!currentSub) return;
+            const auth = arrayBufferToBase64Url(currentSub.getKey('auth'));
+            const checked = [...document.querySelectorAll('.push-topic-checkbox:checked')].map(el => el.value);
+            if (checked.length === 0) {
+                checkbox.checked = true; // prevent deselecting all
+                return;
+            }
+            const label = checkbox.closest('label')?.textContent?.trim() ?? checkbox.value;
+            try {
+                const resp = await fetch('/api/push/topics', {
+                    method: 'PATCH',
+                    headers: withCsrfHeaders({ 'Content-Type': 'application/json' }),
+                    body: JSON.stringify({ auth, topics: checked }),
+                });
+                if (!resp.ok) throw new Error(`PATCH /api/push/topics failed with status ${resp.status}`);
+                showToast(`Push-Benachrichtigungen für '${label}' ${checkbox.checked ? 'aktiviert' : 'deaktiviert'}`);
+            } catch (e) {
+                console.error('Failed to update push topics:', e);
+                checkbox.checked = !checkbox.checked; // revert on error
+                showToast('Fehler beim Speichern', 'error');
+            }
+        });
+    });
+
+    // Unsubscribe button inside topic panel
+    const unsubBtn = document.getElementById('push-unsubscribe-btn');
+    if (unsubBtn) {
+        unsubBtn.addEventListener('click', async () => {
+            setPushButtonState('loading');
+            try {
+                const currentSub = await swReg.pushManager.getSubscription();
+                if (currentSub) {
+                    const auth = arrayBufferToBase64Url(currentSub.getKey('auth'));
+                    const resp = await fetch('/api/push/unsubscribe', {
+                        method: 'DELETE',
+                        headers: withCsrfHeaders({ 'Content-Type': 'application/json' }),
+                        body: JSON.stringify({ auth }),
+                    });
+                    if (!resp.ok) throw new Error(`Unsubscribe request failed with status ${resp.status}`);
+                    const unsubscribed = await currentSub.unsubscribe();
+                    if (!unsubscribed) throw new Error('Browser unsubscribe returned false');
+                }
+                setPushButtonState('unsubscribed');
+                showToast('Alle Push-Benachrichtigungen deaktiviert!');
+            } catch (e) {
+                console.error('Unsubscribe failed:', e);
+                setPushButtonState('subscribed');
+                showToast('Fehler beim Deaktivieren', 'error');
+            }
+        });
+    }
+
+    // Close panel when clicking outside the wrapper
+    document.addEventListener('click', e => {
+        const wrapper = document.getElementById('push-btn-wrapper');
+        const panel = document.getElementById('push-topic-panel');
+        const caret = document.getElementById('push-caret-icon');
+        if (wrapper && panel && !wrapper.contains(e.target) && !panel.classList.contains('hidden')) {
+            panel.classList.add('hidden');
+            if (caret) caret.classList.remove('open');
         }
     });
 }

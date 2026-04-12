@@ -392,6 +392,69 @@ body.status-many {
     }
 }
 
+/* Push topic dropdown */
+.push-btn-wrapper {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.push-caret {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    transition: transform 0.2s;
+}
+
+.push-caret.open {
+    transform: rotate(180deg);
+}
+
+.push-topic-panel {
+    margin-top: 6px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 10px 14px 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    min-width: 170px;
+    text-align: left;
+}
+
+.push-topic-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.88rem;
+    color: #444;
+    cursor: pointer;
+    padding: 3px 0;
+}
+
+.push-topic-label input[type="checkbox"] {
+    cursor: pointer;
+    accent-color: #4caf50;
+}
+
+.push-topic-divider {
+    border: none;
+    border-top: 1px solid #eee;
+    margin: 6px 0;
+}
+
+.push-unsubscribe-btn {
+    background: none;
+    border: none;
+    color: #e53935;
+    font-size: 0.82rem;
+    cursor: pointer;
+    padding: 2px 0;
+    font-family: inherit;
+}
+
+.push-unsubscribe-btn:hover {
+    text-decoration: underline;
+}
 .inofficial-hint {
     max-width: 600px;
     text-align: left;
