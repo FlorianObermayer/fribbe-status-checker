@@ -1,6 +1,51 @@
 :root {
     --color-green: #4caf50;
     --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+/* Theme variables — light defaults */
+    --bg-body: #f5f5f5;
+    --bg-container: #fff;
+    --text-heading: #333;
+    --text-body: #444;
+    --text-muted: #888;
+    --bg-input: #fafafa;
+    --text-input: #333;
+    --border-input: #ccc;
+    --bg-control: #f5f5f5;
+    --text-control: #444;
+    --border-control: #bbb;
+    --bg-control-hover: #e0e0e0;
+    --bg-success: #e8f5e9;
+    --text-success: #2e7d32;
+    --border-success: #c8e6c9;
+    --bg-error: #ffebee;
+    --text-error: #c62828;
+    --border-error: #ffcdd2;
+    --bg-codemirror: #fffbe7;
+}
+
+html.dark-mode {
+    color-scheme: dark;
+    --shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+
+    --bg-body: #121212;
+    --bg-container: #1e1e1e;
+    --text-heading: #e0e0e0;
+    --text-body: #c0c0c0;
+    --text-muted: #888;
+    --bg-input: #2a2a2a;
+    --text-input: #e0e0e0;
+    --border-input: #555;
+    --bg-control: #2a2a2a;
+    --text-control: #ccc;
+    --border-control: #555;
+    --bg-control-hover: #383838;
+    --bg-success: #1a3d1c;
+    --text-success: #81c784;
+    --border-success: #2e7d32;
+    --bg-error: #3d1c1c;
+    --text-error: #ef9a9a;
+    --border-error: #c62828;
+    --bg-codemirror: #2c2815;
 }
 
 html,
@@ -18,16 +63,17 @@ body {
         align-items: center;
         justify-content: center;
         min-height: 100vh;
-        background-color: #f5f5f5;
+        background-color: var(--bg-body);
+            color: var(--text-body);
         text-align: center;
     line-height: 1.6;
 }
 
 .container {
     position: relative;
-    background: white;
+    background: var(--bg-container);
     border-radius: 16px;
-    padding: 24px 20px 32px 20px;
+    padding: 24px 20px 32px;
     box-shadow: var(--shadow);
     max-width: 650px;
     width: 90%;
@@ -37,14 +83,14 @@ body {
 }
 h1 {
     font-weight: 500;
-    color: #333;
+    color: var(--text-heading);
     margin-bottom: 6px;
         text-align: center;
     }
     
     .subtitle {
         text-align: center;
-        color: #888;
+        color: var(--text-muted);
         font-size: 0.92rem;
         margin-top: 0;
         margin-bottom: 24px;
@@ -59,7 +105,7 @@ label {
     margin-bottom: 5px;
     font-weight: 500;
         font-size: 0.92rem;
-        color: #444;
+        color: var(--text-body);
 }
 
 input[type="text"],
@@ -67,13 +113,13 @@ input[type="datetime-local"],
 textarea {
     width: 100%;
     padding: 8px 10px;
-        border: 1px solid #ccc;
+        border: 1px solid var(--border-input);
         border-radius: 8px;
     box-sizing: border-box;
     font-family: 'Roboto', sans-serif;
         font-size: 0.95rem;
-        color: #333;
-        background: #fafafa;
+        color: var(--text-input);
+            background: var(--bg-input);
         transition: border-color 0.2s;
     }
     
@@ -96,9 +142,9 @@ textarea {
     gap: 8px;
     padding: 10px 20px;
     border-radius: 24px;
-    border: 1px solid #bbb;
-    background: #f5f5f5;
-    color: #444;
+    border: 1px solid var(--border-control);
+        background: var(--bg-control);
+        color: var(--text-control);
     cursor: pointer;
     font-size: 0.95rem;
         font-family: 'Roboto', sans-serif;
@@ -115,7 +161,7 @@ textarea {
 }
 
 #submitBtn:hover {
-    background: #e0e0e0;
+    background: var(--bg-control-hover);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
@@ -131,19 +177,19 @@ textarea {
 }
 
 .success {
-    background-color: #e8f5e9;
-        color: #2e7d32;
-        border: 1px solid #c8e6c9;
+    background-color: var(--bg-success);
+        color: var(--text-success);
+        border: 1px solid var(--border-success);
 }
 
 .error {
-    background-color: #ffebee;
-        color: #c62828;
-        border: 1px solid #ffcdd2;
+    background-color: var(--bg-error);
+        color: var(--text-error);
+        border: 1px solid var(--border-error);
 }
 
 .CodeMirror {
-    background: #fffbe7;
+    background: var(--bg-codemirror);
     border-radius: 12px;
     max-width: 100%;
 }
@@ -155,9 +201,9 @@ textarea {
     gap: 6px;
     padding: 6px 14px;
         border-radius: 20px;
-        border: 1px solid #bbb;
-        background: #f5f5f5;
-        color: #444 !important;
+        border: 1px solid var(--border-control);
+            background: var(--bg-control);
+            color: var(--text-control) !important;
     text-decoration: none !important;
     font-size: 0.9rem;
         font-weight: 500;
@@ -166,7 +212,7 @@ textarea {
 }
 
 .preview-button:hover {
-    background: #e0e0e0;
+    background: var(--bg-control-hover);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
@@ -213,9 +259,9 @@ textarea {
     width: 44px;
     height: 44px;
     border-radius: 50%;
-    border: 1px solid #bbb;
-    background: #f5f5f5;
-    color: #444;
+    border: 1px solid var(--border-control);
+        background: var(--bg-control);
+        color: var(--text-control);
     cursor: pointer;
     text-decoration: none;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
@@ -230,7 +276,7 @@ textarea {
 }
 
 .nav-btn:hover {
-    background: #e0e0e0;
+    background: var(--bg-control-hover);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
@@ -256,7 +302,7 @@ textarea {
 }
 @media (max-width: 600px) {
     .container {
-            padding: 10px 12px 24px 12px;
+            padding: 10px 12px 24px;
             border-radius: 0;
             max-width: 100vw;
             width: 100%;
@@ -269,4 +315,117 @@ textarea {
         flex-direction: column;
         gap: 12px;
     }
+}
+/* Dark mode toggle button */
+.theme-toggle-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--border-control);
+    background: var(--bg-control);
+    color: var(--text-control);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    box-shadow: var(--shadow);
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.theme-toggle-btn:hover {
+    background: var(--bg-control-hover);
+}
+
+.theme-toggle-btn svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+    flex-shrink: 0;
+}
+
+#theme-icon-sun {
+    display: none;
+}
+
+#theme-icon-moon {
+    display: block;
+}
+
+html.dark-mode #theme-icon-sun {
+    display: block;
+}
+
+html.dark-mode #theme-icon-moon {
+    display: none;
+}
+
+/* Dark mode overrides for EasyMDE / CodeMirror */
+html.dark-mode .CodeMirror {
+    color: var(--text-input);
+}
+
+html.dark-mode .EasyMDEContainer .CodeMirror {
+    border-color: var(--border-input);
+}
+
+html.dark-mode .CodeMirror-cursor {
+    border-left-color: var(--text-input);
+}
+
+html.dark-mode .CodeMirror-selected,
+html.dark-mode .CodeMirror-focused .CodeMirror-selected {
+    background: #4a4a2a;
+}
+
+html.dark-mode .CodeMirror-line::selection,
+html.dark-mode .CodeMirror-line>span::selection,
+html.dark-mode .CodeMirror-line>span>span::selection {
+    background: #4a4a2a;
+}
+
+html.dark-mode .CodeMirror-activeline-background {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+html.dark-mode .CodeMirror-gutter-filler,
+html.dark-mode .CodeMirror-scrollbar-filler {
+    background-color: var(--bg-codemirror);
+}
+
+html.dark-mode .EasyMDEContainer .CodeMirror-fullscreen {
+    background: var(--bg-codemirror);
+}
+
+html.dark-mode .editor-toolbar {
+    background: var(--bg-container);
+    border-color: var(--border-input);
+    color: var(--text-input);
+}
+
+html.dark-mode .editor-toolbar button {
+    color: var(--text-input);
+}
+
+html.dark-mode .editor-toolbar button.active,
+html.dark-mode .editor-toolbar button:hover {
+    background: var(--bg-control-hover);
+    border-color: var(--border-control);
+}
+
+html.dark-mode .editor-toolbar i.separator {
+    border-left-color: var(--border-input);
+    border-right-color: transparent;
+}
+
+html.dark-mode .editor-preview {
+    background: var(--bg-input);
+    color: var(--text-input);
+}
+
+html.dark-mode .editor-statusbar {
+    color: var(--text-muted);
 }

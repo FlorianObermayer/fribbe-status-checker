@@ -24,10 +24,15 @@ from app.version import VERSION
 
 _logger = logging.getLogger("uvicorn.error")
 
+
 _csp = (
     ContentSecurityPolicy()
     .default_src("'self'", "https://*.fribbe-beach.de")
-    .script_src("'self'", "https://*.fribbe-beach.de")
+    .script_src(
+        "'self'",
+        "https://*.fribbe-beach.de",
+        "'sha256-nMQAQejeJNzygq389v6PkLiAKpJ1N8/ayX83QB0thSU='",  # Hash of the FOUC-prevention inline <script>
+    )
     .style_src(
         "'self'",
         "https://*.fribbe-beach.de",
