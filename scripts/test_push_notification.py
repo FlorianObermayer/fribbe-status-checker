@@ -19,7 +19,6 @@ import json
 import secrets
 import sys
 from pathlib import Path
-from urllib.parse import urlparse
 
 from pywebpush import Response, WebPushException, webpush  # type: ignore[import-untyped]
 
@@ -38,11 +37,10 @@ def main() -> None:
 
     env.load()
     vapid_private_key = env.VAPID_PRIVATE_KEY
-    vapid_public_key = env.VAPID_PUBLIC_KEY
     vapid_claim_subject = env.VAPID_CLAIM_SUBJECT
     data_path = env.LOCAL_DATA_PATH
 
-    if not vapid_private_key or not vapid_public_key or not vapid_claim_subject:
+    if not vapid_private_key or not vapid_claim_subject:
         sys.exit(1)
 
     title = sys.argv[1] if len(sys.argv) > 1 else "Fribbe Beach Test 🏐"
@@ -61,9 +59,7 @@ def main() -> None:
     errors = 0
 
     for sub in subscriptions:
-        sub.get("auth", "?")[:8]
         endpoint = sub.get("endpoint", "")
-        _ = urlparse(endpoint).netloc or endpoint
 
         try:
             result = webpush(
