@@ -26,11 +26,10 @@ from pywebpush import Response, WebPushException, webpush  # type: ignore[import
 from app import env
 
 
-def load_subscriptions(data_path: str | Path) -> list[dict[str, str]]:
-    store_path = Path(data_path) / "push_subscriptions.json"
-    if not store_path.exists():
+def load_subscriptions(subscription_path: Path) -> list[dict[str, str]]:
+    if not subscription_path.exists():
         return []
-    with store_path.open(encoding="utf-8") as f:
+    with subscription_path.open(encoding="utf-8") as f:
         raw: dict[str, dict[str, str]] = json.load(f)
     return list(raw.values())
 
