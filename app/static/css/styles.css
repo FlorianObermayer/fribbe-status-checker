@@ -455,6 +455,33 @@ body.status-many {
 .push-unsubscribe-btn:hover {
     text-decoration: underline;
 }
+/* iOS install hint */
+.push-ios-hint {
+    max-width: 400px;
+    margin: 14px auto 0;
+    padding: 10px 14px;
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    color: #6d4c00;
+    text-align: center;
+    line-height: 1.5;
+}
+
+.push-ios-hint p {
+    margin: 0;
+    display: inline;
+}
+
+.push-ios-hint .ios-share-icon {
+    display: inline-block;
+    vertical-align: middle;
+    width: 18px;
+    height: 18px;
+    stroke: #007aff;
+    margin: 0 2px;
+}
 .inofficial-hint {
     max-width: 600px;
     text-align: left;

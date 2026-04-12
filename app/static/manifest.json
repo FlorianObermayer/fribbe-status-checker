@@ -1,0 +1,21 @@
+{
+    "name": "Fribbe Beach - Status",
+    "short_name": "Fribbe Beach",
+    "description": "Aktuelle Auslastung und Status der Beachvolleyball-Anlage des DJK Augsburg-Hochzoll.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#4caf50",
+    "icons": [
+        {
+            "src": "/static/images/fribbe_logo_transparent_128x128.png",
+            "sizes": "128x128",
+            "type": "image/png"
+        },
+        {
+            "src": "/static/images/favicon.ico",
+            "sizes": "48x48",
+            "type": "image/x-icon"
+        }
+    ]
+}
