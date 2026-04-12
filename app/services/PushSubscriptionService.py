@@ -2,10 +2,10 @@ import json
 import logging
 import re
 from contextlib import suppress
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Self
+from typing import Any, Literal, Self, get_args
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
 
@@ -18,6 +18,10 @@ logger = logging.getLogger("uvicorn.error")
 
 _B64URL_RE = re.compile(r"^[A-Za-z0-9\-_]+=*$")
 
+PushTopic = Literal["presence", "notifications"]
+VALID_TOPICS: frozenset[PushTopic] = frozenset(get_args(PushTopic))
+ALL_TOPICS: list[PushTopic] = sorted(VALID_TOPICS)
+
 
 @dataclass
 class PushSubscription:
@@ -25,22 +29,27 @@ class PushSubscription:
     p256dh: str
     auth: str
     created: datetime
+    topics: list[PushTopic] = field(default_factory=lambda: list(ALL_TOPICS))
 
-    def to_dict(self) -> dict[str, str]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "endpoint": self.endpoint,
             "p256dh": self.p256dh,
             "auth": self.auth,
             "created": self.created.isoformat(),
+            "topics": self.topics,
         }
 
     @classmethod
-    def from_dict(cls, d: dict[str, str]) -> Self:
+    def from_dict(cls, d: dict[str, Any]) -> Self:
+        raw_topics: list[str] = list(d.get("topics") or ALL_TOPICS)
+        valid_topics: list[PushTopic] = [t for t in raw_topics if t in VALID_TOPICS]  # type: ignore[reportUnknownVariableType]
         return cls(
             endpoint=str(d["endpoint"]),
             p256dh=str(d["p256dh"]),
             auth=str(d["auth"]),
             created=datetime.fromisoformat(str(d["created"])),
+            topics=valid_topics or list(ALL_TOPICS),
         )
 
 
@@ -73,12 +82,13 @@ class PushSubscriptionService:
         if not _B64URL_RE.match(auth) or len(auth) < 10:
             raise ValueError("invalid auth")
 
-    def add(self, endpoint: str, p256dh: str, auth: str) -> None:
+    def add(self, endpoint: str, p256dh: str, auth: str, topics: list[PushTopic] | None = None) -> None:
         sub = PushSubscription(
             endpoint=endpoint,
             p256dh=p256dh,
             auth=auth,
             created=datetime.now(tz=ZoneInfo("Europe/Berlin")),
+            topics=list(topics) if topics is not None else list(ALL_TOPICS),
         )
         self._store[auth] = sub
 
@@ -91,11 +101,27 @@ class PushSubscriptionService:
         del self._store[auth]
         return True
 
-    def send_to_all_sync(self, title: str, body: str) -> None:
-        """Send a push notification to all subscribers. Removes expired subscriptions."""
+    def get_topics(self, auth: str) -> list[PushTopic]:
+        """Return the topics for a subscription, or an empty list if not found."""
+        if auth not in self._store:
+            return []
+        return list(self._store[auth].topics)
+
+    def update_topics(self, auth: str, topics: list[PushTopic]) -> bool:
+        """Update topics for an existing subscription. Returns False if not found."""
+        with self._store.batch_write() as store:
+            if auth not in store:
+                return False
+            store[auth].topics = list(topics)
+            return True
+
+    def send_to_topic_sync(self, topic: PushTopic, title: str, body: str) -> None:
+        """Send a push notification to subscribers of a specific topic. Removes expired subscriptions."""
         payload = json.dumps({"title": title, "body": body})
         stale: list[str] = []
         for auth, sub in list(self._store.items()):
+            if topic not in sub.topics:
+                continue
             try:
                 webpush(
                     subscription_info={

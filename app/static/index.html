@@ -121,15 +121,33 @@
         </div>
         <!-- Push notification subscribe row -->
         <div id="push-notify-row" class="push-notify-row hidden">
-            <button id="push-subscribe-btn" class="push-subscribe-btn" aria-label="Push-Benachrichtigungen">
-                <span class="spinner" aria-hidden="true"></span>
-                <svg id="push-btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                </svg>
-                <span id="push-btn-label">Benachrichtigung aktivieren</span>
-            </button>
+            <div id="push-btn-wrapper" class="push-btn-wrapper">
+                <button id="push-subscribe-btn" class="push-subscribe-btn" aria-label="Push-Benachrichtigungen">
+                    <span class="spinner" aria-hidden="true"></span>
+                    <svg id="push-btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                    </svg>
+                    <span id="push-btn-label">Benachrichtigungen aktivieren</span>
+                    <svg id="push-caret-icon" class="push-caret hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+                <div id="push-topic-panel" class="push-topic-panel hidden">
+                    <label class="push-topic-label">
+                        <input type="checkbox" class="push-topic-checkbox" id="push-topic-presence" value="presence" checked>
+                        <span>Anwesenheit</span>
+                    </label>
+                    <label class="push-topic-label">
+                        <input type="checkbox" class="push-topic-checkbox" id="push-topic-notifications" value="notifications" checked>
+                        <span>Mitteilungen</span>
+                    </label>
+                    <hr class="push-topic-divider">
+                    <button id="push-unsubscribe-btn" class="push-unsubscribe-btn">Deaktivieren</button>
+                </div>
+                </div>
         </div>
         <div class="fribbe-logo-wrapper hidden">
             <img src="/static/images/fribbe_logo_transparent_128x128.png" alt="Fribbe Logo" class="fribbe-logo"

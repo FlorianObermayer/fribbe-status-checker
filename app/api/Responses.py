@@ -14,6 +14,7 @@ from app.services.occupancy.Model import (
     OccupancyType,
 )
 from app.services.PresenceLevel import PresenceLevel
+from app.services.PushSubscriptionService import PushTopic
 
 
 class BaseResponse(BaseModel):
@@ -141,6 +142,7 @@ class VapidKeyResponse(BaseModel):
 
 class PushStatusResponse(BaseModel):
     subscribed: bool
+    topics: list[PushTopic] = Field(default_factory=list[PushTopic])
 
 
 class DeletedResponse(BaseModel):

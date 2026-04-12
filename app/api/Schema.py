@@ -10,15 +10,15 @@ def requires_auth_extra() -> dict[str, Any]:
 def update_openapi_schema(app: FastAPI):
     openapi_schema = app.openapi_schema or app.openapi()
 
-    # 2. Sicherstellen, dass 'components' existiert
+    # 2. Ensure 'components' exists
     if "components" not in openapi_schema:
         openapi_schema["components"] = {}
 
-    # 3. Sicherstellen, dass 'securitySchemes' existiert
+    # 3. Ensure 'securitySchemes' exists
     if "securitySchemes" not in openapi_schema["components"]:
         openapi_schema["components"]["securitySchemes"] = {}
 
-    # 4. Nur hinzufügen, wenn nicht bereits vorhanden
+    # 4. Only add if not already present
     if "APIKeyHeader" not in openapi_schema["components"]["securitySchemes"]:
         openapi_schema["components"]["securitySchemes"]["APIKeyHeader"] = {
             "type": "apiKey",

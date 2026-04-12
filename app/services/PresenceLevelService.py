@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 from datetime import date, datetime
-from typing import TYPE_CHECKING, Protocol
 from zoneinfo import ZoneInfo
 
 from huawei_lte_api.Client import Client
@@ -10,21 +9,15 @@ from huawei_lte_api.Connection import Connection
 from readerwriterlock import rwlock
 
 from app.services.MacAddressHelper import should_ignore_device
+from app.services.MessageService import MessageService
 from app.services.occupancy.Model import OccupancyType
 from app.services.occupancy.OccupancyService import OccupancyService
 from app.services.PollingService import PollingService
 from app.services.PresenceLevel import PresenceLevel
 from app.services.PresenceThresholds import PresenceThresholds
+from app.services.PushSender import PushSender
 from app.services.VirtualDay import get_virtual_date
-
-if TYPE_CHECKING:
-    from app.services.MessageService import MessageService
-    from app.services.WeatherService import WeatherService
-
-
-class PushSender(Protocol):
-    def send_to_all_sync(self, title: str, body: str) -> None: ...
-
+from app.services.WeatherService import WeatherService
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -128,7 +121,7 @@ class PresenceLevelService(PollingService):
         self._last_push_virtual_date = virtual_today
         title, body = self._build_push_message(new_level)
         logger.info("First non-empty presence today — sending push notifications")
-        self._push_sender.send_to_all_sync(title, body)
+        self._push_sender.send_to_topic_sync("presence", title, body)
         return True
 
     def _build_push_message(self, level: PresenceLevel) -> tuple[str, str]:

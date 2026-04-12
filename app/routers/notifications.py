@@ -59,7 +59,7 @@ async def get_notifications_as_html(
     if len(notifications) == 0:
         return HTMLResponse("")
 
-    # Combine all queried messages as markdown, convert to sanitised HTML
+    # Combine all queried messages as markdown, convert to sanitized HTML
     rendered_html = "\n<hr/>".join(
         [f'<div data-notification-id="{n.id}">{nh3.clean(markdown.markdown(n.message))}</div>' for n in notifications]
     )

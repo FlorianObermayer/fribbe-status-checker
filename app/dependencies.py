@@ -72,15 +72,6 @@ def startup() -> None:
     # -- Messaging & notifications -------------------------------------------
     _message_service = MessageService()
 
-    _notification_service = NotificationService()
-    _notification_service.start_cleanup_job()
-
-    # -- Weather (optional) --------------------------------------------------
-    if env.OPENWEATHERMAP_API_KEY and env.WEATHER_LAT is not None and env.WEATHER_LON is not None:
-        _weather_service = WeatherService(env.OPENWEATHERMAP_API_KEY, env.WEATHER_LAT, env.WEATHER_LON)
-    else:
-        _logger.warning("OpenWeatherMap not configured; weather-aware messages disabled")
-
     # -- Push notifications (optional) ---------------------------------------
     if env.VAPID_PRIVATE_KEY and env.VAPID_PUBLIC_KEY and env.VAPID_CLAIM_SUBJECT:
         _push_subscription_service = PushSubscriptionService(
@@ -88,6 +79,15 @@ def startup() -> None:
         )
     else:
         _logger.warning("VAPID keys not configured; push notifications disabled")
+
+    _notification_service = NotificationService(push_sender=_push_subscription_service)
+    _notification_service.start_cleanup_job()
+
+    # -- Weather (optional) --------------------------------------------------
+    if env.OPENWEATHERMAP_API_KEY and env.WEATHER_LAT is not None and env.WEATHER_LON is not None:
+        _weather_service = WeatherService(env.OPENWEATHERMAP_API_KEY, env.WEATHER_LAT, env.WEATHER_LON)
+    else:
+        _logger.warning("OpenWeatherMap not configured; weather-aware messages disabled")
 
     # -- Presence detection --------------------------------------------------
     _presence_service = PresenceLevelService(
