@@ -25,22 +25,20 @@ from app.version import VERSION
 _logger = logging.getLogger("uvicorn.error")
 
 
+_csp_domain_src: list[str] = [env.CSP_DOMAIN] if env.CSP_DOMAIN else []
 _csp = (
     ContentSecurityPolicy()
-    .default_src("'self'", "https://*.fribbe-beach.de")
+    .default_src("'self'", *_csp_domain_src)
     .script_src(
         "'self'",
-        "https://*.fribbe-beach.de",
+        *_csp_domain_src,
         "'sha256-nMQAQejeJNzygq389v6PkLiAKpJ1N8/ayX83QB0thSU='",  # Hash of the FOUC-prevention inline <script>
     )
-    .style_src(
-        "'self'",
-        "https://*.fribbe-beach.de",
-        "https://fonts.googleapis.com",
-    )
-    .font_src("'self'", "https://*.fribbe-beach.de", "https://fonts.gstatic.com")
+    .style_src("'self'", *_csp_domain_src, "https://fonts.googleapis.com")
+    .font_src("'self'", *_csp_domain_src, "https://fonts.gstatic.com")
     .object_src("'none'")
-    .img_src("'self'", "https://*.fribbe-beach.de", "https://img.shields.io", "data:")
+    .img_src("'self'", *_csp_domain_src, "https://img.shields.io", "data:")
+    .custom_directive("style-src-attr", "'unsafe-inline'")
 )
 secure_headers = Secure(csp=_csp)
 

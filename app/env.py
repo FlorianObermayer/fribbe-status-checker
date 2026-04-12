@@ -27,11 +27,14 @@ POLLING_STOP_TIMEOUT_SECONDS: int = 10
 # Required
 # ---------------------------------------------------------------------------
 
+APP_URL: str = ""
+
 SESSION_SECRET_KEY: str = ""
 LOCAL_DATA_PATH: str = ""
 API_KEYS_PATH: str = ""
 
 _REQUIRED: list[str] = [
+    "APP_URL",
     "SESSION_SECRET_KEY",
     "LOCAL_DATA_PATH",
     "API_KEYS_PATH",
@@ -86,6 +89,10 @@ WEATHER_LAT: float | None = None
 WEATHER_LON: float | None = None
 WEATHER_CACHE_TTL_SECONDS: int = 1800  # 30 minutes
 
+# Optional domain added to all Content-Security-Policy source lists (e.g. "https://*.example.com").
+# When unset only 'self' is used.
+CSP_DOMAIN: str | None = None
+
 
 def load() -> None:
     """Load (or reload) all env var values into the module-level globals.
@@ -96,6 +103,7 @@ def load() -> None:
     rule, which treats uppercase module-level names as Final by convention.
     """
     g = globals()
+    g["APP_URL"] = os.environ.get("APP_URL") or ""
     g["SESSION_SECRET_KEY"] = os.environ.get("SESSION_SECRET_KEY", "")
     g["LOCAL_DATA_PATH"] = os.environ.get("LOCAL_DATA_PATH", "")
     g["API_KEYS_PATH"] = os.environ.get("API_KEYS_PATH", "")
@@ -131,6 +139,7 @@ def load() -> None:
     g["WEATHER_LON"] = float(_lon) if _lon else None
 
     g["WEATHER_CACHE_TTL_SECONDS"] = int(os.environ.get("WEATHER_CACHE_TTL_SECONDS") or 1800)  # 30 minutes
+    g["CSP_DOMAIN"] = os.environ.get("CSP_DOMAIN") or None
     _log()
 
 
