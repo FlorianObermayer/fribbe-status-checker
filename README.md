@@ -52,7 +52,7 @@ A dev container configuration is also available. Alternatively, use the `Python:
 
 ```sh
 uv run pytest          # run tests (reads .env.test automatically)
-uv run lint            # ruff format + ruff check --fix + pyright
+uv run lint --fix      # backend and frontend lint + auto-fix
 ```
 
 ## Configuration

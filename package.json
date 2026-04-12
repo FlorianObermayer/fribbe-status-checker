@@ -1,0 +1,11 @@
+{
+  "name": "fribbe-status-checker",
+  "private": true,
+  "description": "Dev tooling only (HTML/CSS/JS linting). Not part of the production image.",
+  "devDependencies": {
+    "htmlhint": "^1.9.2",
+    "markdownlint-cli2": "^0.21.0",
+    "stylelint": "^17.7.0",
+    "stylelint-config-standard": "^40.0.0"
+  }
+}
