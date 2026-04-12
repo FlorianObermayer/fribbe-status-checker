@@ -51,7 +51,7 @@ filterwarnings = [
 
 [tool.ruff]
 line-length = 120
-exclude = [".venv"]
+exclude = [".venv", "node_modules"]
 indent-width = 4
 
 [tool.ruff.format]

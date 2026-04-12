@@ -10,6 +10,14 @@
             "problemMatcher": [
                 "$python"
             ]
+        },
+        {
+            "label": "lint & fix",
+            "type": "shell",
+            "command": "uv run lint --fix",
+            "problemMatcher": [
+                "$python"
+            ]
         }
     ]
 }

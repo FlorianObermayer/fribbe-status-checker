@@ -7,7 +7,8 @@ FastAPI beach volleyball status app: presence detection (router polling), occupa
 ```sh
 uv run dev             # run app locally (http://localhost:8007)
 uv run pytest          # run tests (reads .env.test automatically)
-uv run lint            # ruff format + ruff check --fix + pyright
+uv run lint            # backend and frontend lint
+uv run lint --fix      # backend and frontend lint + auto-fix
 ```
 
 Env files: create `.env.dev` and `.env.test` from `.env.template`. Required: `SESSION_SECRET_KEY`, `LOCAL_DATA_PATH`, `API_KEYS_PATH`.

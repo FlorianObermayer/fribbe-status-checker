@@ -4,3 +4,11 @@
 dev-data/
 .venv/
 .git/
+
+# Node — dev tooling only, not part of the production image
+
+node_modules/
+package.json
+package-lock.json
+.htmlhintrc
+.stylelintrc.json
