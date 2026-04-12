@@ -14,7 +14,7 @@ from starlette_csrf.middleware import CSRFMiddleware
 from starsessions import InMemoryStore, SessionAutoloadMiddleware, SessionMiddleware
 
 import app.env as env
-from app.routers import internal, notifications, pages, push, status
+from app.routers import internal, misc, notifications, pages, push, status
 
 TEST_ADMIN_TOKEN = "test-admin-token-" + "A" * 32
 
@@ -42,6 +42,7 @@ def test_app() -> FastAPI:
         cookie_https_only=False,
         cookie_same_site="lax",
     )
+    test_app.include_router(misc.router)
     test_app.include_router(status.router)
     test_app.include_router(push.router)
     test_app.include_router(internal.router)

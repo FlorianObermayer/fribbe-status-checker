@@ -217,6 +217,40 @@ def test_signout_accepts_valid_csrf_for_session_auth(
 
 
 # ---------------------------------------------------------------------------
+# /manifest.json (PWA manifest)
+# ---------------------------------------------------------------------------
+
+
+def test_manifest_json_returns_valid_pwa_manifest(client: TestClient) -> None:
+    response = client.get("/manifest.json")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/manifest+json"
+    body = response.json()
+    assert body["display"] == "standalone"
+    assert body["start_url"] == "/"
+    assert body["name"] == "Fribbe Beach - Status"
+    assert len(body["icons"]) > 0
+
+
+def test_index_html_includes_pwa_meta_tags(client: TestClient) -> None:
+    response = client.get("/")
+
+    assert response.status_code == 200
+    html = response.text
+    assert '<link rel="manifest" href="/manifest.json">' in html
+    assert "apple-mobile-web-app-capable" in html
+    assert "apple-touch-icon" in html
+
+
+def test_index_html_includes_ios_install_hint(client: TestClient) -> None:
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert 'id="push-ios-hint"' in response.text
+
+
+# ---------------------------------------------------------------------------
 # /api/status
 # ---------------------------------------------------------------------------
 

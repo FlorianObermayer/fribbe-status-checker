@@ -28,6 +28,11 @@ async def favicon() -> FileResponse:
     return FileResponse("app/static/images/favicon.ico")
 
 
+@router.get("/manifest.json", include_in_schema=False)
+async def manifest() -> FileResponse:
+    return FileResponse("app/static/manifest.json", media_type="application/manifest+json")
+
+
 @router.get("/sw.js", include_in_schema=False)
 async def service_worker() -> FileResponse:
     return FileResponse(

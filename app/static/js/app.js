@@ -621,7 +621,18 @@ function setTopicCheckboxes(topics) {
 }
 
 async function initPushNotifications() {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        // On iOS Safari, PushManager is only available in standalone (home screen) mode.
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+            navigator.standalone === true;
+        if (isIOS && !isStandalone) {
+            const hint = document.getElementById('push-ios-hint');
+            if (hint) hint.classList.remove('hidden');
+        }
+        return;
+    }
 
     let vapidPublicKey;
     try {
