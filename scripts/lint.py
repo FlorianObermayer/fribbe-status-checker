@@ -14,7 +14,6 @@ PROJECT_ROOT = str(Path(__file__).resolve().parent.parent)
 
 
 def _run(args: list[str], env: dict[str, str] | None = None) -> None:
-    " ".join(args)
     result = subprocess.run(args, cwd=PROJECT_ROOT, env=env, check=False)  # noqa: S603
     if result.returncode != 0:
         sys.exit(result.returncode)
