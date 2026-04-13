@@ -1,46 +1,19 @@
-<!DOCTYPE html>
-<html lang="de">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+{% block head_meta %}
     <meta name="robots" content="noindex, nofollow">
-    <title>Impressum &amp; Datenschutz</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/legal.styles.css?v={{ version }}">
-    <!-- Prevent flash of unstyled content when dark mode is active -->
-    <script>
-        (function () {
-            var t = localStorage.getItem('theme');
-            if (t === 'dark' || (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                document.documentElement.classList.add('dark-mode');
-            }
-        }());
-    </script>
-</head>
+{% endblock %}
 
-<body>
+{% block title %}Impressum &amp; Datenschutz{% endblock %}
+
+{% block head_styles %}
+    <link rel="stylesheet" href="/static/css/legal.styles.css?v={{ version }}">
+{% endblock %}
+
+{% block content %}
     <main class="legal-shell">
         <section class="legal-card">
-            <button id="theme-toggle-btn" class="theme-toggle-btn" aria-label="Erscheinungsbild wechseln"
-                title="Erscheinungsbild wechseln">
-                <svg id="theme-icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <circle cx="12" cy="12" r="5" />
-                    <line x1="12" y1="1" x2="12" y2="3" />
-                    <line x1="12" y1="21" x2="12" y2="23" />
-                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-                    <line x1="1" y1="12" x2="3" y2="12" />
-                    <line x1="21" y1="12" x2="23" y2="12" />
-                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-                </svg>
-                <svg id="theme-icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-                </svg>
-            </button>
+            {% include "_theme_toggle.html" %}
 
             <a href="/" class="back-link">&larr; Zurück</a>
 
@@ -158,8 +131,4 @@
 
         </section>
     </main>
-    <script src="/static/js/csrf.js?v={{ version }}"></script>
-    <script src="/static/js/theme.js?v={{ version }}"></script>
-</body>
-
-</html>
+{% endblock %}

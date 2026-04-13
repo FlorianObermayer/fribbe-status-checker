@@ -12,7 +12,10 @@ from pathlib import Path
 
 PROJECT_ROOT = str(Path(__file__).resolve().parent.parent)
 JS_FILES = sorted(str(p) for p in Path(PROJECT_ROOT, "app/static/js").rglob("*.js"))
-HTML_FILES = sorted(str(p) for p in Path(PROJECT_ROOT, "app/templates").rglob("*.html"))
+_ALL_HTML = sorted(Path(PROJECT_ROOT, "app/templates").rglob("*.html"))
+# base.html is a complete HTML document; everything else is a Jinja2 fragment
+HTML_FULL = [str(p) for p in _ALL_HTML if p.name == "base.html"]
+HTML_FRAGMENTS = [str(p) for p in _ALL_HTML if p.name != "base.html"]
 CSS_FILES = sorted(str(p) for p in Path(PROJECT_ROOT, "app/static/css").rglob("*.css"))
 NODE_BIN = Path(PROJECT_ROOT) / "node_modules" / ".bin"
 
@@ -33,7 +36,12 @@ def main() -> None:
     _run(["pyright"], "pyright", env=node_env)
     for js_file in JS_FILES:
         _run(["node", "--check", js_file], f"node --check {Path(js_file).name}", env=node_env)
-    _run([str(NODE_BIN / "htmlhint"), *HTML_FILES], "htmlhint", env=node_env)
+    _run([str(NODE_BIN / "htmlhint"), *HTML_FULL], "htmlhint (full documents)", env=node_env)
+    _run(
+        [str(NODE_BIN / "htmlhint"), "--config", ".htmlhintrc-fragment", *HTML_FRAGMENTS],
+        "htmlhint (template fragments)",
+        env=node_env,
+    )
     md_cmd = [str(NODE_BIN / "markdownlint-cli2")]
     if fix:
         md_cmd.append("--fix")
