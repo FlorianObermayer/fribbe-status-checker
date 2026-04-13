@@ -560,6 +560,17 @@ body.status-many {
     margin-top: 10px;
 }
 
+.hint-link {
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px dotted currentcolor;
+}
+
+.hint-link:hover {
+    opacity: 1;
+    border-bottom-style: solid;
+}
+
 .occupancy-header-row {
     display: flex;
     align-items: center;
