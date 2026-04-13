@@ -408,10 +408,15 @@ def test_session_preserves_role_for_api_key(
 
     # Authenticate via header — creates a session
     assert client.get("/api/internal/details", headers={"api_key": api_key.key}).status_code == 200
+    csrf_token = client.cookies.get("csrftoken")
+    assert csrf_token is not None
+    csrf_headers = {"x-csrf-token": csrf_token}
 
     # Session-only request (no api_key header) — should inherit READER role
     assert client.get("/api/internal/details").status_code == 200  # READER can read
-    assert client.post("/api/notifications", json={"message": "x"}).status_code == 403  # but can't create
+    assert (
+        client.post("/api/notifications", json={"message": "x"}, headers=csrf_headers).status_code == 403
+    )  # but can't create
 
 
 def test_admin_session_via_form_login(
