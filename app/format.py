@@ -12,7 +12,7 @@ def seconds_to_human(seconds: int) -> str:
         >>> seconds_to_human(604800)
         '7 Tage'
         >>> seconds_to_human(90061)
-        '1 Tag, 1 Stunde, 1 Minute'
+        '1 Tag, 1 Stunde, 1 Minute, 1 Sekunde'
 
     """
     if seconds < 0:
