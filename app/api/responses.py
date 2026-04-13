@@ -126,7 +126,7 @@ class MaskedApiKey(BaseModel):
     def from_api_key(api_key: "ApiKey") -> "MaskedApiKey":
         """Create a masked representation of the given API key."""
         return MaskedApiKey(
-            key_prefix=api_key.key[:4] + "...",
+            key_prefix=api_key.key[: env.MIN_KEY_PREFIX_LENGTH] + "...",
             comment=api_key.comment,
             valid_until=api_key.valid_until,
             role=api_key.role,

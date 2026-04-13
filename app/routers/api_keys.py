@@ -13,7 +13,7 @@ from app.api.schema import requires_auth_extra
 
 router = APIRouter(prefix="/api/internal", tags=["API Keys"])
 
-_MIN_KEY_PREFIX_LENGTH = 5
+MIN_KEY_PREFIX_LENGTH = 5
 
 
 @router.post(
@@ -53,8 +53,6 @@ def delete_api_key(
     _: Annotated[str, Depends(HybridAuth(min_role=AccessRole.ADMIN))],
 ) -> None:
     """Delete an API key by its value or prefix (at least 5 characters). Only delete if there is a unique match."""
-    if len(request.key) < _MIN_KEY_PREFIX_LENGTH:
-        raise HTTPException(status_code=400, detail="Key prefix must be at least 5 characters long")
     result = EphemeralAPIKeyStore.remove(request.key)
     if result == RemoveResult.NOT_FOUND:
         raise HTTPException(status_code=404, detail="Api key not found")

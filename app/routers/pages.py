@@ -115,7 +115,11 @@ async def signout(request: Request) -> JSONResponse:
     """Clear the session and redirect to the home page."""
     # CSRF enforcement is handled by starlette-csrf middleware.
     request.session.clear()
-    return JSONResponse({"redirect": "/"})
+    response = JSONResponse({"redirect": "/"})
+    # Explicitly expire the CSRF token cookie; the CSRF middleware only sets it
+    # when absent, so it would otherwise linger in the browser after sign-out.
+    response.delete_cookie("csrftoken", path="/", samesite="lax", secure=env.HTTPS_ONLY)
+    return response
 
 
 @router.get("/notification-create", response_class=HTMLResponse, tags=["Notifications", "HTML"])

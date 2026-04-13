@@ -5,7 +5,6 @@ with ``dependency_overrides`` cleared before and after each test so that
 individual tests can inject mocks cleanly via ``app.dependency_overrides``.
 """
 
-import re
 from collections.abc import Generator
 
 import pytest
@@ -29,7 +28,6 @@ def test_app() -> FastAPI:
         CSRFMiddleware,
         secret=env.SESSION_SECRET_KEY,
         sensitive_cookies={"session_cookie"},
-        exempt_urls=[re.compile(r"^/api/")],
         header_name="x-csrf-token",
         cookie_secure=False,
         cookie_samesite="lax",

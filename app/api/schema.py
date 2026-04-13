@@ -5,7 +5,7 @@ from fastapi import FastAPI
 
 def requires_auth_extra() -> dict[str, Any]:
     """Return OpenAPI security metadata for authenticated endpoints."""
-    return {"security": [{"APIKeyHeader": []}, {"SessionCookie": [], "CSRFTokenHeader": []}]}
+    return {"security": [{"APIKeyHeader": []}, {"SessionCookie": []}]}
 
 
 def update_openapi_schema(app: FastAPI) -> None:
@@ -33,14 +33,6 @@ def update_openapi_schema(app: FastAPI) -> None:
             "type": "apiKey",
             "name": "session",
             "in": "cookie",
-        }
-
-    if "CSRFTokenHeader" not in openapi_schema["components"]["securitySchemes"]:
-        openapi_schema["components"]["securitySchemes"]["CSRFTokenHeader"] = {
-            "type": "apiKey",
-            "name": "x-csrf-token",
-            "in": "header",
-            "description": "Required when authenticating via session cookie. Read the value from the 'csrftoken' browser cookie.",
         }
 
     app.openapi_schema = openapi_schema

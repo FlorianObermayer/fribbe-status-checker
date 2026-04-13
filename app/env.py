@@ -17,6 +17,9 @@ from app.version import VERSION as _VERSION
 # Minimum token length for all generated and configured tokens.
 MIN_TOKEN_LENGTH: int = 48
 
+# Minimum key prefix length for all API keys.
+MIN_KEY_PREFIX_LENGTH: int = 5
+
 # Session cookie max age in seconds (7 days).
 SESSION_MAX_AGE_SECONDS: int = 60 * 60 * 24 * 7
 SESSION_CLEANUP_INTERVAL_SECONDS: int = 60 * 60  # 1 hour
