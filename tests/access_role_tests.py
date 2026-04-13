@@ -102,14 +102,14 @@ def test_api_key_from_dict_parses_role() -> None:
     assert key.role == AccessRole.READER
 
 
-def test_api_key_from_dict_missing_role_defaults_to_admin() -> None:
+def test_api_key_from_dict_missing_role_defaults_to_reader() -> None:
     d = {
         "key": "A" * env.MIN_TOKEN_LENGTH,
         "comment": "",
         "valid_until": "2030-01-01T00:00:00+00:00",
     }
     key = ApiKey.from_dict(d)
-    assert key.role == AccessRole.ADMIN
+    assert key.role == AccessRole.READER
 
 
 def test_api_key_generate_new_default_role_is_reader() -> None:

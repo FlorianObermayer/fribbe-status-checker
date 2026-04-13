@@ -89,13 +89,13 @@ Every authenticated subject carries an **AccessRole** (`READER < NOTIFICATION_OP
 
 | Role | Permissions |
 | --- | --- |
-| `READER` | Read-only access to all protected endpoints (details, wardens list, notifications list, API keys list). |
+| `READER` | Read-only access to all protected endpoints. |
 | `NOTIFICATION_OPERATOR` | Everything in READER, plus create / update / delete notifications. |
 | `ADMIN` | Full access — API key management, warden CRUD, config changes, and all of the above. |
 
 - `ADMIN_TOKEN` always maps to `ADMIN`.
 - API keys carry a `role` field. New keys default to `READER`; specify `"role": 3` (or `"role": "admin"`) in `POST /api/internal/api_key` to set a higher role.
-- Existing stored keys without a `role` field default to `ADMIN` for backward compatibility.
+- Existing stored keys without a `role` field fallback to `READER` for backward compatibility.
 
 ### Bootstrap (first API key)
 

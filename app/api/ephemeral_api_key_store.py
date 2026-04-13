@@ -12,6 +12,7 @@ from app.api.responses import ApiKey
 from app.services.persistent_collections import PersistentList
 
 _write_lock = threading.Lock()
+_LOCAL_TZ = ZoneInfo("Europe/Berlin")
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -84,12 +85,18 @@ class EphemeralAPIKeyStore:
             return RemoveResult.DELETED
 
     @staticmethod
+    def _is_not_expired(valid_until: datetime) -> bool:
+        """Return True if valid_until is in the future. Naive datetimes are assumed to be Europe/Berlin."""
+        if valid_until.tzinfo is None:
+            valid_until = valid_until.replace(tzinfo=_LOCAL_TZ)
+        return valid_until >= datetime.now(tz=_LOCAL_TZ)
+
+    @staticmethod
     def is_key_valid(key: str | None) -> bool:
         """Check whether a key is present and not expired."""
         if key is None:
             logger.info("EphemeralAPIKeyStore::is_key_valid(api_key=%s) - key is None", redact_key(key))
             return False
-        now = datetime.now(tz=ZoneInfo("Europe/Berlin"))
         entries = EphemeralAPIKeyStore.load()
         for entry in entries:
             if not secrets.compare_digest(entry.key, key):
@@ -108,8 +115,7 @@ class EphemeralAPIKeyStore:
                 )
                 return False
             try:
-                now_with_tz = now if valid_until.tzinfo is None else datetime.now(valid_until.tzinfo)
-                if valid_until >= now_with_tz:
+                if EphemeralAPIKeyStore._is_not_expired(valid_until):
                     logger.info("EphemeralAPIKeyStore::is_key_valid(api_key=%s) - key is valid", redact_key(key))
                     return True
 
@@ -132,7 +138,6 @@ class EphemeralAPIKeyStore:
         """Return the role for a valid (present and not expired) API key, or None."""
         if key is None:
             return None
-        now = datetime.now(tz=ZoneInfo("Europe/Berlin"))
         entries = EphemeralAPIKeyStore.load()
         for entry in entries:
             if not secrets.compare_digest(entry.key, key):
@@ -141,8 +146,7 @@ class EphemeralAPIKeyStore:
             if not valid_until:
                 return None
             try:
-                now_with_tz = now if valid_until.tzinfo is None else datetime.now(valid_until.tzinfo)
-                if valid_until >= now_with_tz:
+                if EphemeralAPIKeyStore._is_not_expired(valid_until):
                     return entry.role
                 return None
             except (TypeError, OverflowError):

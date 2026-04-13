@@ -96,7 +96,7 @@ class ApiKey(BaseModel):
     @classmethod
     def from_dict(cls, d: dict[str, str]) -> Self:
         """Deserialize from a plain dict."""
-        role_str = d.get("role", "admin")
+        role_str = d.get("role", "reader")
         return cls(
             key=d["key"],
             comment=d["comment"],
