@@ -12,7 +12,7 @@ that tests can import routers without spawning real background threads.
 """
 
 import logging
-from typing import Annotated
+from typing import Annotated, cast
 
 from fastapi import Depends, HTTPException
 
@@ -65,23 +65,26 @@ def startup() -> None:
 
     # -- Internal (router device tracking) -----------------------------------
     _svc.internal = InternalService()
-    _svc.internal.start_polling(
-        env.ROUTER_IP,
-        env.ROUTER_USERNAME,
-        env.ROUTER_PASSWORD,
-        env.INTERNAL_POLLING_INTERVAL_SECONDS,
-        env.INTERNAL_POLLING_DELAY_SECONDS,
-    )
+    if env.is_presence_enabled():
+        _svc.internal.start_polling(
+            env.ROUTER_IP,
+            env.ROUTER_USERNAME,
+            env.ROUTER_PASSWORD,
+            env.INTERNAL_POLLING_INTERVAL_SECONDS,
+            env.INTERNAL_POLLING_DELAY_SECONDS,
+        )
+    else:
+        _logger.warning("Router credentials not configured; internal polling disabled")
 
     # -- Messaging & notifications -------------------------------------------
     _svc.message = MessageService()
 
     # -- Push notifications (optional) ---------------------------------------
-    if env.VAPID_PRIVATE_KEY and env.VAPID_PUBLIC_KEY and env.VAPID_CLAIM_SUBJECT:
+    if env.is_push_enabled():
         _svc.push_subscription = PushSubscriptionService(
-            env.VAPID_PRIVATE_KEY,
-            env.VAPID_PUBLIC_KEY,
-            env.VAPID_CLAIM_SUBJECT,
+            cast("str", env.VAPID_PRIVATE_KEY),
+            cast("str", env.VAPID_PUBLIC_KEY),
+            cast("str", env.VAPID_CLAIM_SUBJECT),
         )
     else:
         _logger.warning("VAPID keys not configured; push notifications disabled")
@@ -90,8 +93,12 @@ def startup() -> None:
     _svc.notification.start_cleanup_job()
 
     # -- Weather (optional) --------------------------------------------------
-    if env.OPENWEATHERMAP_API_KEY and env.WEATHER_LAT is not None and env.WEATHER_LON is not None:
-        _svc.weather = WeatherService(env.OPENWEATHERMAP_API_KEY, env.WEATHER_LAT, env.WEATHER_LON)
+    if env.is_weather_enabled():
+        _svc.weather = WeatherService(
+            cast("str", env.OPENWEATHERMAP_API_KEY),
+            cast("float", env.WEATHER_LAT),
+            cast("float", env.WEATHER_LON),
+        )
     else:
         _logger.warning("OpenWeatherMap not configured; weather-aware messages disabled")
 
@@ -102,13 +109,16 @@ def startup() -> None:
         _svc.push_subscription,
         _svc.occupancy,
     )
-    _svc.presence.start_polling(
-        env.ROUTER_IP,
-        env.ROUTER_USERNAME,
-        env.ROUTER_PASSWORD,
-        env.PRESENCE_POLLING_INTERVAL_SECONDS,
-        env.PRESENCE_POLLING_DELAY_SECONDS,
-    )
+    if env.is_presence_enabled():
+        _svc.presence.start_polling(
+            env.ROUTER_IP,
+            env.ROUTER_USERNAME,
+            env.ROUTER_PASSWORD,
+            env.PRESENCE_POLLING_INTERVAL_SECONDS,
+            env.PRESENCE_POLLING_DELAY_SECONDS,
+        )
+    else:
+        _logger.warning("Router credentials not configured; presence polling disabled")
 
 
 def shutdown() -> None:

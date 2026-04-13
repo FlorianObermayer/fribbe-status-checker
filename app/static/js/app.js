@@ -498,7 +498,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupLegendToggle();
 
     const signedIn = document.body.dataset.signedIn === 'true';
-    const showAdminAuth = document.body.dataset.showAdminAuth === 'true';
+    const showAdminAuth = document.body.dataset.showAuthButton === 'true';
     const bootstrapMode = document.body.dataset.bootstrapMode === 'true';
 
     const bootstrapBanner = document.getElementById('bootstrap-banner');

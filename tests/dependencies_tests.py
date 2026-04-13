@@ -47,6 +47,9 @@ def test_startup_creates_services_and_starts_pollers(  # noqa: PLR0913
     mock_env.INTERNAL_POLLING_DELAY_SECONDS = 30
     mock_env.PRESENCE_POLLING_INTERVAL_SECONDS = 60
     mock_env.PRESENCE_POLLING_DELAY_SECONDS = 0
+    mock_env.is_presence_enabled.return_value = True
+    mock_env.is_push_enabled.return_value = False
+    mock_env.is_weather_enabled.return_value = False
 
     deps.startup()
 
@@ -96,6 +99,9 @@ def test_shutdown_stops_all_pollers(
     mock_env.INTERNAL_POLLING_DELAY_SECONDS = 30
     mock_env.PRESENCE_POLLING_INTERVAL_SECONDS = 60
     mock_env.PRESENCE_POLLING_DELAY_SECONDS = 0
+    mock_env.is_presence_enabled.return_value = True
+    mock_env.is_push_enabled.return_value = False
+    mock_env.is_weather_enabled.return_value = False
 
     deps.startup()
     deps.shutdown()

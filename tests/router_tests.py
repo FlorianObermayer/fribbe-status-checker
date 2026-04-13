@@ -214,6 +214,100 @@ def test_get_legal_page_returns_404_when_only_name_configured(
     assert response.status_code == 404
 
 
+def test_get_legal_page_shows_push_section_when_feature_enabled(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(env, "OPERATOR_NAME", "Max Mustermann")
+    monkeypatch.setattr(env, "OPERATOR_EMAIL", "max@example.com")
+    monkeypatch.setattr(env, "is_push_enabled", lambda: True)
+    monkeypatch.setattr(env, "is_presence_enabled", lambda: False)
+    monkeypatch.setattr(env, "is_weather_enabled", lambda: False)
+
+    response = client.get("/legal")
+
+    assert response.status_code == 200
+    assert "Push-Benachrichtigungen" in response.text
+    assert "WLAN-Anwesenheitserkennung" not in response.text
+    assert "OpenWeatherMap" not in response.text
+
+
+def test_get_legal_page_hides_push_section_when_feature_disabled(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(env, "OPERATOR_NAME", "Max Mustermann")
+    monkeypatch.setattr(env, "OPERATOR_EMAIL", "max@example.com")
+    monkeypatch.setattr(env, "is_push_enabled", lambda: False)
+    monkeypatch.setattr(env, "is_presence_enabled", lambda: False)
+    monkeypatch.setattr(env, "is_weather_enabled", lambda: False)
+
+    response = client.get("/legal")
+
+    assert response.status_code == 200
+    assert "Push-Benachrichtigungen" not in response.text
+
+
+def test_get_legal_page_shows_presence_section_when_feature_enabled(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(env, "OPERATOR_NAME", "Max Mustermann")
+    monkeypatch.setattr(env, "OPERATOR_EMAIL", "max@example.com")
+    monkeypatch.setattr(env, "is_push_enabled", lambda: False)
+    monkeypatch.setattr(env, "is_presence_enabled", lambda: True)
+    monkeypatch.setattr(env, "is_weather_enabled", lambda: False)
+
+    response = client.get("/legal")
+
+    assert response.status_code == 200
+    assert "WLAN-Anwesenheitserkennung" in response.text
+    assert "Namentliche Zuordnung" in response.text
+
+
+def test_get_legal_page_hides_presence_section_when_feature_disabled(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(env, "OPERATOR_NAME", "Max Mustermann")
+    monkeypatch.setattr(env, "OPERATOR_EMAIL", "max@example.com")
+    monkeypatch.setattr(env, "is_push_enabled", lambda: False)
+    monkeypatch.setattr(env, "is_presence_enabled", lambda: False)
+    monkeypatch.setattr(env, "is_weather_enabled", lambda: False)
+
+    response = client.get("/legal")
+
+    assert response.status_code == 200
+    assert "WLAN-Anwesenheitserkennung" not in response.text
+    assert "Namentliche Zuordnung" not in response.text
+
+
+def test_get_legal_page_shows_weather_section_when_feature_enabled(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(env, "OPERATOR_NAME", "Max Mustermann")
+    monkeypatch.setattr(env, "OPERATOR_EMAIL", "max@example.com")
+    monkeypatch.setattr(env, "is_push_enabled", lambda: False)
+    monkeypatch.setattr(env, "is_presence_enabled", lambda: False)
+    monkeypatch.setattr(env, "is_weather_enabled", lambda: True)
+
+    response = client.get("/legal")
+
+    assert response.status_code == 200
+    assert "OpenWeatherMap" in response.text
+
+
+def test_get_legal_page_hides_weather_section_when_feature_disabled(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(env, "OPERATOR_NAME", "Max Mustermann")
+    monkeypatch.setattr(env, "OPERATOR_EMAIL", "max@example.com")
+    monkeypatch.setattr(env, "is_push_enabled", lambda: False)
+    monkeypatch.setattr(env, "is_presence_enabled", lambda: False)
+    monkeypatch.setattr(env, "is_weather_enabled", lambda: False)
+
+    response = client.get("/legal")
+
+    assert response.status_code == 200
+    assert "OpenWeatherMap" not in response.text
+
+
 def test_index_shows_legal_link_when_operator_configured(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(env, "OPERATOR_NAME", "Max Mustermann")
     monkeypatch.setattr(env, "OPERATOR_EMAIL", "max@example.com")
