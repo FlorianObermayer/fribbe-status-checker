@@ -192,6 +192,50 @@ def test_get_legal_page_renders_impressum(client: TestClient, monkeypatch: pytes
     assert "max@example.com" in response.text
 
 
+def test_get_legal_page_returns_404_when_operator_not_configured(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(env, "OPERATOR_NAME", "")
+    monkeypatch.setattr(env, "OPERATOR_EMAIL", "")
+
+    response = client.get("/legal")
+
+    assert response.status_code == 404
+
+
+def test_get_legal_page_returns_404_when_only_name_configured(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(env, "OPERATOR_NAME", "Max Mustermann")
+    monkeypatch.setattr(env, "OPERATOR_EMAIL", "")
+
+    response = client.get("/legal")
+
+    assert response.status_code == 404
+
+
+def test_index_shows_legal_link_when_operator_configured(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(env, "OPERATOR_NAME", "Max Mustermann")
+    monkeypatch.setattr(env, "OPERATOR_EMAIL", "max@example.com")
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert 'href="/legal"' in response.text
+
+
+def test_index_hides_legal_link_when_operator_not_configured(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(env, "OPERATOR_NAME", "")
+    monkeypatch.setattr(env, "OPERATOR_EMAIL", "")
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert 'href="/legal"' not in response.text
+
+
 def test_get_auth_page_includes_csrf_cookie_when_signed_in(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
