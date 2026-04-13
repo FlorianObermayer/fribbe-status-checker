@@ -14,17 +14,16 @@ from starlette_csrf.middleware import CSRFMiddleware
 from starsessions import InMemoryStore, SessionAutoloadMiddleware, SessionMiddleware
 
 from app import env
-from app.routers import internal, misc, notifications, pages, push, status
+from app.routers import api_keys, internal, misc, notifications, pages, push, status, wardens
 
 TEST_ADMIN_TOKEN = "test-admin-token-" + "A" * 32
 
-_session_store = InMemoryStore()
 
-
-@pytest.fixture(scope="session")
+@pytest.fixture
 def test_app() -> FastAPI:
     """Minimal FastAPI instance with real routers but no polling side-effects."""
     test_app = FastAPI()
+    session_store = InMemoryStore()
     test_app.add_middleware(
         CSRFMiddleware,
         secret=env.SESSION_SECRET_KEY,
@@ -36,7 +35,7 @@ def test_app() -> FastAPI:
     test_app.add_middleware(SessionAutoloadMiddleware)
     test_app.add_middleware(
         SessionMiddleware,
-        store=_session_store,
+        store=session_store,
         cookie_name="session_cookie",
         lifetime=env.SESSION_MAX_AGE_SECONDS,
         cookie_https_only=False,
@@ -45,8 +44,10 @@ def test_app() -> FastAPI:
     test_app.include_router(misc.router)
     test_app.include_router(status.router)
     test_app.include_router(push.router)
+    test_app.include_router(api_keys.router)
     test_app.include_router(internal.router)
     test_app.include_router(notifications.router)
+    test_app.include_router(wardens.router)
     test_app.include_router(pages.router)
     return test_app
 

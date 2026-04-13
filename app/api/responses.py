@@ -5,6 +5,7 @@ from typing import Self
 from pydantic import BaseModel, Field
 
 from app import env
+from app.api.access_role import AccessRole
 from app.services.internal.model import Warden
 from app.services.notification_service import Notification
 from app.services.occupancy.model import (
@@ -78,9 +79,10 @@ class ApiKey(BaseModel):
     key: str = Field(..., min_length=env.MIN_TOKEN_LENGTH)
     comment: str
     valid_until: datetime
+    role: AccessRole = AccessRole.ADMIN
 
     @staticmethod
-    def generate_new(comment: str, valid_until: datetime) -> "ApiKey":
+    def generate_new(comment: str, valid_until: datetime, role: AccessRole = AccessRole.READER) -> "ApiKey":
         """Generate a new cryptographically random API key."""
         n_bytes = env.MIN_TOKEN_LENGTH // 4 * 3  # convert from base64-url string length to raw byte length
         new_key = secrets.token_urlsafe(n_bytes)
@@ -89,15 +91,17 @@ class ApiKey(BaseModel):
             raise ValueError(
                 msg,
             )
-        return ApiKey(key=new_key, comment=comment, valid_until=valid_until)
+        return ApiKey(key=new_key, comment=comment, valid_until=valid_until, role=role)
 
     @classmethod
     def from_dict(cls, d: dict[str, str]) -> Self:
         """Deserialize from a plain dict."""
+        role_str = d.get("role", "reader")
         return cls(
             key=d["key"],
             comment=d["comment"],
             valid_until=datetime.fromisoformat(d["valid_until"]),
+            role=AccessRole[role_str.upper()],
         )
 
     def to_dict(self) -> dict[str, str]:
@@ -106,6 +110,7 @@ class ApiKey(BaseModel):
             "key": self.key,
             "comment": self.comment,
             "valid_until": self.valid_until.isoformat(),
+            "role": self.role.name.lower(),
         }
 
 
@@ -115,14 +120,16 @@ class MaskedApiKey(BaseModel):
     key_prefix: str
     comment: str
     valid_until: datetime
+    role: AccessRole
 
     @staticmethod
     def from_api_key(api_key: "ApiKey") -> "MaskedApiKey":
         """Create a masked representation of the given API key."""
         return MaskedApiKey(
-            key_prefix=api_key.key[:4] + "...",
+            key_prefix=api_key.key[: env.MIN_KEY_PREFIX_LENGTH] + "...",
             comment=api_key.comment,
             valid_until=api_key.valid_until,
+            role=api_key.role,
         )
 
 

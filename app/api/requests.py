@@ -3,6 +3,8 @@ from datetime import datetime
 from fastapi import Query
 from pydantic import BaseModel, Field, field_validator
 
+from app import env
+from app.api.access_role import AccessRole
 from app.services.push_subscription_service import ALL_TOPICS, VALID_TOPICS, PushTopic
 
 # Single source of truth for all keyword filter options.
@@ -99,12 +101,17 @@ class CreateApiKeyRequest(BaseModel):
 
     comment: str = ""
     valid_until: datetime | None = None
+    role: AccessRole = AccessRole.READER
 
 
 class DeleteApiKeyRequest(BaseModel):
     """Request body for deleting an API key."""
 
-    key: str
+    key: str = Field(
+        ...,
+        min_length=env.MIN_KEY_PREFIX_LENGTH,
+        description=f"Full API key or unique prefix (at least {env.MIN_KEY_PREFIX_LENGTH} characters)",
+    )
 
 
 class PostNotificationRequest(BaseModel):

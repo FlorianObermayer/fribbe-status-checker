@@ -6,7 +6,8 @@ from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import FastAPI, Request, Response
-from fastapi.responses import RedirectResponse
+from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from secure import ContentSecurityPolicy, Secure
 from starlette_csrf.middleware import CSRFMiddleware
@@ -73,6 +74,7 @@ app = FastAPI(
         "name": "MIT",
         "url": "https://github.com/FlorianObermayer/fribbe-status-checker/blob/main/LICENSE",
     },
+    docs_url=None,  # Replaced by a custom /docs route that auto-injects the CSRF header.
 )
 
 app.add_middleware(
@@ -135,5 +137,40 @@ app.include_router(internal.router)
 app.include_router(notifications.router)
 app.include_router(wardens.router)
 app.include_router(pages.router)
+
+
+@app.get("/docs", include_in_schema=False)
+async def swagger_ui() -> HTMLResponse:
+    """Serve Swagger UI with automatic CSRF-token injection from the browser cookie.
+
+    The starlette-csrf middleware sets the ``csrftoken`` cookie on the first GET
+    response but never injects it as the ``X-CSRF-Token`` request header. Without
+    this override every state-changing call made from Swagger UI would be rejected
+    with 403 when the browser session cookie is present.
+
+    /docs is already excluded from the app's Content-Security-Policy headers, so
+    the inline script below is safe.
+    """
+    html = get_swagger_ui_html(openapi_url="/openapi.json", title="Fribbe Status Checker — Docs")
+    # Patch window.fetch so that the csrftoken cookie is forwarded as the
+    # X-CSRF-Token header on every request Swagger UI makes.
+    raw = html.body
+    body = raw.decode() if isinstance(raw, bytes) else bytes(raw).decode()
+    csrf_inject = (
+        "<script>"
+        "(function(){"
+        "var _f=window.fetch;"
+        "window.fetch=function(u,o){"
+        "o=o||{};"
+        "var m=document.cookie.match(/(?:^|;\\s*)csrftoken=([^;]*)/);"
+        "if(m){o.headers=Object.assign({},o.headers,{'X-CSRF-Token':decodeURIComponent(m[1])});}"
+        "return _f.call(this,u,o);"
+        "};"
+        "})();"
+        "</script>"
+    )
+    body = body.replace("</body>", csrf_inject + "\n</body>", 1)
+    return HTMLResponse(content=body)
+
 
 update_openapi_schema(app)

@@ -33,6 +33,46 @@ def test_is_key_valid() -> None:
     assert EphemeralAPIKeyStore.is_key_valid("notfound") is False
 
 
+def test_is_key_valid_naive_datetime() -> None:
+    now_naive = datetime.now()  # no tzinfo
+    valid_key = ApiKey(
+        key="4w69446-02552721-61c1-4535-979e-fb57c8f3c3f0-naive-valid",
+        comment="",
+        valid_until=(now_naive + timedelta(days=1)).replace(microsecond=0),
+    )
+    expired_key = ApiKey(
+        key="4w69446-02552721-61c1-4535-979e-fb57c8f3c3f0-naive-expired",
+        comment="",
+        valid_until=(now_naive - timedelta(days=1)).replace(microsecond=0),
+    )
+    EphemeralAPIKeyStore.save([valid_key, expired_key])
+    assert EphemeralAPIKeyStore.is_key_valid("4w69446-02552721-61c1-4535-979e-fb57c8f3c3f0-naive-valid") is True
+    assert EphemeralAPIKeyStore.is_key_valid("4w69446-02552721-61c1-4535-979e-fb57c8f3c3f0-naive-expired") is False
+
+
+def test_get_valid_key_role_naive_datetime() -> None:
+    now_naive = datetime.now()  # no tzinfo
+    valid_key = ApiKey(
+        key="4w69446-02552721-61c1-4535-979e-fb57c8f3c3f0-role-naive-valid",
+        comment="",
+        valid_until=(now_naive + timedelta(days=1)).replace(microsecond=0),
+    )
+    expired_key = ApiKey(
+        key="4w69446-02552721-61c1-4535-979e-fb57c8f3c3f0-role-naive-expired",
+        comment="",
+        valid_until=(now_naive - timedelta(days=1)).replace(microsecond=0),
+    )
+    EphemeralAPIKeyStore.save([valid_key, expired_key])
+    assert (
+        EphemeralAPIKeyStore.get_valid_key_role("4w69446-02552721-61c1-4535-979e-fb57c8f3c3f0-role-naive-valid")
+        is not None
+    )
+    assert (
+        EphemeralAPIKeyStore.get_valid_key_role("4w69446-02552721-61c1-4535-979e-fb57c8f3c3f0-role-naive-expired")
+        is None
+    )
+
+
 def test_key_too_short() -> None:
     with pytest.raises(ValidationError):
         ApiKey(

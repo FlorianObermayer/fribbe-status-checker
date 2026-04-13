@@ -19,6 +19,7 @@
         "chromecast",
         "cooldown",
         "Coverity",
+        "csrf",
         "dateparser",
         "debugpy",
         "devcontainers",

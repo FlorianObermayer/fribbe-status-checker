@@ -5,6 +5,7 @@ from fastapi import HTTPException, Request
 from starsessions import regenerate_session_id
 
 from app import env
+from app.api.access_role import AccessRole
 from app.api.ephemeral_api_key_header import EphemeralAPIKeyHeader
 from app.api.ephemeral_api_key_store import EphemeralAPIKeyStore
 
@@ -16,11 +17,11 @@ class AuthRedirectError(Exception):
         self.next_url = next_url
 
 
-def resolve_session_subject(request: Request) -> str | None:
+def resolve_session_subject(request: Request) -> tuple[str, AccessRole] | None:
     """Read session data from starsessions and validate it.
 
-    Returns the authenticated subject (admin token value or API key) on
-    success, or *None* after clearing an invalid / expired session.
+    Returns a ``(subject, role)`` tuple on success, or *None* after
+    clearing an invalid / expired session.
     """
     kind = request.session.get("kind")
 
@@ -29,14 +30,16 @@ def resolve_session_subject(request: Request) -> str | None:
         if admin_token:
             subject_hash = request.session.get("subject_hash")
             if subject_hash and secrets.compare_digest(hashlib.sha256(admin_token.encode()).hexdigest(), subject_hash):
-                return admin_token
+                return admin_token, AccessRole.ADMIN
         request.session.clear()
         return None
 
     if kind == "api_key":
         subject = request.session.get("subject")
-        if subject and EphemeralAPIKeyStore.is_key_valid(subject):
-            return subject
+        if subject:
+            role = EphemeralAPIKeyStore.get_valid_key_role(subject)
+            if role is not None:
+                return subject, role
         request.session.clear()
         return None
 
@@ -64,16 +67,30 @@ def create_session(request: Request, token: str) -> bool:
     return True
 
 
+def _resolve_header_role(api_key: str) -> AccessRole:
+    """Determine the role for a credential supplied via the API key header."""
+    admin_token = env.ADMIN_TOKEN
+    if admin_token and secrets.compare_digest(api_key, admin_token):
+        return AccessRole.ADMIN
+    return EphemeralAPIKeyStore.get_valid_key_role(api_key) or AccessRole.READER
+
+
 class HybridAuth:
-    """Authenticate via server-side session or API key header."""
+    """Authenticate via server-side session or API key header.
+
+    *min_role* controls the minimum :class:`AccessRole` required.
+    Authenticated users whose role is below *min_role* receive a 403.
+    """
 
     def __init__(
         self,
         *,
+        min_role: AccessRole = AccessRole.READER,
         bypass_on_empty_api_key_list: bool = False,
         name: str = "api_key",
         auto_error: bool = True,
     ) -> None:
+        self._min_role = min_role
         self._auto_error = auto_error
         self._name = name
         self._bypass_on_empty_api_key_list = bypass_on_empty_api_key_list
@@ -81,10 +98,14 @@ class HybridAuth:
     async def __call__(self, request: Request) -> str | None:
         """Resolve the authenticated subject from session or API key header."""
         # 1. Check server-side session (starsessions).
-        session_subject = resolve_session_subject(request)
-        if session_subject is not None:
+        result = resolve_session_subject(request)
+        if result is not None:
+            subject, role = result
             request.state.auth_via_session = True
-            return session_subject
+            request.state.auth_role = role
+            if role < self._min_role:
+                raise HTTPException(status_code=403, detail="Insufficient permissions")
+            return subject
 
         # Remove legacy auth material from older cookies.
         _legacy_keys = ("admin_token_hash", "api_key", "auth_session_id", "is_admin")
@@ -103,9 +124,13 @@ class HybridAuth:
             auto_error=self._auto_error,
         )(request)
         if api_key:
+            role = _resolve_header_role(api_key)
             request.state.auth_via_session = False
+            request.state.auth_role = role
             create_session(request, api_key)
             regenerate_session_id(request)
+            if role < self._min_role:
+                raise HTTPException(status_code=403, detail="Insufficient permissions")
             return api_key
 
         if self._auto_error:
@@ -117,7 +142,8 @@ class HybridAuth:
 class PageAuth:
     """Auth dependency for HTML page routes. Redirects to /auth instead of returning 401."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, min_role: AccessRole = AccessRole.READER) -> None:
+        self._min_role = min_role
         self._hybrid_auth = HybridAuth(auto_error=False)
 
     async def __call__(self, request: Request) -> str:
@@ -128,4 +154,7 @@ class PageAuth:
             if request.url.query:
                 next_path += "?" + request.url.query
             raise AuthRedirectError(next_url=next_path)
+        role: AccessRole = getattr(request.state, "auth_role", AccessRole.READER)
+        if role < self._min_role:
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
         return api_key

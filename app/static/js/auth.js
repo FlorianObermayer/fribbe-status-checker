@@ -80,7 +80,7 @@
         try {
             const resp = await fetch('/auth', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: withCsrfHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({ token, next }),
             });
 

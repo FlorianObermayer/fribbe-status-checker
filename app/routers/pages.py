@@ -6,6 +6,7 @@ from fastapi.templating import Jinja2Templates
 from starsessions import regenerate_session_id
 
 from app import env
+from app.api.access_role import AccessRole
 from app.api.ephemeral_api_key_store import EphemeralAPIKeyStore
 from app.api.hybrid_auth import PageAuth, create_session, resolve_session_subject
 from app.api.requests import NotificationQuery
@@ -114,11 +115,17 @@ async def signout(request: Request) -> JSONResponse:
     """Clear the session and redirect to the home page."""
     # CSRF enforcement is handled by starlette-csrf middleware.
     request.session.clear()
-    return JSONResponse({"redirect": "/"})
+    response = JSONResponse({"redirect": "/"})
+    # Explicitly expire the CSRF token cookie; the CSRF middleware only sets it
+    # when absent, so it would otherwise linger in the browser after sign-out.
+    response.delete_cookie("csrftoken", path="/", samesite="lax", secure=env.HTTPS_ONLY)
+    return response
 
 
 @router.get("/notification-create", response_class=HTMLResponse, tags=["Notifications", "HTML"])
-def get_notification_builder(request: Request, _: Annotated[str, Depends(PageAuth())]) -> HTMLResponse:
+def get_notification_builder(
+    request: Request, _: Annotated[str, Depends(PageAuth(min_role=AccessRole.NOTIFICATION_OPERATOR))]
+) -> HTMLResponse:
     """Serve the notification creation page."""
     return _templates.TemplateResponse(
         request,

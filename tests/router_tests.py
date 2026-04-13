@@ -274,6 +274,27 @@ def test_signout_accepts_valid_csrf_for_session_auth(
     assert response.json()["redirect"] == "/"
 
 
+def test_signout_clears_session_and_csrf_cookies(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+
+    response = client.post("/signout", headers=_get_csrf_headers(client))
+
+    assert response.status_code == 200
+    set_cookie_headers = response.headers.get_list("set-cookie")
+    # session_cookie must be expired
+    session_cookies = [h for h in set_cookie_headers if "session_cookie=" in h]
+    assert any("expires=Thu, 01 Jan 1970" in c or "max-age=0" in c.lower() for c in session_cookies), (
+        "session_cookie was not expired in signout response"
+    )
+    # csrftoken must be expired
+    csrf_cookies = [h for h in set_cookie_headers if "csrftoken=" in h]
+    assert any("max-age=0" in c.lower() for c in csrf_cookies), "csrftoken was not expired in signout response"
+
+
 # ---------------------------------------------------------------------------
 # /manifest.json (PWA manifest)
 # ---------------------------------------------------------------------------
