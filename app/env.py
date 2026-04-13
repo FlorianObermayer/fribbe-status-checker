@@ -72,7 +72,7 @@ OCCUPANCY_POLLING_INTERVAL_SECONDS: int = 360
 
 HTTPS_ONLY: bool = False
 
-SHOW_ADMIN_AUTH: bool = False
+SHOW_AUTH_BUTTON: bool = False
 
 # When set, accepted as a master credential on all protected endpoints.
 # Also disables the empty-store bypass, so setup mode never opens the API to the world.
@@ -129,7 +129,7 @@ def load() -> None:
 
     g["HTTPS_ONLY"] = (os.environ.get("HTTPS_ONLY") or "false").lower() == "true"
 
-    g["SHOW_ADMIN_AUTH"] = os.environ.get("SHOW_ADMIN_AUTH", "false").lower() == "true"
+    g["SHOW_AUTH_BUTTON"] = os.environ.get("SHOW_AUTH_BUTTON", "false").lower() == "true"
 
     g["ADMIN_TOKEN"] = os.environ.get("ADMIN_TOKEN") or None
 

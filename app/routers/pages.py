@@ -51,7 +51,7 @@ def get_html(request: Request, _for_date: str = "today") -> HTMLResponse:
         "index.html",
         context={
             "signed_in": signed_in,
-            "show_admin_auth": env.SHOW_ADMIN_AUTH,
+            "show_auth_button": env.SHOW_AUTH_BUTTON,
             "bootstrap_mode": bootstrap_mode,
             "app_url": env.APP_URL,
             "version": VERSION,
@@ -150,7 +150,7 @@ def get_notification_preview(
         "index.html",
         context={
             "signed_in": True,
-            "show_admin_auth": env.SHOW_ADMIN_AUTH,
+            "show_auth_button": env.SHOW_AUTH_BUTTON,
             "bootstrap_mode": False,
             "app_url": env.APP_URL,
             "version": VERSION,

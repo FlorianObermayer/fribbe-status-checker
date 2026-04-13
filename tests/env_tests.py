@@ -97,16 +97,16 @@ def test_load_vapid_keys(monkeypatch: pytest.MonkeyPatch) -> None:
     assert env.VAPID_CLAIM_SUBJECT == "https://example.com"
 
 
-def test_load_show_admin_auth_default_is_false(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("SHOW_ADMIN_AUTH", raising=False)
+def test_load_show_auth_button_default_is_false(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("SHOW_AUTH_BUTTON", raising=False)
     env.load()
-    assert env.SHOW_ADMIN_AUTH is False
+    assert env.SHOW_AUTH_BUTTON is False
 
 
-def test_load_show_admin_auth_true(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("SHOW_ADMIN_AUTH", "true")
+def test_load_show_auth_button_true(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SHOW_AUTH_BUTTON", "true")
     env.load()
-    assert env.SHOW_ADMIN_AUTH is True
+    assert env.SHOW_AUTH_BUTTON is True
 
 
 def test_load_admin_token_default_is_none(monkeypatch: pytest.MonkeyPatch) -> None:
