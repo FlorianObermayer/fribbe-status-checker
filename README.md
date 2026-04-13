@@ -16,7 +16,7 @@ A FastAPI-based status checker for [Fribbe Beach](https://fribbebeach.de), runni
 - **Weather-aware messages** — Optional OpenWeatherMap integration for temperature- and weather-state-aware status and push messages.
 - **REST API** — JSON API with hybrid authentication (API key header or opaque server-side session cookie). Interactive docs at `/docs`.
 - **Web UI** — Jinja2-templated HTML pages with CSS/JS frontend, service worker support, and **dark mode** (follows system preference, override via toggle). Static assets served directly by the app.
-- **Impressum & Datenschutz** — Legal page at `/legal` with operator info and GDPR-compliant privacy policy. Operator name and email are configured via environment variables.
+- **Impressum & Datenschutz** — To activate legal compliance, set both `OPERATOR_NAME` and `OPERATOR_EMAIL` environment variables. When configured, a GDPR-compliant legal page is served at `/legal` and a link appears in the UI footer.
 
 ## Development
 

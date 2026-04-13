@@ -54,13 +54,19 @@ def get_html(request: Request, _for_date: str = "today") -> HTMLResponse:
             "bootstrap_mode": bootstrap_mode,
             "app_url": env.APP_URL,
             "version": VERSION,
+            "show_legal": bool(env.OPERATOR_NAME and env.OPERATOR_EMAIL),
         },
     )
 
 
 @router.get("/legal", response_class=HTMLResponse, include_in_schema=False)
 def get_legal_page(request: Request) -> HTMLResponse:
-    """Serve the Impressum & Datenschutz page."""
+    """Serve the Impressum & Datenschutz page.
+
+    Returns 404 when OPERATOR_NAME or OPERATOR_EMAIL are not configured.
+    """
+    if not env.OPERATOR_NAME or not env.OPERATOR_EMAIL:
+        raise HTTPException(status_code=404, detail="Legal page not configured")
     return _templates.TemplateResponse(
         request,
         "legal.html",
@@ -141,5 +147,6 @@ def get_notification_preview(
             "bootstrap_mode": False,
             "app_url": env.APP_URL,
             "version": VERSION,
+            "show_legal": bool(env.OPERATOR_NAME and env.OPERATOR_EMAIL),
         },
     )
