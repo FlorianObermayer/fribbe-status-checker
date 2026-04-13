@@ -52,7 +52,7 @@ README.md                  # Project overview, setup, conventions, instructions
 - `PresenceLevelService` polls router → `PresenceLevel` (empty/few/many) → on first daily EMPTY→active transition fires push notification via `PushSubscriptionService`
 - `MessageService` provides German-language text; uses `Weather` from `WeatherService` (OWM, 30-min cache)
 - `HybridAuth` checks an opaque server-side session referenced by the session cookie first, then `api_key` header; one-time bootstrap bypass when key store is empty
-- **Access roles**: `AccessRole` (`READER < NOTIFICATION_OPERATOR < ADMIN`) in `app/api/access_role.py`. `HybridAuth(min_role=...)` enforces the minimum role; 403 when authenticated but insufficient. `ADMIN_TOKEN` always maps to `ADMIN`. API keys carry a `role` field (defaults to `ADMIN` for backward compat in stored keys, `READER` for newly generated keys). `PageAuth(min_role=...)` works the same way for HTML page routes.
+- **Access roles**: `AccessRole` (`READER < NOTIFICATION_OPERATOR < ADMIN`) in `app/api/access_role.py`. `HybridAuth(min_role=...)` enforces the minimum role; 403 when authenticated but insufficient. `ADMIN_TOKEN` always maps to `ADMIN`. API keys carry a `role` field; when the field is missing in stored keys, `ApiKey.from_dict()` falls back to `READER`. `PageAuth(min_role=...)` works the same way for HTML page routes.
 
 ## Conventions
 
