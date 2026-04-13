@@ -51,11 +51,11 @@ def get_html(request: Request, _for_date: str = "today") -> HTMLResponse:
         "index.html",
         context={
             "signed_in": signed_in,
-            "show_auth_button": env.SHOW_AUTH_BUTTON,
+            "show_auth_button": env.is_login_button_enabled(),
             "bootstrap_mode": bootstrap_mode,
             "app_url": env.APP_URL,
             "version": VERSION,
-            "show_legal": bool(env.OPERATOR_NAME and env.OPERATOR_EMAIL),
+            "show_legal": env.is_legal_page_enabled(),
         },
     )
 
@@ -66,7 +66,7 @@ def get_legal_page(request: Request) -> HTMLResponse:
 
     Returns 404 when OPERATOR_NAME or OPERATOR_EMAIL are not configured.
     """
-    if not env.OPERATOR_NAME or not env.OPERATOR_EMAIL:
+    if not env.is_legal_page_enabled():
         raise HTTPException(status_code=404, detail="Legal page not configured")
     return _templates.TemplateResponse(
         request,
@@ -76,6 +76,9 @@ def get_legal_page(request: Request) -> HTMLResponse:
             "operator_name": env.OPERATOR_NAME,
             "operator_email": env.OPERATOR_EMAIL,
             "session_max_age": seconds_to_human(env.SESSION_MAX_AGE_SECONDS),
+            "feature_presence": env.is_presence_enabled(),
+            "feature_push": env.is_push_enabled(),
+            "feature_weather": env.is_weather_enabled(),
         },
     )
 
@@ -150,10 +153,10 @@ def get_notification_preview(
         "index.html",
         context={
             "signed_in": True,
-            "show_auth_button": env.SHOW_AUTH_BUTTON,
+            "show_auth_button": env.is_login_button_enabled(),
             "bootstrap_mode": False,
             "app_url": env.APP_URL,
             "version": VERSION,
-            "show_legal": bool(env.OPERATOR_NAME and env.OPERATOR_EMAIL),
+            "show_legal": env.is_legal_page_enabled(),
         },
     )

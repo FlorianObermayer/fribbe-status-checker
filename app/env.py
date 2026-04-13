@@ -100,6 +100,55 @@ CSP_DOMAIN: str | None = None
 OPERATOR_NAME: str = ""
 OPERATOR_EMAIL: str = ""
 
+# ---------------------------------------------------------------------------
+# Feature flags
+# ---------------------------------------------------------------------------
+
+
+def is_presence_enabled() -> bool:
+    """Return True when router credentials are fully configured.
+
+    Enables WLAN presence detection and named warden tracking.
+    """
+    return bool(ROUTER_IP and ROUTER_USERNAME and ROUTER_PASSWORD)
+
+
+def is_push_enabled() -> bool:
+    """Return True when the full VAPID key triple is configured.
+
+    Enables Web Push notifications.
+    """
+    return bool(VAPID_PRIVATE_KEY and VAPID_PUBLIC_KEY and VAPID_CLAIM_SUBJECT)
+
+
+def is_weather_enabled() -> bool:
+    """Return True when OpenWeatherMap API key and coordinates are configured.
+
+    Enables weather-aware status messages.
+    """
+    return bool(OPENWEATHERMAP_API_KEY and WEATHER_LAT is not None and WEATHER_LON is not None)
+
+
+def is_legal_page_enabled() -> bool:
+    """Return True when OPERATOR_NAME and OPERATOR_EMAIL are configured.
+
+    Enables the /legal page with operator contact info and feature disclosures.
+    """
+    return bool(OPERATOR_NAME and OPERATOR_EMAIL)
+
+
+def is_login_button_enabled() -> bool:
+    """Return True when SHOW_AUTH_BUTTON is configured.
+
+    Enables the "Login" button in the UI.
+    """
+    return bool(SHOW_AUTH_BUTTON)
+
+
+# ---------------------------------------------------------------------------
+# Env loading and validation
+# ---------------------------------------------------------------------------
+
 
 def load() -> None:
     """Load (or reload) all env var values into the module-level globals.
@@ -154,7 +203,7 @@ def load() -> None:
 
 
 def _log() -> None:
-    """Log all loaded env vars, masking sensitive ones."""
+    """Log all loaded env vars, masking sensitive ones, then derived feature flags."""
     logger = logging.getLogger("uvicorn.error")
 
     logger.info("Loaded environment variables:")
@@ -166,6 +215,13 @@ def _log() -> None:
             logger.info("%s=%s", var, masked)
         else:
             logger.info("%s=%s", var, value)
+
+    logger.info("Feature flags:")
+    g = globals()
+    for name, fn in sorted(
+        (k, v) for k, v in g.items() if k.startswith("is_") and k.endswith("_enabled") and callable(v)
+    ):
+        logger.info("%s -> %s", name, fn())
 
 
 def validate() -> None:

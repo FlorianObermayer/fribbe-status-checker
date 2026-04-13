@@ -73,8 +73,11 @@
             <ul class="copy">
                 <li><b>Sitzungs-Cookie</b> (<code>session_cookie</code>): Ein opaker Sitzungsbezeichner, der für die
                     Authentifizierung erforderlich ist. Enthält keine persönlichen Daten. Lebensdauer: {{ session_max_age }}.</li>
+                {% if feature_push %}
                 <li><b>Push-Benachrichtigungen</b>: Wer Benachrichtigungen aktiviert, dessen Browser-Endpunkt und
                     Verschlüsselungsschlüssel werden gespeichert, um Nachrichten zustellen zu können.</li>
+                {% endif %}
+                {% if feature_presence %}
                 <li><b>WLAN-Anwesenheitserkennung</b>: Es wird die Anzahl der mit dem WLAN verbundenen
                     Geräte ermittelt, um die aktuelle Anwesenheitsstufe (leer / wenige / viele) anzuzeigen.
                     Dabei werden keine MAC-Adressen, Gerätenamen oder sonstige gerätebezogene Daten gespeichert.
@@ -84,34 +87,45 @@
                     MAC-Adressen und Gerätenamen den Namen der Person zugeordnet und gespeichert. Dies geschieht
                     ausschließlich mit ausdrücklicher Einwilligung der betroffenen Person (Art. 6 Abs. 1 lit. a
                     DSGVO).</li>
+                {% endif %}
             </ul>
 
             <h3>3. Rechtsgrundlage</h3>
             <ul class="copy">
                 <li>Sitzungs-Cookie: Berechtigtes Interesse zur Bereitstellung der Anmeldefunktion (Art. 6 Abs. 1
                     lit. f DSGVO).</li>
+                {% if feature_push %}
                 <li>Push-Benachrichtigungen: Einwilligung durch Aktivierung im Browser (Art. 6 Abs. 1 lit. a
                     DSGVO).</li>
+                {% endif %}
+                {% if feature_presence %}
                 <li>WLAN-Anwesenheitserkennung: Berechtigtes Interesse der Vereinsgemeinschaft an einer
                     Anwesenheitsanzeige (Art. 6 Abs. 1 lit. f DSGVO), gestützt durch die WLAN-Nutzungsvereinbarung.</li>
                 <li>Namentliche Zuordnung: Ausdrückliche Einwilligung (Art. 6 Abs. 1 lit. a DSGVO).</li>
+                {% endif %}
             </ul>
 
             <h3>4. Speicherdauer</h3>
             <ul class="copy">
                 <li>Sitzungsdaten: Maximal {{ session_max_age }}, danach automatisch gelöscht.</li>
+                {% if feature_push %}
                 <li>Push-Abonnements: Bis zur Abmeldung oder bis der Browser-Endpunkt ungültig wird.</li>
+                {% endif %}
+                {% if feature_presence %}
                 <li>Anwesenheitszählung: Wird täglich zurückgesetzt. Es werden ausschließlich Gerätezahlen
                     erfasst, keine gerätebezogenen Daten.</li>
                 <li>Beachwart-Zuordnung: Bis zur Löschung durch den Betroffenen oder den Administrator.</li>
+                {% endif %}
             </ul>
 
             <h3>5. Drittanbieter</h3>
+            {% if feature_weather %}
             <p class="copy">
                 Für wetterabhängige Statusmeldungen werden die Koordinaten der Anlage (keine personenbezogenen Daten)
                 an <a href="https://openweather.co.uk/privacy-policy" target="_blank"
                     rel="noopener noreferrer">OpenWeatherMap</a> übermittelt.
             </p>
+            {% endif %}
             <p class="copy">
                 Zur Darstellung der Schriftart wird <a href="https://developers.google.com/fonts/faq/privacy"
                     target="_blank" rel="noopener noreferrer">Google Fonts</a> eingebunden.
@@ -126,10 +140,14 @@
                 Zur Ausübung Ihrer Rechte wenden Sie sich bitte per E-Mail an
                 <a href="mailto:{{ operator_email }}">{{ operator_email }}</a>.
             </p>
+            {% if feature_push or feature_presence %}
             <p class="copy">
-                Push-Benachrichtigungen können jederzeit über die Schaltfläche auf der Startseite deaktiviert werden.
-                Beachwarte können die Löschung ihrer Gerätezuordnung jederzeit beim Administrator anfragen.
+                {% if feature_push %}Push-Benachrichtigungen können jederzeit über die Schaltfläche auf der Startseite deaktiviert
+                werden.{% endif %}
+                {% if feature_presence %}Beachwarte können die Löschung ihrer Gerätezuordnung jederzeit beim Administrator anfragen.{%
+                endif %}
             </p>
+            {% endif %}
 
             <h3>7. Beschwerderecht</h3>
             <p class="copy">
