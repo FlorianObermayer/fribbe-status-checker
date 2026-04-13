@@ -5,6 +5,7 @@ import nh3
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import HTMLResponse
 
+from app.api.access_role import AccessRole
 from app.api.hybrid_auth import HybridAuth
 from app.api.requests import NOTIFICATION_FILTERS, NotificationQuery, PostNotificationRequest, UpdateNotificationRequest
 from app.api.responses import (
@@ -74,7 +75,7 @@ async def get_notifications_as_html(
 async def post_notification(
     svc: NotificationServiceDep,
     request: PostNotificationRequest,
-    _: Annotated[str, Depends(HybridAuth())],
+    _: Annotated[str, Depends(HybridAuth(min_role=AccessRole.NOTIFICATION_OPERATOR))],
 ) -> PostNotificationResponse:
     """Create a new notification."""
     notification_id = svc.add(request.message, request.valid_from, request.valid_until, enabled=request.enabled)
@@ -89,7 +90,7 @@ async def update_notification(
     svc: NotificationServiceDep,
     notification_id: str,
     request: UpdateNotificationRequest,
-    _: Annotated[str, Depends(HybridAuth())],
+    _: Annotated[str, Depends(HybridAuth(min_role=AccessRole.NOTIFICATION_OPERATOR))],
 ) -> None:
     """Update an existing notification."""
     if not svc.update(
@@ -108,7 +109,7 @@ async def update_notification(
 async def delete_notification(
     svc: NotificationServiceDep,
     notification_id: str,
-    _: Annotated[str, Depends(HybridAuth())],
+    _: Annotated[str, Depends(HybridAuth(min_role=AccessRole.NOTIFICATION_OPERATOR))],
 ) -> None:
     """Delete a notification by ID."""
     if not svc.delete(notification_id):
@@ -122,7 +123,7 @@ async def delete_notification(
 async def delete_notifications(
     svc: NotificationServiceDep,
     request: Annotated[NotificationQuery, Query()],
-    _: Annotated[str, Depends(HybridAuth())],
+    _: Annotated[str, Depends(HybridAuth(min_role=AccessRole.NOTIFICATION_OPERATOR))],
 ) -> DeletedResponse:
     """Delete notifications matching the given filter."""
     count = svc.delete_many(request.n_ids)

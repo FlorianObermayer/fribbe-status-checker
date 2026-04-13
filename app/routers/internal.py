@@ -2,6 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Response
 
+from app.api.access_role import AccessRole
 from app.api.hybrid_auth import HybridAuth
 from app.api.requests import ConfigRequest
 from app.api.responses import DetailsResponse
@@ -41,7 +42,7 @@ def details(
     tags=["Config"],
     openapi_extra=requires_auth_extra(),
 )
-async def config(request: ConfigRequest, _: Annotated[str, Depends(HybridAuth())]) -> Response:
+async def config(request: ConfigRequest, _: Annotated[str, Depends(HybridAuth(min_role=AccessRole.ADMIN))]) -> Response:
     """Update presence detection thresholds."""
     if not any((request.threshold_min_non_empty_ct, request.threshold_min_many_ct)):
         return Response(status_code=304)  # ^= Not Modified

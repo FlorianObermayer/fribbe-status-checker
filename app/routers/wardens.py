@@ -2,6 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from app.api.access_role import AccessRole
 from app.api.hybrid_auth import HybridAuth
 from app.api.requests import CreateWardenRequest, UpdateWardenRequest
 from app.api.responses import WardenListResponse, WardenResponse
@@ -22,7 +23,7 @@ def list_wardens(_: Annotated[str, Depends(HybridAuth())]) -> WardenListResponse
 @router.post("", status_code=201, openapi_extra=requires_auth_extra())
 def create_warden(
     request: CreateWardenRequest,
-    _: Annotated[str, Depends(HybridAuth())],
+    _: Annotated[str, Depends(HybridAuth(min_role=AccessRole.ADMIN))],
 ) -> WardenResponse:
     """Register a new warden."""
     warden = Warden(request.name, request.device_macs, request.device_names)
@@ -37,7 +38,7 @@ def create_warden(
 def update_warden(
     name: str,
     request: UpdateWardenRequest,
-    _: Annotated[str, Depends(HybridAuth())],
+    _: Annotated[str, Depends(HybridAuth(min_role=AccessRole.ADMIN))],
 ) -> WardenResponse:
     """Update an existing warden."""
     store = WardenStore.get_instance()
@@ -58,7 +59,7 @@ def update_warden(
 
 
 @router.delete("/{name}", status_code=204, openapi_extra=requires_auth_extra())
-def delete_warden(name: str, _: Annotated[str, Depends(HybridAuth())]) -> None:
+def delete_warden(name: str, _: Annotated[str, Depends(HybridAuth(min_role=AccessRole.ADMIN))]) -> None:
     """Delete a warden by name."""
     try:
         WardenStore.get_instance().delete(name)

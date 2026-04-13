@@ -83,6 +83,20 @@ uv run test-push-notification "Title" "Body text"
 
 The app uses **HybridAuth**: an API key passed via the `api_key` header or an opaque server-side session cookie. Browser sessions are protected by a per-session CSRF token (`X-CSRF-Token`).
 
+### Access roles
+
+Every authenticated subject carries an **AccessRole** (`READER < NOTIFICATION_OPERATOR < ADMIN`). Higher roles inherit all permissions of lower roles.
+
+| Role | Permissions |
+| --- | --- |
+| `READER` | Read-only access to all protected endpoints (details, wardens list, notifications list, API keys list). |
+| `NOTIFICATION_OPERATOR` | Everything in READER, plus create / update / delete notifications. |
+| `ADMIN` | Full access — API key management, warden CRUD, config changes, and all of the above. |
+
+- `ADMIN_TOKEN` always maps to `ADMIN`.
+- API keys carry a `role` field. New keys default to `READER`; specify `"role": 3` (or `"role": "admin"`) in `POST /api/internal/api_key` to set a higher role.
+- Existing stored keys without a `role` field default to `ADMIN` for backward compatibility.
+
 ### Bootstrap (first API key)
 
 On a fresh install with an empty key store and no `ADMIN_TOKEN`, `POST /api/internal/api_key` is open to allow creating the first key:

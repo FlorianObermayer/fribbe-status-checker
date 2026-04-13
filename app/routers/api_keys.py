@@ -4,6 +4,7 @@ from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from app.api.access_role import AccessRole
 from app.api.ephemeral_api_key_store import EphemeralAPIKeyStore, RemoveResult
 from app.api.hybrid_auth import HybridAuth
 from app.api.requests import CreateApiKeyRequest, DeleteApiKeyRequest
@@ -21,7 +22,9 @@ _MIN_KEY_PREFIX_LENGTH = 5
 )
 def create_api_key(
     request: CreateApiKeyRequest,
-    auth_subject: Annotated[str | None, Depends(HybridAuth(bypass_on_empty_api_key_list=True))],
+    auth_subject: Annotated[
+        str | None, Depends(HybridAuth(min_role=AccessRole.ADMIN, bypass_on_empty_api_key_list=True))
+    ],
 ) -> ApiKey:
     """Create a new API key, store it in the JSON file, and return it.
 
@@ -33,7 +36,7 @@ def create_api_key(
     valid_until = (request.valid_until or datetime.now(tz=ZoneInfo("Europe/Berlin")) + timedelta(days=180)).replace(
         microsecond=0,
     )
-    new_api_key = ApiKey.generate_new(request.comment, valid_until)
+    new_api_key = ApiKey.generate_new(request.comment, valid_until, request.role)
     bootstrap_mode = auth_subject is None
     appended = EphemeralAPIKeyStore.append(new_api_key, require_empty=bootstrap_mode)
     if not appended:
@@ -47,7 +50,7 @@ def create_api_key(
 )
 def delete_api_key(
     request: DeleteApiKeyRequest,
-    _: Annotated[str, Depends(HybridAuth())],
+    _: Annotated[str, Depends(HybridAuth(min_role=AccessRole.ADMIN))],
 ) -> None:
     """Delete an API key by its value or prefix (at least 5 characters). Only delete if there is a unique match."""
     if len(request.key) < _MIN_KEY_PREFIX_LENGTH:
@@ -63,7 +66,7 @@ def delete_api_key(
     "/api_keys",
     openapi_extra=requires_auth_extra(),
 )
-def list_api_keys(_: Annotated[str | None, Depends(HybridAuth())]) -> ApiKeys:
+def list_api_keys(_: Annotated[str | None, Depends(HybridAuth(min_role=AccessRole.ADMIN))]) -> ApiKeys:
     """Return all API keys as a masked list. Full key values are only shown at creation time."""
     keys = EphemeralAPIKeyStore.load()
     return ApiKeys(api_keys=[MaskedApiKey.from_api_key(k) for k in keys])

@@ -3,6 +3,7 @@ from datetime import datetime
 from fastapi import Query
 from pydantic import BaseModel, Field, field_validator
 
+from app.api.access_role import AccessRole
 from app.services.push_subscription_service import ALL_TOPICS, VALID_TOPICS, PushTopic
 
 # Single source of truth for all keyword filter options.
@@ -99,6 +100,7 @@ class CreateApiKeyRequest(BaseModel):
 
     comment: str = ""
     valid_until: datetime | None = None
+    role: AccessRole = AccessRole.READER
 
 
 class DeleteApiKeyRequest(BaseModel):

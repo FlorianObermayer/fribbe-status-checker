@@ -6,6 +6,7 @@ from enum import Enum
 from zoneinfo import ZoneInfo
 
 from app import env
+from app.api.access_role import AccessRole
 from app.api.redact import redact_key
 from app.api.responses import ApiKey
 from app.services.persistent_collections import PersistentList
@@ -125,3 +126,25 @@ class EphemeralAPIKeyStore:
             "EphemeralAPIKeyStore::is_key_valid(api_key=%s) - key not found in registered keys", redact_key(key)
         )
         return False
+
+    @staticmethod
+    def get_valid_key_role(key: str | None) -> AccessRole | None:
+        """Return the role for a valid (present and not expired) API key, or None."""
+        if key is None:
+            return None
+        now = datetime.now(tz=ZoneInfo("Europe/Berlin"))
+        entries = EphemeralAPIKeyStore.load()
+        for entry in entries:
+            if not secrets.compare_digest(entry.key, key):
+                continue
+            valid_until = entry.valid_until
+            if not valid_until:
+                return None
+            try:
+                now_with_tz = now if valid_until.tzinfo is None else datetime.now(valid_until.tzinfo)
+                if valid_until >= now_with_tz:
+                    return entry.role
+                return None
+            except (TypeError, OverflowError):
+                return None
+        return None
