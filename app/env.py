@@ -93,6 +93,10 @@ WEATHER_CACHE_TTL_SECONDS: int = 1800  # 30 minutes
 # When unset only 'self' is used.
 CSP_DOMAIN: str | None = None
 
+# Operator identity shown on the Impressum / Datenschutz page.
+OPERATOR_NAME: str = ""
+OPERATOR_EMAIL: str = ""
+
 
 def load() -> None:
     """Load (or reload) all env var values into the module-level globals.
@@ -140,6 +144,9 @@ def load() -> None:
 
     g["WEATHER_CACHE_TTL_SECONDS"] = int(os.environ.get("WEATHER_CACHE_TTL_SECONDS") or 1800)  # 30 minutes
     g["CSP_DOMAIN"] = os.environ.get("CSP_DOMAIN") or None
+
+    g["OPERATOR_NAME"] = os.environ.get("OPERATOR_NAME") or ""
+    g["OPERATOR_EMAIL"] = os.environ.get("OPERATOR_EMAIL") or ""
     _log()
 
 

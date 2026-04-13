@@ -179,6 +179,19 @@ def test_get_auth_page_renders_password_field(client: TestClient) -> None:
     assert 'type="password"' in response.text
 
 
+def test_get_legal_page_renders_impressum(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(env, "OPERATOR_NAME", "Max Mustermann")
+    monkeypatch.setattr(env, "OPERATOR_EMAIL", "max@example.com")
+
+    response = client.get("/legal")
+
+    assert response.status_code == 200
+    assert "Impressum" in response.text
+    assert "Datenschutzerklärung" in response.text
+    assert "Max Mustermann" in response.text
+    assert "max@example.com" in response.text
+
+
 def test_get_auth_page_includes_csrf_cookie_when_signed_in(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,

@@ -39,7 +39,7 @@ app/
   services/                # Domain services (presence, occupancy, push, messages, weather)
     internal/              # Internal device-count tracking (WardenStore)
     occupancy/             # Web scraping for booking status
-  templates/               # Jinja2 HTML templates (index, auth, notification-create)
+  templates/               # Jinja2 HTML templates (index, auth, notification-create, legal)
   static/                  # Served CSS/JS/images frontend assets
 scripts/                   # uv entry points (dev, lint, watch, generate-vapid-keys, …)
 tests/                     # Unit tests; test-data/ holds fixture files

@@ -10,6 +10,7 @@ from app.api.ephemeral_api_key_store import EphemeralAPIKeyStore
 from app.api.hybrid_auth import PageAuth, create_session, resolve_session_subject
 from app.api.requests import NotificationQuery
 from app.api.schema import requires_auth_extra
+from app.format import seconds_to_human
 from app.version import VERSION
 
 router = APIRouter()
@@ -53,6 +54,21 @@ def get_html(request: Request, _for_date: str = "today") -> HTMLResponse:
             "bootstrap_mode": bootstrap_mode,
             "app_url": env.APP_URL,
             "version": VERSION,
+        },
+    )
+
+
+@router.get("/legal", response_class=HTMLResponse, include_in_schema=False)
+def get_legal_page(request: Request) -> HTMLResponse:
+    """Serve the Impressum & Datenschutz page."""
+    return _templates.TemplateResponse(
+        request,
+        "legal.html",
+        context={
+            "version": VERSION,
+            "operator_name": env.OPERATOR_NAME,
+            "operator_email": env.OPERATOR_EMAIL,
+            "session_max_age": seconds_to_human(env.SESSION_MAX_AGE_SECONDS),
         },
     )
 

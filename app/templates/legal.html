@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Impressum &amp; Datenschutz</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/legal.styles.css?v={{ version }}">
+    <!-- Prevent flash of unstyled content when dark mode is active -->
+    <script>
+        (function () {
+            var t = localStorage.getItem('theme');
+            if (t === 'dark' || (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark-mode');
+            }
+        }());
+    </script>
+</head>
+
+<body>
+    <main class="legal-shell">
+        <section class="legal-card">
+            <button id="theme-toggle-btn" class="theme-toggle-btn" aria-label="Erscheinungsbild wechseln"
+                title="Erscheinungsbild wechseln">
+                <svg id="theme-icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="5" />
+                    <line x1="12" y1="1" x2="12" y2="3" />
+                    <line x1="12" y1="21" x2="12" y2="23" />
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                    <line x1="1" y1="12" x2="3" y2="12" />
+                    <line x1="21" y1="12" x2="23" y2="12" />
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                </svg>
+                <svg id="theme-icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                </svg>
+            </button>
+
+            <a href="/" class="back-link">&larr; Zurück</a>
+
+            <h1>Impressum</h1>
+
+            <p class="copy">
+                Angaben gemäß § 5 DDG
+            </p>
+            <p class="copy">
+                {{ operator_name }}<br>
+                E-Mail: <a href="mailto:{{ operator_email }}">{{ operator_email }}</a>
+            </p>
+            <p class="copy">
+                Dies ist ein <b>privates, inoffizielles Projekt</b> und steht in keiner offiziellen Verbindung zum
+                DJK Augsburg Hochzoll e.V.
+            </p>
+
+            <h2>Datenschutzerklärung</h2>
+
+            <h3>1. Verantwortlicher</h3>
+            <p class="copy">
+                {{ operator_name }}<br>
+                E-Mail: <a href="mailto:{{ operator_email }}">{{ operator_email }}</a>
+            </p>
+
+            <h3>2. Erhobene Daten</h3>
+            <p class="copy">
+                Diese Anwendung verarbeitet folgende Daten:
+            </p>
+            <ul class="copy">
+                <li><b>Sitzungs-Cookie</b> (<code>session_cookie</code>): Ein opaker Sitzungsbezeichner, der für die
+                    Authentifizierung erforderlich ist. Enthält keine persönlichen Daten. Lebensdauer: {{ session_max_age }}.</li>
+                <li><b>Push-Benachrichtigungen</b>: Wer Benachrichtigungen aktiviert, dessen Browser-Endpunkt und
+                    Verschlüsselungsschlüssel werden gespeichert, um Nachrichten zustellen zu können.</li>
+                <li><b>WLAN-Anwesenheitserkennung</b>: Es wird die Anzahl der mit dem WLAN verbundenen
+                    Geräte ermittelt, um die aktuelle Anwesenheitsstufe (leer / wenige / viele) anzuzeigen.
+                    Dabei werden keine MAC-Adressen, Gerätenamen oder sonstige gerätebezogene Daten gespeichert.
+                    Die Nutzung des WLAN setzt die Zustimmung zur Nutzungsvereinbarung voraus.</li>
+                <li><b>Namentliche Zuordnung (Beachwarte)</b>: Mitglieder des Beachwart-Teams können ihre Geräte
+                    freiwillig registrieren, um namentlich als anwesend angezeigt zu werden. Hierfür werden
+                    MAC-Adressen und Gerätenamen den Namen der Person zugeordnet und gespeichert. Dies geschieht
+                    ausschließlich mit ausdrücklicher Einwilligung der betroffenen Person (Art. 6 Abs. 1 lit. a
+                    DSGVO).</li>
+            </ul>
+
+            <h3>3. Rechtsgrundlage</h3>
+            <ul class="copy">
+                <li>Sitzungs-Cookie: Berechtigtes Interesse zur Bereitstellung der Anmeldefunktion (Art. 6 Abs. 1
+                    lit. f DSGVO).</li>
+                <li>Push-Benachrichtigungen: Einwilligung durch Aktivierung im Browser (Art. 6 Abs. 1 lit. a
+                    DSGVO).</li>
+                <li>WLAN-Anwesenheitserkennung: Berechtigtes Interesse der Vereinsgemeinschaft an einer
+                    Anwesenheitsanzeige (Art. 6 Abs. 1 lit. f DSGVO), gestützt durch die WLAN-Nutzungsvereinbarung.</li>
+                <li>Namentliche Zuordnung: Ausdrückliche Einwilligung (Art. 6 Abs. 1 lit. a DSGVO).</li>
+            </ul>
+
+            <h3>4. Speicherdauer</h3>
+            <ul class="copy">
+                <li>Sitzungsdaten: Maximal {{ session_max_age }}, danach automatisch gelöscht.</li>
+                <li>Push-Abonnements: Bis zur Abmeldung oder bis der Browser-Endpunkt ungültig wird.</li>
+                <li>Anwesenheitszählung: Wird täglich zurückgesetzt. Es werden ausschließlich Gerätezahlen
+                    erfasst, keine gerätebezogenen Daten.</li>
+                <li>Beachwart-Zuordnung: Bis zur Löschung durch den Betroffenen oder den Administrator.</li>
+            </ul>
+
+            <h3>5. Drittanbieter</h3>
+            <p class="copy">
+                Für wetterabhängige Statusmeldungen werden die Koordinaten der Anlage (keine personenbezogenen Daten)
+                an <a href="https://openweather.co.uk/privacy-policy" target="_blank"
+                    rel="noopener noreferrer">OpenWeatherMap</a> übermittelt.
+            </p>
+            <p class="copy">
+                Zur Darstellung der Schriftart wird <a href="https://developers.google.com/fonts/faq/privacy"
+                    target="_blank" rel="noopener noreferrer">Google Fonts</a> eingebunden.
+            </p>
+
+            <h3>6. Ihre Rechte</h3>
+            <p class="copy">
+                Sie haben das Recht auf Auskunft (Art. 15 DSGVO), Berichtigung (Art. 16), Löschung (Art. 17),
+                Einschränkung der Verarbeitung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21).
+            </p>
+            <p class="copy">
+                Zur Ausübung Ihrer Rechte wenden Sie sich bitte per E-Mail an
+                <a href="mailto:{{ operator_email }}">{{ operator_email }}</a>.
+            </p>
+            <p class="copy">
+                Push-Benachrichtigungen können jederzeit über die Schaltfläche auf der Startseite deaktiviert werden.
+                Beachwarte können die Löschung ihrer Gerätezuordnung jederzeit beim Administrator anfragen.
+            </p>
+
+            <h3>7. Beschwerderecht</h3>
+            <p class="copy">
+                Sie haben das Recht, sich bei einer Datenschutz-Aufsichtsbehörde zu beschweren. Zuständig ist das
+                <a href="https://www.lda.bayern.de/" target="_blank" rel="noopener noreferrer">Bayerische
+                    Landesamt für Datenschutzaufsicht (BayLDA)</a>.
+            </p>
+
+        </section>
+    </main>
+    <script src="/static/js/csrf.js?v={{ version }}"></script>
+    <script src="/static/js/theme.js?v={{ version }}"></script>
+</body>
+
+</html>
