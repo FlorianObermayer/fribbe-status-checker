@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager, suppress
 from pathlib import Path
@@ -79,6 +80,7 @@ app.add_middleware(
     CSRFMiddleware,
     secret=env.SESSION_SECRET_KEY,
     sensitive_cookies={"session_cookie"},
+    exempt_urls=[re.compile(r"^/api/")],
     header_name="x-csrf-token",
     cookie_secure=env.HTTPS_ONLY,
     cookie_samesite="lax",

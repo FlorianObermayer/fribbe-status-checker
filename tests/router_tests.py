@@ -632,23 +632,7 @@ def test_notifications_post_returns_401_without_auth(client: TestClient, test_ap
     assert response.status_code == 401
 
 
-def test_notifications_post_rejects_missing_csrf_for_session_auth(
-    client: TestClient,
-    test_app: FastAPI,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
-    svc = _mock_notification_svc()
-    test_app.dependency_overrides[get_notification_service] = lambda: svc
-    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
-
-    response = client.post("/api/notifications", json={"message": "Test message"})
-
-    assert response.status_code == 403
-    svc.add.assert_not_called()
-
-
-def test_notifications_post_accepts_valid_csrf_for_session_auth(
+def test_notifications_post_accepts_request_with_session_auth(
     client: TestClient,
     test_app: FastAPI,
     monkeypatch: pytest.MonkeyPatch,
@@ -662,7 +646,6 @@ def test_notifications_post_accepts_valid_csrf_for_session_auth(
     response = client.post(
         "/api/notifications",
         json={"message": "Test message"},
-        headers=_get_csrf_headers(client),
     )
 
     assert response.status_code == 200

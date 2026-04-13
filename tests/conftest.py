@@ -5,6 +5,7 @@ with ``dependency_overrides`` cleared before and after each test so that
 individual tests can inject mocks cleanly via ``app.dependency_overrides``.
 """
 
+import re
 from collections.abc import Generator
 
 import pytest
@@ -18,17 +19,17 @@ from app.routers import api_keys, internal, misc, notifications, pages, push, st
 
 TEST_ADMIN_TOKEN = "test-admin-token-" + "A" * 32
 
-_session_store = InMemoryStore()
 
-
-@pytest.fixture(scope="session")
+@pytest.fixture
 def test_app() -> FastAPI:
     """Minimal FastAPI instance with real routers but no polling side-effects."""
     test_app = FastAPI()
+    session_store = InMemoryStore()
     test_app.add_middleware(
         CSRFMiddleware,
         secret=env.SESSION_SECRET_KEY,
         sensitive_cookies={"session_cookie"},
+        exempt_urls=[re.compile(r"^/api/")],
         header_name="x-csrf-token",
         cookie_secure=False,
         cookie_samesite="lax",
@@ -36,7 +37,7 @@ def test_app() -> FastAPI:
     test_app.add_middleware(SessionAutoloadMiddleware)
     test_app.add_middleware(
         SessionMiddleware,
-        store=_session_store,
+        store=session_store,
         cookie_name="session_cookie",
         lifetime=env.SESSION_MAX_AGE_SECONDS,
         cookie_https_only=False,
