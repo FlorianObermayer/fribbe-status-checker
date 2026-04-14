@@ -125,13 +125,15 @@ def get_notification_preview(
 )
 def enable_notification(
     svc: NotificationServiceDep,
+    request: Request,
     notification_id: str,
     _auth: Annotated[str, Depends(PageAuth(min_role=AccessRole.NOTIFICATION_OPERATOR))],
 ) -> RedirectResponse:
     """Enable a notification and redirect back to the preview page."""
     if not svc.update(notification_id, enabled=True):
         raise HTTPException(status_code=404, detail="Notification not found")
-    response = RedirectResponse(url=f"{Route.URL_NOTIFICATION_PREVIEW}?n_ids={notification_id}", status_code=303)
+    preview_url = request.url_for("get_notification_preview").include_query_params(n_ids=notification_id)
+    response = RedirectResponse(url=str(preview_url), status_code=303)
     show_toast(response, "Benachrichtigung aktiviert")
     return response
 
@@ -142,13 +144,15 @@ def enable_notification(
 )
 def disable_notification(
     svc: NotificationServiceDep,
+    request: Request,
     notification_id: str,
     _auth: Annotated[str, Depends(PageAuth(min_role=AccessRole.NOTIFICATION_OPERATOR))],
 ) -> RedirectResponse:
     """Disable a notification and redirect back to the preview page."""
     if not svc.update(notification_id, enabled=False):
         raise HTTPException(status_code=404, detail="Notification not found")
-    response = RedirectResponse(url=f"{Route.URL_NOTIFICATION_PREVIEW}?n_ids={notification_id}", status_code=303)
+    preview_url = request.url_for("get_notification_preview").include_query_params(n_ids=notification_id)
+    response = RedirectResponse(url=str(preview_url), status_code=303)
     show_toast(response, "Benachrichtigung deaktiviert")
     return response
 
