@@ -59,8 +59,13 @@ def post_notification_builder(
         show_toast(response, "Nachricht ist ein Pflichtfeld", "error")
         return response
     tz = ZoneInfo(env.TZ)
-    parsed_from = datetime.fromisoformat(valid_from).replace(tzinfo=tz) if valid_from else None
-    parsed_until = datetime.fromisoformat(valid_until).replace(tzinfo=tz) if valid_until else None
+    try:
+        parsed_from = datetime.fromisoformat(valid_from).replace(tzinfo=tz) if valid_from else None
+        parsed_until = datetime.fromisoformat(valid_until).replace(tzinfo=tz) if valid_until else None
+    except ValueError:
+        response = RedirectResponse(url=Route.URL_NOTIFICATION_CREATE, status_code=303)
+        show_toast(response, "Ungültiges Datum/Zeit-Format", "error")
+        return response
     notification_id = svc.add(message, parsed_from, parsed_until, enabled=False)
     response = RedirectResponse(url=f"{Route.URL_NOTIFICATION_PREVIEW}?n_ids={notification_id}", status_code=303)
     show_toast(response, "Vorschau erstellt")
