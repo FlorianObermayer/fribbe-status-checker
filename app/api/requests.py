@@ -107,7 +107,7 @@ def _validate_topics(topics: list[str]) -> list[PushTopic]:
     if not topics:
         msg = "At least one topic is required"
         raise ValueError(msg)
-    return sorted([t for t in topics if t in VALID_TOPICS])
+    return list(dict.fromkeys(topics))
 
 
 class PushSubscribeRequest(BaseModel):
