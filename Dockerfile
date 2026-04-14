@@ -45,6 +45,11 @@ USER appuser
 # Copy the source code into the container.
 COPY ./app /code/app
 
+# Build-time version tag injected by CI; defaults to "dev" for local builds.
+# Placed after COPY so source-code changes don't bust the layer cache for unrelated layers.
+ARG BUILD_VERSION=dev
+ENV BUILD_VERSION=${BUILD_VERSION}
+
 # Expose the port that the application listens on.
 EXPOSE 80
 

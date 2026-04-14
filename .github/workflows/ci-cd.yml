@@ -2,7 +2,6 @@ name: CI/CD Pipeline
 
 # Define environment variables available to all jobs
 env:
-  APP_NAME: fribbe-status-checker
   PYTHON_VERSION: '3.12'
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 on:
@@ -11,6 +10,11 @@ on:
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
+
+# Prevent parallel deploy pipelines from conflicting on image tags / releases
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'workflow_dispatch' }}
 
 jobs:
   dependency-review:
@@ -71,31 +75,157 @@ jobs:
   build-and-push:
     needs: [lint, test]
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      build_version: ${{ steps.version.outputs.build_version }}
+      is_new_version: ${{ steps.check_tag.outputs.is_new_version }}
     
     steps:
       - uses: actions/checkout@v6
-      
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Extract version from pyproject.toml
+        id: version
+        run: |
+          VERSION=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "build_version=${VERSION}-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+      - name: Normalize image repository to lowercase
+        run: echo "IMAGE_REPO=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
+      - name: Check if version tag already exists
+        id: check_tag
+        run: |
+          if git rev-parse "v${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
+            echo "is_new_version=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_new_version=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Compute image tags
+        id: tags
+        run: |
+          TAGS="${IMAGE_REPO}:latest"
+          TAGS="${TAGS},${IMAGE_REPO}:${{ steps.version.outputs.build_version }}"
+          if [ "${{ steps.check_tag.outputs.is_new_version }}" = "true" ]; then
+            TAGS="${TAGS},${IMAGE_REPO}:${{ steps.version.outputs.version }}"
+          fi
+          echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
       
-      - name: Login to Docker Hub
+      - name: Login to GitHub Container Registry
         uses: docker/login-action@v4
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Build and push
         uses: docker/build-push-action@v7
         with:
           context: .
           push: true
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.APP_NAME }}:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.APP_NAME }}:${{ github.sha }}
-          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/${{ env.APP_NAME }}:buildcache
-          cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/${{ env.APP_NAME }}:buildcache,mode=max
-          # Pass build args to Dockerfile
+          tags: ${{ steps.tags.outputs.tags }}
+          cache-from: type=registry,ref=${{ env.IMAGE_REPO }}:buildcache
+          cache-to: type=registry,ref=${{ env.IMAGE_REPO }}:buildcache,mode=max
           build-args: |
-            APP_ENV=production
-            BUILD_VERSION=${{ github.sha }}
+            BUILD_VERSION=${{ steps.version.outputs.build_version }}
+
+  release:
+    needs: [build-and-push]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Normalize image repository to lowercase
+        run: echo "IMAGE_REPO=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
+      - name: Generate changelog (stable — unreleased commits)
+        if: needs.build-and-push.outputs.is_new_version == 'true'
+        id: changelog-stable
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --unreleased --strip header
+        env:
+          GITHUB_REPO: ${{ github.repository }}
+
+      - name: Generate changelog (nightly — since last tag)
+        if: needs.build-and-push.outputs.is_new_version == 'false'
+        id: changelog-nightly
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --latest --strip header
+        env:
+          GITHUB_REPO: ${{ github.repository }}
+
+      # First push with a new version: create a stable release
+      - name: Create release
+        if: needs.build-and-push.outputs.is_new_version == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.build-and-push.outputs.version }}
+          name: v${{ needs.build-and-push.outputs.version }}
+          body: |
+            ## Docker Image
+
+            ```
+            docker pull ${{ env.IMAGE_REPO }}:${{ needs.build-and-push.outputs.version }}
+            ```
+
+            Build: `${{ needs.build-and-push.outputs.build_version }}`
+
+            ## What's Changed
+
+            ${{ steps.changelog-stable.outputs.content }}
+          generate_release_notes: false
+
+      # Subsequent pushes under the same version: update rolling nightly pre-release
+      - name: Delete existing nightly tag
+        if: needs.build-and-push.outputs.is_new_version == 'false'
+        run: git push origin :refs/tags/nightly 2>/dev/null || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create nightly release
+        if: needs.build-and-push.outputs.is_new_version == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nightly
+          name: Nightly (${{ needs.build-and-push.outputs.build_version }})
+          prerelease: true
+          make_latest: false
+          body: |
+            ## Nightly Build
+
+            Automated build from `main` — not a stable release.
+
+            ```
+            docker pull ${{ env.IMAGE_REPO }}:${{ needs.build-and-push.outputs.build_version }}
+            ```
+
+            Base version: `${{ needs.build-and-push.outputs.version }}` | Build: `${{ needs.build-and-push.outputs.build_version }}` | Commit: ${{ github.sha }}
+
+            ## Changes since v${{ needs.build-and-push.outputs.version }}
+
+            ${{ steps.changelog-nightly.outputs.content }}
+          generate_release_notes: false
