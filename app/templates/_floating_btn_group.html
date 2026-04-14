@@ -1,0 +1,61 @@
+{% set _grp_visible = (show_preview_controls | default(false)) or (show_auth_button | default(false)) or
+(show_notification_create_btn | default(false)) or (show_preview_btn | default(false)) or show_back_btn %}
+<div id="floating-btn-group" class="{{ 'visible' if _grp_visible else '' }}">
+    {% if show_preview_controls | default(false) %}
+    {% include "_preview_controls.html" %}
+    {% endif %}
+    {% if show_auth_button | default(false) and not (signed_in | default(false)) %}
+    <a id="signin-btn" href="{{ url_auth }}" class="floating-btn" title="Anmelden" data-tooltip="Anmelden">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+            <polyline points="10 17 15 12 10 7" />
+            <line x1="15" y1="12" x2="3" y2="12" />
+        </svg>
+    </a>
+    {% endif %}
+    {% if show_notification_create_btn | default(false) %}
+    <a href="{{ url_notification_create }}" class="floating-btn" title="Benachrichtigung erstellen"
+        data-tooltip="Benachrichtigung erstellen">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 5v14M5 12h14" />
+        </svg>
+    </a>
+    {% endif %}
+    {% if show_preview_btn | default(false) %}
+    <a href="{{ url_preview }}" class="floating-btn" title="Benachrichtigungen verwalten"
+        data-tooltip="Benachrichtigungen verwalten">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+        </svg>
+    </a>
+    {% endif %}
+    {% if show_auth_button | default(false) and signed_in | default(false) %}
+    <form id="signout-form" method="post" action="{{ url_signout }}">
+        <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token }}">
+        <button id="signout-btn" type="submit" class="floating-btn" title="Abmelden" data-tooltip="Abmelden">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+        </button>
+    </form>
+    {% endif %}
+    {% if show_back_btn %}
+    <button type="button" class="floating-btn" title="Zurück" data-tooltip="Zurück" id="floating-btn-back">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M19 12H5" />
+            <polyline points="12 19 5 12 12 5" />
+        </svg>
+    </button>
+    <script>
+        document.getElementById('floating-btn-back').addEventListener('click', function () { history.back(); });
+    </script>
+    {% endif %}
+</div>

@@ -1,0 +1,326 @@
+/* Shared styles — used on all pages */
+
+:root {
+    --color-red: #f44336;
+        --color-yellow: #ffeb3b;
+        --color-green: #4caf50;
+        --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        /* Theme variables — light mode defaults */
+        --bg-body: #f5f5f5;
+        --bg-body-empty: #ffebee;
+        --bg-body-few: #fff8e1;
+        --bg-body-many: #e8f5e9;
+        --bg-container: #fff;
+        --bg-card: #f6f6f6;
+        --bg-card-fully: #ffeaea;
+    --bg-control: #f5f5f5;
+    --bg-control-hover: #e0e0e0;
+    --bg-control-subscribed: #e8f5e9;
+        --bg-control-subscribed-hover: #d0edda;
+        --bg-status-message: rgba(255, 255, 255, 0.92);
+        --bg-notification: #fffbe7;
+        --bg-panel: #fff;
+        --bg-ios-hint: #fff8e1;
+    
+        --text-heading: #333;
+        --text-body: #444;
+        --text-muted: #888;
+        --text-hint: #aaa;
+        --text-control: #444;
+        --text-subscribed: #2e7d32;
+        --text-ios-hint: #6d4c00;
+    
+        --border-control: #bbb;
+        --border-input: #ccc;
+        --border-panel: #ddd;
+        --border-subtle: #eee;
+        --border-ios-hint: #ffe082;
+        --border-light-ring: #fff;
+}
+
+html.dark-mode {
+    color-scheme: dark;
+        --shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    
+        --bg-body: #121212;
+        --bg-body-empty: #2d1a1a;
+        --bg-body-few: #2d2914;
+        --bg-body-many: #162d17;
+        --bg-container: #1e1e1e;
+        --bg-card: #252525;
+        --bg-card-fully: #3d1c1c;
+    --bg-control: #2a2a2a;
+    --bg-control-hover: #383838;
+        --bg-control-subscribed: #1a3d1c;
+        --bg-control-subscribed-hover: #1f4821;
+        --bg-status-message: rgba(30, 30, 30, 0.9);
+        --bg-notification: #2c2815;
+        --bg-panel: #252525;
+        --bg-ios-hint: #292515;
+    
+        --text-heading: #e0e0e0;
+        --text-body: #c0c0c0;
+        --text-muted: #888;
+        --text-hint: #606060;
+        --text-control: #ccc;
+        --text-subscribed: #81c784;
+        --text-ios-hint: #d4b800;
+    --border-control: #555;
+    --border-input: #555;
+        --border-panel: #444;
+        --border-subtle: #3a3a3a;
+        --border-ios-hint: #6b5b00;
+        --border-light-ring: #1e1e1e;
+    }
+    
+    .hidden {
+        display: none !important;
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+    
+    html,
+    body {
+        max-width: 100vw;
+        overflow-x: hidden;
+    }
+    
+    body {
+        font-family: 'Roboto', sans-serif;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background-color: var(--bg-body);
+        transition: background-color 0.5s ease;
+        text-align: center;
+    }
+    
+    .container {
+        position: relative;
+        background: var(--bg-container);
+        border-radius: 16px;
+        padding: 24px 8px 32px;
+        box-shadow: var(--shadow);
+        max-width: 650px;
+        width: 90%;
+        margin: 8px 0;
+        box-sizing: border-box;
+    }
+    
+    h1 {
+        font-weight: 500;
+        color: var(--text-heading);
+        margin-bottom: 30px;
+    }
+    
+    .bootstrap-banner {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 2000;
+        background: #c62828;
+        color: #fff;
+        text-align: center;
+        padding: 12px 16px;
+        font-size: 0.95rem;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    }
+    
+    .bootstrap-banner a {
+        color: #ffe082;
+        text-decoration: underline;
+    }
+    
+    /* Toast notification */
+    .toast {
+        position: fixed;
+        right: 16px;
+        bottom: 16px;
+        z-index: 9999;
+        padding: 10px 14px;
+        border-radius: 6px;
+        color: #fff;
+        font-size: 14px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        opacity: 0;
+        transform: translateY(10px);
+        pointer-events: none;
+        transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+    
+    .toast.visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    
+    /* Server-rendered flash: CSS-only show then auto-fade */
+    .toast.flash-auto {
+        animation: flash-toast var(--toast-duration, 3s) ease forwards;
+        transform: translateY(0);
+    }
+    
+    @keyframes flash-toast {
+        0% {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+    
+        10% {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    
+        80% {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    
+        100% {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+    }
+    
+    .toast.success {
+        background-color: #2d8a42;
+    }
+    
+    .toast.error {
+        background-color: #b3403f;
+    }
+    
+    /* Dark mode toggle button */
+    .theme-toggle-btn {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: 1px solid var(--border-control);
+        background: var(--bg-control);
+        color: var(--text-control);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        box-shadow: var(--shadow);
+        transition: background 0.2s, border-color 0.2s, color 0.2s;
+        z-index: 10;
+    }
+    
+    .theme-toggle-btn:hover {
+        background: var(--bg-control-hover);
+    }
+    
+    .theme-toggle-btn svg {
+        width: 18px;
+        height: 18px;
+        display: block;
+        flex-shrink: 0;
+    }
+    
+    /* Show moon in light mode, sun in dark mode */
+    #theme-icon-sun {
+        display: none;
+    }
+    
+    #theme-icon-moon {
+        display: block;
+    }
+    
+    html.dark-mode #theme-icon-sun {
+        display: block;
+    }
+    
+    html.dark-mode #theme-icon-moon {
+        display: none;
+    }
+    
+    /* GitHub badge */
+    .github-badge {
+        opacity: 0.35;
+        border-radius: 4px;
+        display: block;
+    }
+    
+    .github-badge img {
+        display: block;
+        height: 20px;
+}
+
+/* Button group container */
+#floating-btn-group {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-end;
+    z-index: 1100;
+    }
+    
+    #floating-btn-group.visible {
+        display: flex;
+}
+
+/* Circular floating button */
+.floating-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--border-control);
+    background: var(--bg-control);
+    color: var(--text-control);
+    cursor: pointer;
+    text-decoration: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: background 0.2s, box-shadow 0.2s;
+    padding: 0;
+    font: inherit;
+}
+
+.floating-btn[data-tooltip]::before {
+    content: attr(data-tooltip);
+    position: absolute;
+    right: calc(100% + 10px);
+    top: 50%;
+    transform: translateY(-50%);
+    white-space: nowrap;
+    background: rgba(50, 50, 50, 0.88);
+    color: #fff;
+    font-size: 0.78rem;
+    padding: 4px 9px;
+    border-radius: 5px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.floating-btn[data-tooltip]:hover::before {
+    opacity: 1;
+}
+
+.floating-btn svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+}
+
+.floating-btn:hover {
+    background: var(--bg-control-hover);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}

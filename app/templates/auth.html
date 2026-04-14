@@ -7,10 +7,10 @@
 {% block title %}Anmelden{% endblock %}
 
 {% block head_styles %}
-    <link rel="stylesheet" href="/static/css/auth.styles.css?v={{ version }}">
+    <link rel="stylesheet" href="/static/css/auth.styles.css?v={{ content_hash_version }}">
 {% endblock %}
 
-{% block body_attrs %} data-next="{{ next_url }}" data-signed-in="{{ signed_in | tojson }}"{% endblock %}
+{% block body_attrs %} data-next="{{ next_url }}" data-signed-in="{{ signed_in | tojson }}" data-url-auth="{{ url_auth }}" data-url-signout="{{ url_signout }}"{% endblock %}
 
 {% block content %}
     <main class="auth-shell">
@@ -21,7 +21,7 @@
             <p class="copy">Melde dich mit API-Schlüssel oder Admin-Token an. Der Browser speichert danach nur eine
                 opaque Sitzungs-ID, nicht den Schlüssel selbst.</p>
 
-            <form id="auth-form" novalidate>
+            <form id="auth-form" novalidate class="{% if signed_in %}hidden{% endif %}">
                 <label for="token-input">Schlüssel</label>
                 <input id="token-input" name="token" type="password" autocomplete="current-password" spellcheck="false"
                     required>
@@ -29,11 +29,11 @@
                 <p id="auth-error" class="error" hidden></p>
                 <div class="actions">
                     <button id="auth-submit" class="primary" type="submit">Anmelden</button>
-                    <a id="auth-cancel" class="link-button secondary" href="/">Abbrechen</a>
+                    <a id="auth-cancel" class="link-button secondary" href="{{ next_url }}">Abbrechen</a>
                 </div>
             </form>
 
-            <div id="signed-in-panel" class="signed-in-panel" hidden>
+            <div id="signed-in-panel" class="signed-in-panel{% if not signed_in %} hidden{% endif %}">
                 <p class="copy">Für diesen Browser ist bereits eine gültige Sitzung vorhanden.</p>
                 <div class="actions">
                     <button id="continue-button" class="primary" type="button">Weiter</button>
@@ -45,5 +45,5 @@
 {% endblock %}
 
 {% block scripts %}
-    <script src="/static/js/auth.js?v={{ version }}"></script>
+    <script src="/static/js/auth.js?v={{ content_hash_version }}"></script>
 {% endblock %}

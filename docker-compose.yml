@@ -19,6 +19,7 @@ services:
     environment:
       - APP_URL=${APP_URL:-} 
       - API_KEYS_PATH=${API_KEYS_PATH:-/code/secrets/apikeys.json}
+      - TZ=${TZ:-Europe/Berlin}
       - HTTPS_ONLY=${HTTPS_ONLY:-true}
       - LOCAL_DATA_PATH=${LOCAL_DATA_PATH:-/code/app-data/}
       - ROUTER_IP=${ROUTER_IP:-192.168.8.1}

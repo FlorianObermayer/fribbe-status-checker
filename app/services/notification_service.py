@@ -11,6 +11,7 @@ import markdown
 import nh3
 
 from app import env
+from app.api.requests import NotificationFilterId
 from app.services.persistent_collections import PersistentDict
 from app.services.polling_service import PollingService
 from app.services.push_sender import PushSender
@@ -125,16 +126,19 @@ class NotificationService(PollingService):
     def get(self, notification_ids: list[str] | None = None) -> list[Notification]:
         """Return notifications matching the given filter IDs."""
         if notification_ids is None:
-            notification_ids = ["all_active"]
+            notification_ids = [NotificationFilterId.ALL_ACTIVE]
         result: list[Notification] = []
 
-        if "all" in notification_ids:
+        if NotificationFilterId.ALL in notification_ids:
             result = [*self._store.values()]
-        elif "all_active" in notification_ids or "latest_active" in notification_ids:
+        elif (
+            NotificationFilterId.ALL_ACTIVE in notification_ids
+            or NotificationFilterId.LATEST_ACTIVE in notification_ids
+        ):
             result = [n for n in self._store.values() if n.is_active()]
-        elif "all_enabled" in notification_ids:
+        elif NotificationFilterId.ALL_ENABLED in notification_ids:
             result = [n for n in self._store.values() if n.enabled]
-        elif "all_inactive" in notification_ids:
+        elif NotificationFilterId.ALL_INACTIVE in notification_ids:
             result = [n for n in self._store.values() if not n.is_active()]
         else:
             requested_ids = {nid for nid in notification_ids if nid.startswith("nid-")}
@@ -145,7 +149,7 @@ class NotificationService(PollingService):
             reverse=True,
         )
 
-        if "latest_active" in notification_ids:
+        if NotificationFilterId.LATEST_ACTIVE in notification_ids:
             result = [result[0]] if len(result) > 0 else []
 
         return result
@@ -165,16 +169,16 @@ class NotificationService(PollingService):
     def delete_many(self, nids: list[str]) -> int:
         """Delete notifications matching the given filter IDs; return the count."""
         with self._store.batch_write() as store:
-            if "all" in nids:
+            if NotificationFilterId.ALL in nids:
                 count = len(store)
                 store.clear()
                 return count
 
-            if "all_active" in nids:
+            if NotificationFilterId.ALL_ACTIVE in nids:
                 to_delete = [n.id for n in store.values() if n.is_active()]
-            elif "all_enabled" in nids:
+            elif NotificationFilterId.ALL_ENABLED in nids:
                 to_delete = [n.id for n in store.values() if n.enabled]
-            elif "all_inactive" in nids:
+            elif NotificationFilterId.ALL_INACTIVE in nids:
                 to_delete = [n.id for n in store.values() if not n.is_active()]
             else:
                 requested = {nid for nid in nids if nid.startswith("nid-")}

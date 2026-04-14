@@ -60,14 +60,22 @@
 {% block title %}Fribbe Beach - Status &amp; Auslastung der Beachvolleyball-Anlage (Inoffiziell){% endblock %}
 
 {% block head_styles %}
-    <link rel="stylesheet" href="/static/css/styles.css?v={{ version }}">
+    <link rel="stylesheet" href="/static/css/index.styles.css?v={{ content_hash_version }}">
 {% endblock %}
 
-{% block body_attrs %} id="status-body" data-signed-in="{{ signed_in | tojson }}" data-show-auth-button="{{ show_auth_button | tojson }}"
-    data-bootstrap-mode="{{ bootstrap_mode | tojson }}"{% endblock %}
+{% block body_attrs %} id="status-body"
+data-notifications-url="{{ url_notifications_content }}"
+data-status-url="{{ url_status_content }}"
+data-push-vapid-key-url="{{ url_api_push_vapid_key }}"
+data-push-status-url="{{ url_api_push_status }}"
+data-push-subscribe-url="{{ url_api_push_subscribe }}"
+data-push-unsubscribe-url="{{ url_api_push_unsubscribe }}"
+data-push-topics-url="{{ url_api_push_topics }}"{% endblock %}
 
 {% block content %}
-    <div id="bootstrap-banner" class="bootstrap-banner hidden" role="alert" aria-live="polite" aria-atomic="true">
+    {% block page_banner %}{% endblock %}
+    <div id="bootstrap-banner" class="bootstrap-banner{% if not (bootstrap_mode | default(false)) %} hidden{% endif %}"
+        role="alert" aria-live="polite" aria-atomic="true">
         <strong>⚠ Setup mode active:</strong> No API keys configured. <a
             href="/docs#/API%20Keys/create_api_key_api_internal_api_key_post">Create the first key</a> to secure the
         admin interface.
@@ -108,27 +116,28 @@
             </div>
         </div>
 
-        <div id="status-message" class="status-message">
-            Lade Status...
-        </div>
-
-        <!-- Occupancy Info Card -->
-        <div id="occupancy-card" class="occupancy-card">
-            <div class="occupancy-header-row">
-                <h2 id="occupancy-header">Lade Status...</h2>
-                <div class="date-picker-row">
-                    <input type="date" id="for-date-picker" />
-                    <button id="today-btn" type="button">Heute</button>
+        <div id="status-content-container">
+            <div id="status-content" data-level="" data-occupancy-type="" data-threshold-empty="" data-threshold-few=""
+                data-threshold-many="">
+                <div id="status-message" class="status-message">Lade Status...</div>
+                <div id="occupancy-card" class="occupancy-card">
+                    <div class="occupancy-header-row">
+                        <h2 id="occupancy-header">Lade Status...</h2>
+                        <div class="date-picker-row">
+                            <input type="date" id="for-date-picker" value="{{ for_date_value }}" min="{{ today_str }}"
+                                max="{{ max_date_str }}" />
+                            <button id="today-btn" type="button">Heute</button>
+                        </div>
+                    </div>
+                    <div>
+                        <div><span id="occupancy-message">Lade Veranstaltung...</span></div>
+                    </div>
+                </div>
+                <div id="combined-updated-marker">
+                    <span id="combined-updated-text">Aktualisiert ...</span>
                 </div>
             </div>
-            <div>
-                <div><span id="occupancy-message">Lade Veranstaltung...</span></div>
             </div>
-        </div>
-        <!-- Kombinierter Aktualisierungsmarker -->
-        <div id="combined-updated-marker">
-            <span id="combined-updated-text">Aktualisiert ...</span>
-        </div>
         <!-- Push notification subscribe row -->
         <div id="push-notify-row" class="push-notify-row hidden">
             <div id="push-btn-wrapper" class="push-btn-wrapper">
@@ -179,42 +188,9 @@
             <b>Disclaimer:</b> Dies ist ein <b>inoffizielles Projekt</b> und steht in keiner offiziellen Verbindung zum
             DJK
             Augsburg Hochzoll
-            e.V.{% if show_legal %} · <a href="/legal" class="hint-link">Impressum &amp; Datenschutz</a>{% endif %}
+            e.V.{% if show_legal %} · <a href="{{ url_legal }}" class="hint-link">Impressum &amp;
+                Datenschutz</a>{% endif %}
         </p>
-    </div>
-
-    <div id="admin-btn-group">
-        <a id="signin-btn" href="/auth" class="admin-btn" title="Anmelden" data-tooltip="Anmelden">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-                <polyline points="10 17 15 12 10 7" />
-                <line x1="15" y1="12" x2="3" y2="12" />
-            </svg>
-        </a>
-        <a href="/notification-create" class="admin-btn" title="Benachrichtigung erstellen"
-            data-tooltip="Benachrichtigung erstellen">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M12 5v14M5 12h14" />
-            </svg>
-        </a>
-        <a href="/preview/notifications?n_ids=all_active" class="admin-btn" title="Benachrichtigungen verwalten"
-            data-tooltip="Benachrichtigungen verwalten">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-            </svg>
-        </a>
-        <button id="signout-btn" class="admin-btn" title="Abmelden" data-tooltip="Abmelden">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
-        </button>
     </div>
 
     <!-- Notification Info Box -->
@@ -226,8 +202,11 @@
     </div>
 {% endblock %}
 
+{% block floating_buttons %}{% include "_floating_btn_group.html" %}{% endblock %}
+
 {% block scripts %}
-    <script src="/static/js/app.js?v={{ version }}"></script>
+
+    <script src="/static/js/app.js?v={{ content_hash_version }}"></script>
     <!-- GitHub badge-->
     <a href="https://github.com/FlorianObermayer/fribbe-status-checker" target="_blank" rel="noopener noreferrer"
         aria-label="Open GitHub repository" title="GitHub: fribbe-status-checker" class="github-badge">

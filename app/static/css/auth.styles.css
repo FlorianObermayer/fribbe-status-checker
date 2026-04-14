@@ -1,65 +1,35 @@
 :root {
-    --color-gray: #f5f5f5;
-    --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         --accent: #4caf50;
         --accent-hover: #43a047;
         --danger-bg: #ffebee;
         --danger-text: #c62828;
         --muted: #888;
-/* Theme variables — light defaults */
-    --bg-body: #f5f5f5;
     --bg-card: #fff;
-    --text-heading: #333;
     --text-copy: #666;
     --bg-input: #fafafa;
     --text-input: #333;
-    --border-input: #ccc;
     --bg-secondary: #f5f5f5;
     --text-secondary: #444;
     --border-secondary: #bbb;
     --bg-secondary-hover: #e0e0e0;
-    --border-light-ring: #fff;
-    --bg-control: #f5f5f5;
-    --border-control: #bbb;
-    --text-control: #444;
 }
 
 html.dark-mode {
-    color-scheme: dark;
-    --shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
     --danger-bg: #3d1c1c;
     --danger-text: #ef9a9a;
 
-    --bg-body: #121212;
     --bg-card: #1e1e1e;
-    --text-heading: #e0e0e0;
     --text-copy: #999;
     --bg-input: #2a2a2a;
     --text-input: #e0e0e0;
-    --border-input: #555;
     --bg-secondary: #2a2a2a;
     --text-secondary: #ccc;
     --border-secondary: #555;
     --bg-secondary-hover: #383838;
-    --border-light-ring: #1e1e1e;
-    --bg-control: #2a2a2a;
-    --border-control: #555;
-    --text-control: #ccc;
-}
-
-* {
-    box-sizing: border-box;
 }
 
 body {
-    margin: 0;
-    min-height: 100vh;
-    font-family: 'Roboto', sans-serif;
     color: var(--text-heading);
-        background-color: var(--bg-body);
-        display: flex;
-        align-items: center;
-        justify-content: center;
     padding: 24px;
 }
 
@@ -206,49 +176,13 @@ button:disabled {
     }
 }
 
-/* Dark mode toggle button */
+/* Dark mode toggle button — size overrides */
 .theme-toggle-btn {
-    position: absolute;
-    top: 12px;
-    right: 12px;
     width: 32px;
     height: 32px;
-    border-radius: 50%;
-    border: 1px solid var(--border-control);
-    background: var(--bg-control);
-    color: var(--text-control);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    box-shadow: var(--shadow);
-    transition: background 0.2s, border-color 0.2s;
-}
-
-.theme-toggle-btn:hover {
-    background: var(--bg-secondary-hover);
 }
 
 .theme-toggle-btn svg {
     width: 16px;
     height: 16px;
-    display: block;
-    flex-shrink: 0;
-}
-
-#theme-icon-sun {
-    display: none;
-}
-
-#theme-icon-moon {
-    display: block;
-}
-
-html.dark-mode #theme-icon-sun {
-    display: block;
-}
-
-html.dark-mode #theme-icon-moon {
-    display: none;
 }

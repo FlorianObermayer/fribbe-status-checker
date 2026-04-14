@@ -1,0 +1,49 @@
+<form method="get" action="{{ url_notification_preview }}" class="filter-wrapper">
+    <select name="n_ids" class="filter-select" id="preview-filter-select">
+        {% for f in notification_filters %}
+        {% if f.value == selected_filter %}
+        <option value="{{ f.value }}" selected>{{ f.label }}</option>
+        {% else %}
+        <option value="{{ f.value }}">{{ f.label }}</option>
+        {% endif %}
+        {% endfor %}
+    </select>
+</form>
+<script>document.getElementById('preview-filter-select').addEventListener('change', function () { this.form.submit(); })</script>
+    {% if show_activate_btn | default(false) %}
+<form method="post" action="{{ url_enable }}">
+    <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token }}">
+    <button type="submit" class="floating-btn" title="Aktivieren" data-tooltip="Aktivieren">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="20 6 9 17 4 12"/>
+        </svg>
+    </button>
+</form>
+{% endif %}
+{% if show_disable_btn | default(false) %}
+<form method="post" action="{{ url_disable }}">
+    <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token }}">
+    <button type="submit" class="floating-btn" title="Deaktivieren" data-tooltip="Deaktivieren">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+    </button>
+</form>
+{% endif %}
+{% if show_delete_btn | default(false) %}
+<form method="post" action="{{ url_delete }}">
+    <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token }}">
+    <button type="submit" class="floating-btn" title="Löschen" data-tooltip="Löschen" id="preview-btn-delete">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+        </svg>
+    </button>
+</form>
+<script>document.getElementById('preview-btn-delete').closest('form').addEventListener('submit', function (e) { if (!confirm('Diese Benachrichtigung wirklich löschen?')) e.preventDefault(); })</script>
+
+{% endif %}

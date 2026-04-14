@@ -1,78 +1,185 @@
+from datetime import date, datetime, timedelta
 from typing import Annotated
+from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.templating import Jinja2Templates
-from starsessions import regenerate_session_id
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import HTMLResponse
 
 from app import env
-from app.api.access_role import AccessRole
 from app.api.ephemeral_api_key_store import EphemeralAPIKeyStore
-from app.api.hybrid_auth import PageAuth, create_session, resolve_session_subject
-from app.api.requests import NotificationQuery
-from app.api.schema import requires_auth_extra
+from app.api.requests import AuthRedirectQuery
+from app.dependencies import (
+    MessageServiceDep,
+    OccupancyServiceDep,
+    PresenceServiceDep,
+    WeatherServiceDep,
+)
 from app.format import seconds_to_human
-from app.version import VERSION
+from app.routers._page_utils import templates
+from app.routers.nav_context import NavContext, Route, operator_or_above
+from app.services.occupancy.model import OccupancySource, OccupancyType
+from app.services.presence_level import PresenceLevel
+from app.services.presence_thresholds import PresenceThresholds
 
 router = APIRouter()
-_templates = Jinja2Templates(directory="app/templates")
 
 
-def _is_signed_in(request: Request) -> bool:
-    session_subject = resolve_session_subject(request)
-    if session_subject is not None:
-        return True
-
-    # Clear stale / legacy session entries.
-    if (
-        request.session.get("api_key")
-        or request.session.get("admin_token_hash")
-        or request.session.get("auth_session_id")
-    ):
-        request.session.clear()
-
-    return False
-
-
-def sanitize_next(next_url: str) -> str:
-    """Ensure the redirect URL is a safe relative path."""
-    if not next_url.startswith("/") or next_url.startswith("//"):
-        return "/"
-    return next_url
-
-
-@router.get("/", response_class=HTMLResponse, tags=["HTML"])
-def get_html(request: Request, _for_date: str = "today") -> HTMLResponse:
+@router.get(Route.URL_INDEX, response_class=HTMLResponse, tags=["HTML"])
+def get_html(request: Request, for_date: str | None = None) -> HTMLResponse:
     """Serve the main index page with injected runtime config."""
-    signed_in = _is_signed_in(request)
     bootstrap_mode = EphemeralAPIKeyStore.is_empty() and not env.ADMIN_TOKEN
-    return _templates.TemplateResponse(
+    nav_ctx = NavContext(
+        request,
+        show_auth_button=env.is_login_button_enabled(),
+        show_notification_create_btn=operator_or_above,
+        show_preview_btn=operator_or_above,
+    )
+    _today = datetime.now(tz=ZoneInfo(env.TZ)).date()
+    today_str = _today.isoformat()
+    max_date_str = (_today + timedelta(days=365)).isoformat()
+    return templates.TemplateResponse(
         request,
         "index.html",
         context={
-            "signed_in": signed_in,
-            "show_auth_button": env.is_login_button_enabled(),
+            **nav_ctx,
             "bootstrap_mode": bootstrap_mode,
             "app_url": env.APP_URL,
-            "version": VERSION,
             "show_legal": env.is_legal_page_enabled(),
+            "for_date_value": for_date or today_str,
+            "today_str": today_str,
+            "max_date_str": max_date_str,
         },
     )
 
 
-@router.get("/legal", response_class=HTMLResponse, include_in_schema=False)
-def get_legal_page(request: Request) -> HTMLResponse:
+def _format_datetime(dt: datetime) -> str:
+    """Format a datetime as a short German-locale string (e.g. '11. Apr., 12:00')."""
+    return dt.strftime("%-d. %b., %H:%M")
+
+
+def _format_date_long(d: str | None) -> str:
+    """Format an ISO date string as a long German weekday+date (e.g. 'Freitag, 11. Apr.')."""
+    parsed = date.fromisoformat(d) if d else None
+    if parsed is None:
+        return ""
+    weekdays = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"]
+    return f"{weekdays[parsed.weekday()]}, {parsed.strftime('%-d. %b.')}"
+
+
+def _build_occupancy_header(source: OccupancySource, for_date: str | None, for_date_iso: str) -> str:
+    """Build the occupancy card header string."""
+    if source == OccupancySource.EVENT_CALENDAR:
+        return f"Veranstaltungen ({_format_date_long(for_date_iso)})" if for_date else "Heutige Veranstaltungen"
+    return f"Belegungsplan ({_format_date_long(for_date_iso)})" if for_date else "Heutiger Belegungsplan"
+
+
+def _build_combined_updated_text(
+    presence_last_updated: datetime | None,
+    occupancy_last_updated: datetime | None,
+) -> str:
+    """Build the combined 'last updated' text."""
+    parts: list[str] = []
+    if presence_last_updated:
+        parts.append(f"Anwesenheit vom {_format_datetime(presence_last_updated)}")
+    if occupancy_last_updated:
+        parts.append(f"Belegung vom {_format_datetime(occupancy_last_updated)}")
+    return " - ".join(parts) if parts else "Aktualisiert: Nie"
+
+
+def _build_status_context(
+    occupancy_svc: OccupancyServiceDep,
+    presence_svc: PresenceServiceDep,
+    message_svc: MessageServiceDep,
+    weather_svc: WeatherServiceDep,
+    for_date: str | None,
+) -> dict[str, object]:
+    """Build the template context for the status content fragment."""
+    daily_occupancy = occupancy_svc.get_occupancy(for_date or "today")
+
+    time_str = next(
+        (event.time_str for event in daily_occupancy.events if event.occupancy_type == OccupancyType.FULLY),
+        None,
+    )
+    weather = weather_svc.get_condition() if weather_svc is not None else None
+    presence_level = presence_svc.get_level()
+    presence_last_updated = presence_svc.get_last_updated()
+    presence_message = message_svc.get_status_message(
+        presence_level,
+        daily_occupancy.occupancy_type,
+        time_str,
+        weather,
+    ).message
+
+    thresholds = PresenceThresholds().get_thresholds()
+    _today = datetime.now(tz=ZoneInfo(env.TZ)).date()
+
+    return {
+        "presence": {
+            "level": presence_level.value,
+            "message": presence_message,
+        },
+        "occupancy": {
+            "type": daily_occupancy.occupancy_type.value,
+            "source": daily_occupancy.occupancy_source.value,
+            "messages": daily_occupancy.lines,
+        },
+        "thresholds": {
+            "empty": thresholds.get(PresenceLevel.EMPTY, 0),
+            "few": thresholds.get(PresenceLevel.FEW, 0),
+            "many": thresholds.get(PresenceLevel.MANY, 0),
+        },
+        "occupancy_header": _build_occupancy_header(
+            daily_occupancy.occupancy_source,
+            for_date,
+            daily_occupancy.date.isoformat(),
+        ),
+        "combined_updated_text": _build_combined_updated_text(
+            presence_last_updated,
+            daily_occupancy.last_updated,
+        ),
+        "for_date_value": for_date or _today.isoformat(),
+        "today_str": _today.isoformat(),
+        "max_date_str": (_today + timedelta(days=365)).isoformat(),
+    }
+
+
+@router.get(
+    Route.URL_STATUS_CONTENT,
+    response_class=HTMLResponse,
+    include_in_schema=False,
+)
+def get_status_content(  # noqa: PLR0913
+    request: Request,
+    occupancy_svc: OccupancyServiceDep,
+    presence_svc: PresenceServiceDep,
+    message_svc: MessageServiceDep,
+    weather_svc: WeatherServiceDep,
+    for_date: str | None = None,
+) -> HTMLResponse:
+    """Return server-rendered status HTML fragment for polling."""
+    ctx = _build_status_context(occupancy_svc, presence_svc, message_svc, weather_svc, for_date)
+    return templates.TemplateResponse(request, "_status_content.html", context=ctx)
+
+
+@router.get(Route.URL_LEGAL, response_class=HTMLResponse, include_in_schema=False)
+def get_legal_page(
+    request: Request,
+) -> HTMLResponse:
     """Serve the Impressum & Datenschutz page.
 
-    Returns 404 when OPERATOR_NAME or OPERATOR_EMAIL are not configured.
+    Returns 404 legal page is not configured.
     """
     if not env.is_legal_page_enabled():
         raise HTTPException(status_code=404, detail="Legal page not configured")
-    return _templates.TemplateResponse(
+    nav_ctx = NavContext(
+        request,
+        show_auth_button=False,
+    )
+    return templates.TemplateResponse(
         request,
         "legal.html",
         context={
-            "version": VERSION,
+            **nav_ctx,
             "operator_name": env.OPERATOR_NAME,
             "operator_email": env.OPERATOR_EMAIL,
             "session_max_age": seconds_to_human(env.SESSION_MAX_AGE_SECONDS),
@@ -83,80 +190,15 @@ def get_legal_page(request: Request) -> HTMLResponse:
     )
 
 
-@router.get("/auth", response_class=HTMLResponse, include_in_schema=False)
-def get_auth_page(request: Request, next_url: Annotated[str, Query(alias="next")] = "/") -> HTMLResponse:
+@router.get(Route.URL_AUTH, response_class=HTMLResponse, include_in_schema=False)
+def get_auth_page(request: Request, redirect: Annotated[AuthRedirectQuery, Depends()]) -> HTMLResponse:
     """Serve the authentication page."""
-    next_url = sanitize_next(next_url)
-    signed_in = _is_signed_in(request)
-    return _templates.TemplateResponse(
+    nav_ctx = NavContext(
+        request,
+        show_auth_button=False,
+    )
+    return templates.TemplateResponse(
         request,
         "auth.html",
-        context={
-            "next_url": next_url,
-            "signed_in": signed_in,
-            "version": VERSION,
-        },
-    )
-
-
-@router.post("/auth", include_in_schema=False)
-async def post_auth(
-    request: Request,
-    token: Annotated[str, Body()],
-    next_url: Annotated[str, Body(alias="next")] = "/",
-) -> JSONResponse:
-    """Authenticate with a token and create a session."""
-    next_url = sanitize_next(next_url)
-    if not create_session(request, token):
-        raise HTTPException(status_code=401, detail="Invalid token")
-    regenerate_session_id(request)
-    return JSONResponse({"redirect": next_url})
-
-
-@router.post("/signout", include_in_schema=False)
-async def signout(request: Request) -> JSONResponse:
-    """Clear the session and redirect to the home page."""
-    # CSRF enforcement is handled by starlette-csrf middleware.
-    request.session.clear()
-    response = JSONResponse({"redirect": "/"})
-    # Explicitly expire the CSRF token cookie; the CSRF middleware only sets it
-    # when absent, so it would otherwise linger in the browser after sign-out.
-    response.delete_cookie("csrftoken", path="/", samesite="lax", secure=env.HTTPS_ONLY)
-    return response
-
-
-@router.get("/notification-create", response_class=HTMLResponse, tags=["Notifications", "HTML"])
-def get_notification_builder(
-    request: Request, _: Annotated[str, Depends(PageAuth(min_role=AccessRole.NOTIFICATION_OPERATOR))]
-) -> HTMLResponse:
-    """Serve the notification creation page."""
-    return _templates.TemplateResponse(
-        request,
-        "notification-create.html",
-        context={"version": VERSION},
-    )
-
-
-@router.get(
-    "/preview/notifications",
-    tags=["Notifications"],
-    openapi_extra=requires_auth_extra(),
-)
-def get_notification_preview(
-    request: Request,
-    _query: Annotated[NotificationQuery, Query()],
-    _auth: Annotated[str, Depends(PageAuth())],
-) -> HTMLResponse:
-    """Serve a notification preview page."""
-    return _templates.TemplateResponse(
-        request,
-        "index.html",
-        context={
-            "signed_in": True,
-            "show_auth_button": env.is_login_button_enabled(),
-            "bootstrap_mode": False,
-            "app_url": env.APP_URL,
-            "version": VERSION,
-            "show_legal": env.is_legal_page_enabled(),
-        },
+        context={**nav_ctx, "next_url": redirect.next},
     )

@@ -1,0 +1,26 @@
+{% extends "index.html" %}
+
+{% block body_attrs %} id="status-body"
+data-notifications-url="{{ url_notification_preview_content }}"
+data-status-url="{{ url_status_content }}"
+data-push-vapid-key-url="{{ url_api_push_vapid_key }}"
+data-push-status-url="{{ url_api_push_status }}"
+data-push-subscribe-url="{{ url_api_push_subscribe }}"
+data-push-unsubscribe-url="{{ url_api_push_unsubscribe }}"
+data-push-topics-url="{{ url_api_push_topics }}"{% endblock %}
+
+{% block head_styles %}
+{{ super() }}
+<link rel="stylesheet" href="/static/css/preview.styles.css?v={{ content_hash_version }}">
+{% endblock %}
+
+{% block page_banner %}
+    <div class="preview-banner" role="note">
+        Diese Seite zeigt, wie die Benachrichtigungen auf der Status Seite aussehen werden.
+    </div>
+{% endblock %}
+
+{% block floating_buttons %}
+    {% set show_preview_controls = true %}
+    {% include "_floating_btn_group.html" %}
+{% endblock %}

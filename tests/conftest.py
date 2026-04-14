@@ -10,11 +10,11 @@ from collections.abc import Generator
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from starlette_csrf.middleware import CSRFMiddleware
 from starsessions import InMemoryStore, SessionAutoloadMiddleware, SessionMiddleware
 
 from app import env
-from app.routers import api_keys, internal, misc, notifications, pages, push, status, wardens
+from app.csrf import FormFieldCSRFMiddleware
+from app.routers import api_keys, auth, internal, misc, notification_ui, notifications, pages, push, status, wardens
 
 TEST_ADMIN_TOKEN = "test-admin-token-" + "A" * 32
 
@@ -25,7 +25,7 @@ def test_app() -> FastAPI:
     test_app = FastAPI()
     session_store = InMemoryStore()
     test_app.add_middleware(
-        CSRFMiddleware,
+        FormFieldCSRFMiddleware,
         secret=env.SESSION_SECRET_KEY,
         sensitive_cookies={"session_cookie"},
         header_name="x-csrf-token",
@@ -42,11 +42,13 @@ def test_app() -> FastAPI:
         cookie_same_site="lax",
     )
     test_app.include_router(misc.router)
+    test_app.include_router(auth.router)
     test_app.include_router(status.router)
     test_app.include_router(push.router)
     test_app.include_router(api_keys.router)
     test_app.include_router(internal.router)
     test_app.include_router(notifications.router)
+    test_app.include_router(notification_ui.router)
     test_app.include_router(wardens.router)
     test_app.include_router(pages.router)
     return test_app

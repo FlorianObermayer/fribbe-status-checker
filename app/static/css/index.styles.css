@@ -1,100 +1,4 @@
-:root {
-    --color-red: #f44336;
-    --color-yellow: #ffeb3b;
-    --color-green: #4caf50;
-    --color-gray: #f5f5f5;
-    --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-/* Theme variables — light mode defaults */
-    --bg-body: #f5f5f5;
-    --bg-body-empty: #ffebee;
-    --bg-body-few: #fff8e1;
-    --bg-body-many: #e8f5e9;
-    --bg-container: #fff;
-    --bg-card: #f6f6f6;
-    --bg-card-fully: #ffeaea;
-    --bg-control: #f5f5f5;
-    --bg-control-hover: #e0e0e0;
-    --bg-control-subscribed: #e8f5e9;
-    --bg-control-subscribed-hover: #d0edda;
-    --bg-status-message: rgba(255, 255, 255, 0.92);
-    --bg-notification: #fffbe7;
-    --bg-panel: #fff;
-    --bg-ios-hint: #fff8e1;
-
-    --text-heading: #333;
-    --text-body: #444;
-    --text-muted: #888;
-    --text-hint: #aaa;
-    --text-control: #444;
-    --text-subscribed: #2e7d32;
-    --text-ios-hint: #6d4c00;
-
-    --border-control: #bbb;
-    --border-input: #ccc;
-    --border-panel: #ddd;
-    --border-subtle: #eee;
-    --border-ios-hint: #ffe082;
-    --border-light-ring: #fff;
-}
-
-html.dark-mode {
-    color-scheme: dark;
-    --shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-
-    --bg-body: #121212;
-    --bg-body-empty: #2d1a1a;
-    --bg-body-few: #2d2914;
-    --bg-body-many: #162d17;
-    --bg-container: #1e1e1e;
-    --bg-card: #252525;
-    --bg-card-fully: #3d1c1c;
-    --bg-control: #2a2a2a;
-    --bg-control-hover: #383838;
-    --bg-control-subscribed: #1a3d1c;
-    --bg-control-subscribed-hover: #1f4821;
-    --bg-status-message: rgba(30, 30, 30, 0.9);
-    --bg-notification: #2c2815;
-    --bg-panel: #252525;
-    --bg-ios-hint: #292515;
-
-    --text-heading: #e0e0e0;
-    --text-body: #c0c0c0;
-    --text-muted: #888;
-    --text-hint: #606060;
-    --text-control: #ccc;
-    --text-subscribed: #81c784;
-    --text-ios-hint: #d4b800;
-
-    --border-control: #555;
-    --border-input: #555;
-    --border-panel: #444;
-    --border-subtle: #3a3a3a;
-    --border-ios-hint: #6b5b00;
-    --border-light-ring: #1e1e1e;
-}
-
-.hidden {
-    display: none !important;
-}
-
-.bootstrap-banner {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 2000;
-    background: #c62828;
-    color: #fff;
-    text-align: center;
-    padding: 12px 16px;
-    font-size: 0.95rem;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-}
-
-.bootstrap-banner a {
-    color: #ffe082;
-    text-decoration: underline;
-}
+/* Index page styles */
 
 .clipboard-textarea {
     position: fixed;
@@ -106,44 +10,6 @@ html.dark-mode {
     margin: 0;
     padding-left: 24px;
     text-align: left;
-}
-
-html,
-body {
-    max-width: 100vw;
-    overflow-x: hidden;
-}
-
-body {
-    font-family: 'Roboto', sans-serif;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    background-color: var(--bg-body);
-    transition: background-color 0.5s ease;
-    text-align: center;
-}
-
-.container {
-    position: relative;
-    background: var(--bg-container);
-    border-radius: 16px;
-    padding: 24px 8px 32px;
-    box-shadow: var(--shadow);
-    max-width: 650px;
-    width: 90%;
-    margin: 8px 0;
-    box-sizing: border-box;
-}
-
-h1 {
-    font-weight: 500;
-    color: var(--text-heading);
-    margin-bottom: 30px;
 }
 
 .status-indicator {
@@ -204,7 +70,7 @@ h1 {
     margin: 14px 0;
     border-radius: 10px;
     background-color: var(--bg-status-message);
-        color: var(--text-body);
+    color: var(--text-body);
     font-style: italic;
     position: relative;
     padding: 18px 8px;
@@ -227,7 +93,7 @@ h1 {
     text-overflow: ellipsis;
 }
 
-/* Status-specific styles */
+/* Status-specific body background */
 body.status-empty {
     background-color: var(--bg-body-empty);
 }
@@ -240,7 +106,7 @@ body.status-many {
     background-color: var(--bg-body-many);
 }
 
-/* CSS Ergänzungen */
+/* Status explanation dots */
 .status-explanation {
     display: flex;
     justify-content: center;
@@ -284,9 +150,10 @@ body.status-many {
     background-color: var(--color-green);
 }
 
+/* Occupancy cards */
 .occupancy-card.occupancy-fully {
     background: var(--bg-card-fully) !important;
-        border: 2.5px solid var(--color-red);
+    border: 2.5px solid var(--color-red);
     box-shadow: 0 2px 12px 0 rgba(244, 67, 54, 0.08);
 }
 
@@ -315,70 +182,50 @@ body.status-many {
     align-items: flex-start;
 }
 
-#admin-btn-group {
-    display: none;
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    z-index: 1100;
-    flex-direction: column;
-    gap: 10px;
-    align-items: center;
-}
-
-#admin-btn-group.admin-visible {
-    display: flex;
-}
-
-.admin-btn {
-    position: relative;
+.occupancy-header-row {
     display: flex;
     align-items: center;
-    justify-content: center;
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.occupancy-header-row h2 {
+    margin: 0;
+    font-size: 1.1rem;
+    flex: 1 1 auto;
+    text-align: left;
+}
+
+.occupancy-card .date-picker-row {
+    margin: 0;
+    gap: 6px;
+}
+
+.occupancy-card #for-date-picker {
+    font-size: 0.98rem;
+    padding: 2px 6px;
+    border-radius: 6px;
+    border: 1px solid var(--border-input);
+    background: var(--bg-control);
+    color: var(--text-heading);
+    max-width: 120px;
+}
+
+.occupancy-card #today-btn {
+    font-size: 0.95rem;
+    padding: 2px 8px;
+    border-radius: 6px;
     border: 1px solid var(--border-control);
-        background: var(--bg-control);
-        color: var(--text-control);
+    background: var(--bg-control);
+    color: var(--text-heading);
     cursor: pointer;
-    text-decoration: none;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    transition: background 0.2s, box-shadow 0.2s;
-    padding: 0;
-    font: inherit;
+    transition: background 0.2s;
 }
 
-.admin-btn[data-tooltip]::before {
-    content: attr(data-tooltip);
-    position: absolute;
-    right: calc(100% + 10px);
-    top: 50%;
-    transform: translateY(-50%);
-    white-space: nowrap;
-    background: rgba(50, 50, 50, 0.88);
-    color: #fff;
-    font-size: 0.78rem;
-    padding: 4px 9px;
-    border-radius: 5px;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.15s;
-}
-
-.admin-btn[data-tooltip]:hover::before {
-    opacity: 1;
-}
-
-.admin-btn svg {
-    width: 20px;
-    height: 20px;
-    display: block;
-}
-
-.admin-btn:hover {
+.occupancy-card #today-btn:hover {
     background: var(--bg-control-hover);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 /* Push notification subscribe button */
@@ -395,8 +242,8 @@ body.status-many {
     padding: 7px 18px;
     border-radius: 20px;
     border: 1px solid var(--border-control);
-        background: var(--bg-control);
-        color: var(--text-control);
+    background: var(--bg-control);
+    color: var(--text-control);
     cursor: pointer;
     font-size: 0.88rem;
     font-family: inherit;
@@ -480,7 +327,7 @@ body.status-many {
 .push-topic-panel {
     margin-top: 6px;
     background: var(--bg-panel);
-        border: 1px solid var(--border-panel);
+    border: 1px solid var(--border-panel);
     border-radius: 10px;
     padding: 10px 14px 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -522,13 +369,14 @@ body.status-many {
 .push-unsubscribe-btn:hover {
     text-decoration: underline;
 }
+
 /* iOS install hint */
 .push-ios-hint {
     max-width: 400px;
     margin: 14px auto 0;
     padding: 10px 14px;
     background: var(--bg-ios-hint);
-        border: 1px solid var(--border-ios-hint);
+    border: 1px solid var(--border-ios-hint);
     border-radius: 10px;
     font-size: 0.85rem;
     color: var(--text-ios-hint);
@@ -549,6 +397,7 @@ body.status-many {
     stroke: #007aff;
     margin: 0 2px;
 }
+
 .inofficial-hint {
     max-width: 600px;
     text-align: left;
@@ -571,52 +420,7 @@ body.status-many {
     border-bottom-style: solid;
 }
 
-.occupancy-header-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 8px;
-    flex-wrap: wrap;
-}
-
-.occupancy-header-row h2 {
-    margin: 0;
-    font-size: 1.1rem;
-    flex: 1 1 auto;
-    text-align: left;
-}
-
-.occupancy-card .date-picker-row {
-    margin: 0;
-    gap: 6px;
-}
-
-.occupancy-card #for-date-picker {
-    font-size: 0.98rem;
-    padding: 2px 6px;
-    border-radius: 6px;
-    border: 1px solid var(--border-input);
-        background: var(--bg-control);
-        color: var(--text-heading);
-    max-width: 120px;
-}
-
-.occupancy-card #today-btn {
-    font-size: 0.95rem;
-    padding: 2px 8px;
-    border-radius: 6px;
-    border: 1px solid var(--border-control);
-        background: var(--bg-control);
-        color: var(--text-heading);
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.occupancy-card #today-btn:hover {
-    background: var(--bg-control-hover);
-}
-
+/* Legend */
 .legend-toggle {
     display: flex;
     align-items: center;
@@ -625,7 +429,7 @@ body.status-many {
     font-size: 1rem;
     font-weight: 500;
     background: var(--bg-container);
-        color: var(--text-body);
+    color: var(--text-body);
     border-radius: 8px;
     box-shadow: var(--shadow);
     margin: 20px auto 0;
@@ -664,7 +468,7 @@ body.status-many {
 .legend-panel {
     margin-top: 80px;
     background: var(--bg-panel);
-        color: var(--text-body);
+    color: var(--text-body);
     border-radius: 12px;
     box-shadow: var(--shadow);
     padding: 18px 20px 14px;
@@ -692,6 +496,7 @@ body.status-many {
     padding: 2px 0;
 }
 
+/* Notification modal */
 .notification-modal {
     position: fixed;
     top: 0;
@@ -708,7 +513,7 @@ body.status-many {
 
 .notification-content {
     background: var(--bg-notification);
-        color: var(--text-heading);
+    color: var(--text-heading);
     border-radius: 12px;
     box-shadow: var(--shadow);
     padding: 12px;
@@ -721,57 +526,6 @@ body.status-many {
     overflow-y: auto;
     align-self: center;
     text-align: start;
-}
-
-/* Filter select styled as pill matching admin-btn aesthetic */
-.filter-wrapper {
-    position: relative;
-}
-
-.filter-wrapper .filter-select {
-    display: block;
-    padding: 6px 28px 6px 10px;
-    border-radius: 22px;
-    border: 1px solid var(--border-control);
-        background: var(--bg-control);
-        color: var(--text-control);
-    font-family: 'Roboto', sans-serif;
-    font-size: 0.82rem;
-    font-weight: 500;
-    cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    transition: background 0.2s, box-shadow 0.2s;
-        appearance: none;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-        background-repeat: no-repeat;
-        background-position: right 8px center;
-        min-width: 44px;
-        max-width: 160px;
-        text-overflow: ellipsis;
-    white-space: nowrap;
-    overflow: hidden;
-}
-
-.filter-wrapper .filter-select:hover {
-    background-color: var(--bg-control-hover);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.filter-wrapper .filter-select:focus {
-    outline: none;
-    border-color: var(--border-control);
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
 }
 
 .notification-close {
@@ -788,11 +542,23 @@ body.status-many {
     margin-left: auto;
     display: block;
     border-radius: 6px;
-    border: none
+    border: none;
 }
 
 .notification-close:hover {
     color: #f44336;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @keyframes fadeInScale {
@@ -807,110 +573,11 @@ body.status-many {
     }
 }
 
-[data-notification-id] {
-    position: relative;
-}
-
-.notification-id-controls {
-    position: absolute;
-    top: 6px;
-    right: 8px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    z-index: 5;
-}
-
-.notification-id-btn {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    border: 1px solid rgba(0, 0, 0, 0.25);
-    background: rgba(0, 0, 0, 0.45);
-    color: #fff;
-    cursor: pointer;
-    padding: 0;
-    font: inherit;
-        transition: background 0.15s;
-    }
-    
-    .notification-id-btn svg {
-        width: 13px;
-        height: 13px;
-        display: block;
-}
-
-.notification-id-btn.selected {
-    background: rgba(76, 175, 80, 0.8);
-    border-color: rgba(76, 175, 80, 1);
-}
-
-.notification-id-btn:hover {
-    background: rgba(0, 0, 0, 0.7);
-}
-
-.notification-id-btn.selected:hover {
-    background: rgba(76, 175, 80, 1);
-}
-
-.notification-id-btn[data-tooltip]::before {
-    content: attr(data-tooltip);
-    position: absolute;
-    right: calc(100% + 8px);
-    top: 50%;
-    transform: translateY(-50%);
-    white-space: nowrap;
-    background: rgba(50, 50, 50, 0.9);
-    color: #fff;
-    font-size: 0.72rem;
-    font-family: monospace;
-    padding: 3px 8px;
-    border-radius: 4px;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.15s;
-}
-
-.notification-id-btn[data-tooltip]:hover::before {
-    opacity: 1;
-}
-
-.copy-toast {
-    position: fixed;
-    right: 16px;
-    bottom: 16px;
-    z-index: 9999;
-    padding: 10px 14px;
-    border-radius: 6px;
-    color: #fff;
-    font-size: 14px;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
-    opacity: 0;
-    transform: translateY(10px);
-    pointer-events: none;
-    transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-.copy-toast.visible {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-.copy-toast.success {
-    background-color: #2d8a42;
-}
-
-.copy-toast.error {
-    background-color: #b3403f;
-}
 #notification-html img {
     max-width: 100%;
     height: auto;
 }
+
 #notification-html>*:first-child {
     margin-top: 0;
 }
@@ -952,7 +619,6 @@ body.status-many {
         bottom: 2px;
         font-size: 0.6rem;
         max-width: 98vw;
-
     }
 
     .occupancy-card.occupancy-fully {
@@ -1002,65 +668,4 @@ body.status-many {
     .legend-overlay {
         display: flex !important;
     }
-}
-
-/* Dark mode toggle button */
-.theme-toggle-btn {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: 1px solid var(--border-control);
-    background: var(--bg-control);
-    color: var(--text-control);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    box-shadow: var(--shadow);
-    transition: background 0.2s, border-color 0.2s, color 0.2s;
-    z-index: 10;
-}
-
-.theme-toggle-btn:hover {
-    background: var(--bg-control-hover);
-}
-
-.theme-toggle-btn svg {
-    width: 18px;
-    height: 18px;
-    display: block;
-    flex-shrink: 0;
-}
-
-/* Show moon in light mode, sun in dark mode */
-#theme-icon-sun {
-    display: none;
-}
-
-#theme-icon-moon {
-    display: block;
-}
-
-html.dark-mode #theme-icon-sun {
-    display: block;
-}
-
-html.dark-mode #theme-icon-moon {
-    display: none;
-}
-/* GitHub badge positioning (moved from inline styles) */
-.github-badge {
-
-    opacity: 0.35;
-    border-radius: 4px;
-    display: block;
-}
-
-.github-badge img {
-    display: block;
-    height: 20px;
 }

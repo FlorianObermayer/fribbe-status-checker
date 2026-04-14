@@ -1,4 +1,5 @@
 from datetime import datetime
+from enum import StrEnum
 
 from fastapi import Query
 from pydantic import BaseModel, Field, field_validator
@@ -7,23 +8,58 @@ from app import env
 from app.api.access_role import AccessRole
 from app.services.push_subscription_service import ALL_TOPICS, VALID_TOPICS, PushTopic
 
+
+class NotificationFilterId(StrEnum):
+    """Keyword filter IDs for notification queries."""
+
+    ALL_ACTIVE = "all_active"
+    LATEST_ACTIVE = "latest_active"
+    ALL_ENABLED = "all_enabled"
+    ALL_INACTIVE = "all_inactive"
+    ALL = "all"
+
+
 # Single source of truth for all keyword filter options.
 # Order here determines the order in the UI selector.
 NOTIFICATION_FILTERS: list[dict[str, str]] = [
-    {"value": "all_active", "label": "Aktive"},
-    {"value": "latest_active", "label": "Neueste aktive"},
-    {"value": "all_enabled", "label": "Alle aktivierten"},
-    {"value": "all_inactive", "label": "Inaktive"},
-    {"value": "all", "label": "Alle"},
+    {"value": NotificationFilterId.ALL_ACTIVE, "label": "Aktive"},
+    {"value": NotificationFilterId.LATEST_ACTIVE, "label": "Neueste aktive"},
+    {"value": NotificationFilterId.ALL_ENABLED, "label": "Alle aktivierten"},
+    {"value": NotificationFilterId.ALL_INACTIVE, "label": "Inaktive"},
+    {"value": NotificationFilterId.ALL, "label": "Alle"},
 ]
 
 # Keyword IDs that require an authenticated request
-_protected_ids = ["all", "all_enabled", "all_inactive"]
+_protected_ids = [NotificationFilterId.ALL, NotificationFilterId.ALL_ENABLED, NotificationFilterId.ALL_INACTIVE]
 # Keyword IDs allowed for unauthenticated requests
-_default_ids = ["all_active", "latest_active"]
+_default_ids = [NotificationFilterId.ALL_ACTIVE, NotificationFilterId.LATEST_ACTIVE]
 
 _keyword_ids = [f["value"] for f in NOTIFICATION_FILTERS]
 _examples = [*_keyword_ids, "nid-<...>"]
+
+
+class AuthRedirectQuery(BaseModel):
+    """Common query parameters for page requests."""
+
+    next: str = Query(
+        default="/",
+        description="Optional relative URL to redirect to after successful authentication (e.g., /notification-create)",
+    )
+
+    @field_validator("next", mode="before", check_fields=False)
+    @classmethod
+    def validate_next_url(cls, value: str | None) -> str:
+        """Ensure the URLs are safe relative paths."""
+        return cls.sanitize_url(value) or "/"
+
+    @staticmethod
+    def sanitize_url(value: str | None) -> str | None:
+        """Ensure the URLs are safe relative paths."""
+        if value is None:
+            return value
+        if not value.startswith("/") or value.startswith("//"):
+            return "/"
+        return value
 
 
 class NotificationQuery(BaseModel):
@@ -51,21 +87,27 @@ class NotificationQuery(BaseModel):
         return value
 
 
+class AuthBody(AuthRedirectQuery):
+    """Request body for POST /auth."""
+
+    token: str
+
+
 class PushAuthRequest(BaseModel):
     """Request body carrying a push subscription auth token."""
 
     auth: str
 
 
-def _validate_topics(v: list[str]) -> list[PushTopic]:
-    invalid = set(v) - VALID_TOPICS
+def _validate_topics(topics: list[str]) -> list[PushTopic]:
+    invalid = set(topics) - VALID_TOPICS
     if invalid:
         msg = f"Invalid topics: {sorted(invalid)}"
         raise ValueError(msg)
-    if not v:
+    if not topics:
         msg = "At least one topic is required"
         raise ValueError(msg)
-    return sorted(set(v))  # type: ignore[return-value]
+    return sorted([t for t in topics if t in VALID_TOPICS])
 
 
 class PushSubscribeRequest(BaseModel):

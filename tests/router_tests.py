@@ -20,6 +20,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
 from app import env
+from app.api.access_role import AccessRole
 from app.api.ephemeral_api_key_store import EphemeralAPIKeyStore
 from app.api.responses import ApiKey
 from app.dependencies import (
@@ -177,6 +178,230 @@ def test_get_auth_page_renders_password_field(client: TestClient) -> None:
     assert response.status_code == 200
     assert 'id="auth-form"' in response.text
     assert 'type="password"' in response.text
+
+
+# ---------------------------------------------------------------------------
+# Bootstrap banner
+# ---------------------------------------------------------------------------
+
+
+def test_index_shows_bootstrap_banner_in_bootstrap_mode(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Bootstrap banner must be visible (no 'hidden' class) when in bootstrap mode."""
+    keys_path = tmp_path / "api_keys.json"
+    monkeypatch.setattr(env, "API_KEYS_PATH", str(keys_path))
+    monkeypatch.setattr(env, "ADMIN_TOKEN", "")  # no token + empty store → bootstrap mode
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert 'id="bootstrap-banner"' in response.text
+    assert "bootstrap-banner hidden" not in response.text
+
+
+def test_index_hides_bootstrap_banner_normally(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Bootstrap banner must have the 'hidden' class when not in bootstrap mode."""
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert "bootstrap-banner hidden" in response.text
+
+
+# ---------------------------------------------------------------------------
+# Floating button group — visible class
+# ---------------------------------------------------------------------------
+
+
+def test_index_floating_btn_group_is_visible_when_signin_btn_shown(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """floating-btn-group must carry class="visible" when the sign-in button is rendered."""
+    monkeypatch.setattr(env, "is_login_button_enabled", lambda: True)
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert 'id="floating-btn-group" class="visible"' in response.text
+
+
+def test_index_floating_btn_group_not_visible_without_any_buttons(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """When no auth / action buttons are shown, the group must not carry class="visible"."""
+    monkeypatch.setattr(env, "is_login_button_enabled", lambda: False)
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert 'id="floating-btn-group" class="visible"' not in response.text
+
+
+# ---------------------------------------------------------------------------
+# Floating button group — signin / signout visibility
+# ---------------------------------------------------------------------------
+
+
+def test_index_shows_signin_btn_when_not_signed_in(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(env, "is_login_button_enabled", lambda: True)
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert 'id="signin-btn"' in response.text
+    assert 'id="signout-btn"' not in response.text
+
+
+def test_index_shows_signout_btn_when_signed_in(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(env, "is_login_button_enabled", lambda: True)
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert 'id="signin-btn"' not in response.text
+    assert 'id="signout-btn"' in response.text
+
+
+def test_index_hides_signin_btn_when_login_button_disabled(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(env, "is_login_button_enabled", lambda: False)
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert 'id="signin-btn"' not in response.text
+
+
+def test_auth_page_never_shows_signin_btn(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The auth form IS the sign-in UI; the floating signin button must not render."""
+    monkeypatch.setattr(env, "is_login_button_enabled", lambda: True)
+
+    response = client.get("/auth")
+
+    assert response.status_code == 200
+    assert 'id="signin-btn"' not in response.text
+
+
+def test_auth_page_shows_no_floating_signout_btn_when_signed_in(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Auth page has its own inline signed-in panel; no floating signout button needed."""
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+
+    response = client.get("/auth")
+
+    assert response.status_code == 200
+    assert 'id="signout-btn"' not in response.text
+
+
+def test_legal_page_shows_no_floating_auth_btns(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Legal page has show_auth_button=False — no floating signin or signout buttons."""
+    monkeypatch.setattr(env, "OPERATOR_NAME", "Max Mustermann")
+    monkeypatch.setattr(env, "OPERATOR_EMAIL", "max@example.com")
+    monkeypatch.setattr(env, "is_login_button_enabled", lambda: True)
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+
+    response = client.get("/legal")
+
+    assert response.status_code == 200
+    assert 'id="signin-btn"' not in response.text
+    assert 'id="signout-btn"' not in response.text
+
+
+def test_legal_page_always_shows_back_button(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Any sub-page (not /) shows a back button that uses browser history."""
+    monkeypatch.setattr(env, "OPERATOR_NAME", "Max Mustermann")
+    monkeypatch.setattr(env, "OPERATOR_EMAIL", "max@example.com")
+
+    response = client.get("/legal")
+
+    assert response.status_code == 200
+    assert 'title="Zurück"' in response.text
+    assert "history.back()" in response.text
+
+
+def test_index_has_no_back_button(client: TestClient) -> None:
+    """The index page ('/') must not show a back button."""
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert 'title="Zurück"' not in response.text
+
+
+def test_notification_create_page_shows_preview_not_create_btn(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+
+    response = client.get("/notification-create")
+
+    assert response.status_code == 200
+    assert 'id="signout-btn"' not in response.text
+    # Already on notification-create — no circular button
+    assert 'href="/notification-create"' not in response.text
+    # Preview button should be visible
+    assert 'href="/preview/notifications' in response.text
+
+
+def test_index_shows_notification_btns_for_operator_role(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """when_role(NOTIFICATION_OPERATOR) predicate reveals buttons for operator-role session."""
+    keys_path = tmp_path / "api_keys.json"
+    monkeypatch.setattr(env, "API_KEYS_PATH", str(keys_path))
+    api_key = ApiKey.generate_new(
+        comment="test-operator",
+        valid_until=datetime(2030, 12, 31, tzinfo=_UTC),
+        role=AccessRole.NOTIFICATION_OPERATOR,
+    )
+    assert EphemeralAPIKeyStore.append(api_key)
+    client.post("/auth", json={"token": api_key.key, "next": "/"})
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert 'href="/notification-create"' in response.text
+    assert 'href="/preview/notifications' in response.text
+
+
+def test_index_hides_notification_btns_when_not_signed_in(client: TestClient) -> None:
+    """Notification buttons must not appear for unauthenticated visitors on the index page."""
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert 'href="/notification-create"' not in response.text
+    assert 'href="/preview/notifications' not in response.text
+
+
+def test_index_hides_notification_btns_for_reader_role(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """READER role is below NOTIFICATION_OPERATOR — buttons must stay hidden."""
+    keys_path = tmp_path / "api_keys.json"
+    monkeypatch.setattr(env, "API_KEYS_PATH", str(keys_path))
+    api_key = ApiKey.generate_new(
+        comment="test-reader",
+        valid_until=datetime(2030, 12, 31, tzinfo=_UTC),
+        role=AccessRole.READER,
+    )
+    assert EphemeralAPIKeyStore.append(api_key)
+    client.post("/auth", json={"token": api_key.key, "next": "/"})
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert 'href="/notification-create"' not in response.text
+    assert 'href="/preview/notifications' not in response.text
 
 
 def test_get_legal_page_renders_impressum(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -362,10 +587,31 @@ def test_signout_accepts_valid_csrf_for_session_auth(
     monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
 
-    response = client.post("/signout", headers=_get_csrf_headers(client))
+    response = client.post("/signout", headers=_get_csrf_headers(client), follow_redirects=False)
 
-    assert response.status_code == 200
-    assert response.json()["redirect"] == "/"
+    assert response.status_code == 303
+    assert response.headers["location"] == "/"
+
+
+def test_signout_accepts_valid_csrf_form_field(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """FormFieldCSRFMiddleware must also accept the token from a hidden form field."""
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+    csrf_token = client.cookies.get("csrftoken")
+    assert csrf_token is not None
+
+    response = client.post(
+        "/signout",
+        data={"x-csrf-token": csrf_token},
+        headers={"content-type": "application/x-www-form-urlencoded"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/"
 
 
 def test_signout_clears_session_and_csrf_cookies(
@@ -375,9 +621,9 @@ def test_signout_clears_session_and_csrf_cookies(
     monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
 
-    response = client.post("/signout", headers=_get_csrf_headers(client))
+    response = client.post("/signout", headers=_get_csrf_headers(client), follow_redirects=False)
 
-    assert response.status_code == 200
+    assert response.status_code == 303
     set_cookie_headers = response.headers.get_list("set-cookie")
     # session_cookie must be expired
     session_cookies = [h for h in set_cookie_headers if "session_cookie=" in h]
@@ -480,6 +726,61 @@ def test_status_includes_last_error_when_present(client: TestClient, test_app: F
     body = client.get("/api/status").json()
 
     assert body["presence"]["last_error"] == "router unreachable"
+
+
+# ---------------------------------------------------------------------------
+# /status/content
+# ---------------------------------------------------------------------------
+
+
+def test_status_content_returns_200_with_html(client: TestClient, test_app: FastAPI) -> None:
+    test_app.dependency_overrides[get_occupancy_service] = _mock_occupancy_svc
+    test_app.dependency_overrides[get_presence_service] = _mock_presence_svc
+    test_app.dependency_overrides[get_message_service] = _mock_message_svc
+    test_app.dependency_overrides[get_weather_service] = lambda: None
+
+    response = client.get("/status/content")
+
+    assert response.status_code == 200
+    assert 'data-level="empty"' in response.text
+    assert "Niemand da" in response.text
+
+
+def test_status_content_renders_few_level(client: TestClient, test_app: FastAPI) -> None:
+    test_app.dependency_overrides[get_occupancy_service] = _mock_occupancy_svc
+    test_app.dependency_overrides[get_presence_service] = lambda: _mock_presence_svc(PresenceLevel.FEW)
+    test_app.dependency_overrides[get_message_service] = lambda: _mock_message_svc("Ein paar Leute")
+    test_app.dependency_overrides[get_weather_service] = lambda: None
+
+    response = client.get("/status/content")
+
+    assert response.status_code == 200
+    assert 'data-level="few"' in response.text
+    assert "Ein paar Leute" in response.text
+
+
+def test_status_content_for_date_forwarded(client: TestClient, test_app: FastAPI) -> None:
+    occ_svc = _mock_occupancy_svc()
+    test_app.dependency_overrides[get_occupancy_service] = lambda: occ_svc
+    test_app.dependency_overrides[get_presence_service] = _mock_presence_svc
+    test_app.dependency_overrides[get_message_service] = _mock_message_svc
+    test_app.dependency_overrides[get_weather_service] = lambda: None
+
+    client.get("/status/content?for_date=2026-04-12")
+
+    occ_svc.get_occupancy.assert_called_once_with("2026-04-12")
+
+
+def test_status_content_renders_occupancy_fully(client: TestClient, test_app: FastAPI) -> None:
+    test_app.dependency_overrides[get_occupancy_service] = lambda: _mock_occupancy_svc(OccupancyType.FULLY)
+    test_app.dependency_overrides[get_presence_service] = _mock_presence_svc
+    test_app.dependency_overrides[get_message_service] = _mock_message_svc
+    test_app.dependency_overrides[get_weather_service] = lambda: None
+
+    response = client.get("/status/content")
+
+    assert response.status_code == 200
+    assert "occupancy-fully" in response.text
 
 
 # ---------------------------------------------------------------------------
@@ -733,6 +1034,37 @@ def test_notifications_html_renders_markdown(client: TestClient, test_app: FastA
     test_app.dependency_overrides[get_notification_service] = lambda: svc
 
     response = client.get("/api/notifications?n_ids=all_active")
+
+    assert response.status_code == 200
+    assert 'data-notification-id="nid-abc123"' in response.text
+    assert "<strong>world</strong>" in response.text
+
+
+def test_notification_content_returns_empty_for_no_results(client: TestClient, test_app: FastAPI) -> None:
+    svc = _mock_notification_svc()
+    svc.get.return_value = []
+    test_app.dependency_overrides[get_notification_service] = lambda: svc
+
+    response = client.get("/notifications/content?n_ids=all_active")
+
+    assert response.status_code == 200
+    assert response.text == ""
+
+
+def test_notification_content_renders_markdown(client: TestClient, test_app: FastAPI) -> None:
+    notif = Notification(
+        id="nid-abc123",
+        message="Hello **world**",
+        created=_NOW,
+        valid_from=None,
+        valid_until=None,
+        enabled=True,
+    )
+    svc = _mock_notification_svc()
+    svc.get.return_value = [notif]
+    test_app.dependency_overrides[get_notification_service] = lambda: svc
+
+    response = client.get("/notifications/content?n_ids=all_active")
 
     assert response.status_code == 200
     assert 'data-notification-id="nid-abc123"' in response.text

@@ -1,0 +1,35 @@
+<div id="status-content"
+    data-level="{{ presence.level }}"
+    data-occupancy-type="{{ occupancy.type }}"
+    data-threshold-empty="{{ thresholds.empty }}"
+    data-threshold-few="{{ thresholds.few }}"
+    data-threshold-many="{{ thresholds.many }}">
+    <div id="status-message" class="status-message">{{ presence.message }}</div>
+    <div id="occupancy-card" class="occupancy-card{{ ' occupancy-fully' if occupancy.type == 'fully' else '' }}">
+        <div class="occupancy-header-row">
+            <h2 id="occupancy-header">{{ occupancy_header }}</h2>
+            <div class="date-picker-row">
+                <input type="date" id="for-date-picker" value="{{ for_date_value }}" min="{{ today_str }}" max="{{ max_date_str }}" />
+                <button id="today-btn" type="button">Heute</button>
+            </div>
+        </div>
+        <div>
+            <div>
+                <span id="occupancy-message">
+                    {% if occupancy.messages %}
+                    <ul class="occupancy-list">
+                        {% for msg in occupancy.messages %}
+                        <li>{{ msg }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    Keine Belegungen oder Veranstaltungen!
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+    <div id="combined-updated-marker">
+        <span id="combined-updated-text">{{ combined_updated_text }}</span>
+    </div>
+</div>

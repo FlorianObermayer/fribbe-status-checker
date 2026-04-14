@@ -7,15 +7,13 @@
 {% block title %}Impressum &amp; Datenschutz{% endblock %}
 
 {% block head_styles %}
-    <link rel="stylesheet" href="/static/css/legal.styles.css?v={{ version }}">
+    <link rel="stylesheet" href="/static/css/legal.styles.css?v={{ content_hash_version }}">
 {% endblock %}
 
 {% block content %}
     <main class="legal-shell">
         <section class="legal-card">
             {% include "_theme_toggle.html" %}
-
-            <a href="/" class="back-link">&larr; Zurück</a>
 
             <h1>Impressum</h1>
 

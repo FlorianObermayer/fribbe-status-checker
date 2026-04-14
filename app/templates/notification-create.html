@@ -9,53 +9,46 @@
 {% block head_styles %}
     <link rel="stylesheet" href="/static/vendor/easymde/easymde.min.css">
     <script src="/static/vendor/easymde/easymde.min.js"></script>
-    <link rel="stylesheet" href="/static/css/notification-create.styles.css?v={{ version }}">
+    <link rel="stylesheet" href="/static/css/notification-create.styles.css?v={{ content_hash_version }}">
 {% endblock %}
 
 {% block content %}
     <div class="container">
         {% include "_theme_toggle.html" %}
+        <h1>Fribbe - Nachricht erstellen</h1>
         <p class="subtitle">Erstelle Nachrichten, die auf der Status Seite angezeigt werden!</p>
 
-        <div class="form-group">
-            <label for="message">Nachricht (unterstützt Markdown)</label>
-            <textarea id="message" placeholder="Schreibe deine Nachricht..."></textarea>
-        </div>
+        <form method="post" action="{{ url_notification_create }}">
+            <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token }}">
 
-        <div class="datetime-group">
             <div class="form-group">
-                <label for="validFrom">Gilt ab (optional)</label>
-                <input type="datetime-local" id="validFrom">
-            </div>
-            <div class="form-group">
-                <label for="validUntil">Gilt bis (optional)</label>
-                <input type="datetime-local" id="validUntil">
-            </div>
+                <label for="message">Nachricht (unterstützt Markdown)</label>
+                <textarea id="message" name="message" placeholder="Schreibe deine Nachricht..."></textarea>
+                </div>
+
+            <div class="datetime-group">
+                <div class="form-group">
+                    <label for="validFrom">Gilt ab (optional)</label>
+                    <input type="datetime-local" id="validFrom" name="valid_from" value="{{ valid_from_default }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="validUntil">Gilt bis (optional)</label>
+                    <input type="datetime-local" id="validUntil" name="valid_until" value="{{ valid_until_default }}">
+                    </div>
             </div>
 
-        <button id="submitBtn">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                <circle cx="12" cy="12" r="3" />
-            </svg>
-            Vorschau Erstellen
-        </button>
-
-        <div id="result"></div>
-    </div>
-    
-    <div id="nav-btn-group">
-        <a href="/" class="nav-btn" title="Zurück zur Startseite" data-tooltip="Zurück zur Startseite">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M19 12H5" />
-                <polyline points="12 19 5 12 12 5" />
-            </svg>
-        </a>
+            <button type="submit" id="submitBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                </svg>
+                Vorschau Erstellen
+            </button>
+        </form>
     </div>
 {% endblock %}
 
 {% block scripts %}
-    <script src="/static/js/notification-create.js?v={{ version }}"></script>
+    <script src="/static/js/notification-create.js?v={{ content_hash_version }}"></script>
 {% endblock %}

@@ -7,6 +7,7 @@
     {% block head_meta %}{% endblock %}
     <title>{% block title %}{% endblock %}</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/shared.css?v={{ content_hash_version }}">
     {% block head_styles %}{% endblock %}
     <!-- Prevent flash of unstyled content when dark mode is active -->
     <script>
@@ -21,9 +22,13 @@
 
 <body{% block body_attrs %}{% endblock %}>
     {% block content %}{% endblock %}
-    <script src="/static/js/csrf.js?v={{ version }}"></script>
-    <script src="/static/js/theme.js?v={{ version }}"></script>
+    {% block floating_buttons %}{% include "_floating_btn_group.html" %}{% endblock %}
+    <div id="toast" class="toast{% if flash_message %} {{ flash_type }} flash-auto{% endif %}" role="status"
+        aria-live="polite" data-timeout="{{ toast_display_ms }}">{{ flash_message }}</div>
+    <script src="/static/js/csrf.js?v={{ content_hash_version }}"></script>
+    <script src="/static/js/toast.js?v={{ content_hash_version }}"></script>
+    <script src="/static/js/theme.js?v={{ content_hash_version }}"></script>
     {% block scripts %}{% endblock %}
-</body>
+    </body>
 
 </html>
