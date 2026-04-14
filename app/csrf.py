@@ -37,7 +37,7 @@ class FormFieldCSRFMiddleware(CSRFMiddleware):
             if not _replayed:
                 _replayed = True
                 return {"type": "http.request", "body": body, "more_body": False}
-            return await receive()
+            return {"type": "http.request", "body": b"", "more_body": False}
 
         if self._url_is_required(request.url) or (
             request.method not in self.safe_methods
