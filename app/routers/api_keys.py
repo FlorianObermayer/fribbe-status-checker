@@ -31,8 +31,8 @@ def create_api_key(
 
     Require valid API key to create or no API keys to begin with at all (admin setup mode).
 
-    - comment: Optional comment for the key
-    - valid_until: Optional datetime (default: 6 months from now).
+    - comment: Required comment for the key. Length constraints are validated by `CreateApiKeyRequest`.
+    - valid_until: Optional datetime. Defaults to now plus `env.DEFAULT_API_KEY_VALIDITY_DAYS`.
     """
     valid_until = (
         request.valid_until or datetime.now(tz=ZoneInfo(env.TZ)) + timedelta(days=env.DEFAULT_API_KEY_VALIDITY_DAYS)
