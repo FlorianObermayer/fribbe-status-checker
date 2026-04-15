@@ -1183,3 +1183,287 @@ def test_notifications_put_returns_404_when_not_found(
     )
 
     assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# /api-keys page
+# ---------------------------------------------------------------------------
+
+
+def test_api_keys_page_redirects_to_auth_when_not_signed_in(client: TestClient) -> None:
+    """Unauthenticated access to /api-keys must redirect to /auth."""
+    response = client.get("/api-keys", follow_redirects=False)
+
+    assert response.status_code == 302
+    assert "/auth" in response.headers["location"]
+
+
+def test_api_keys_page_returns_403_for_reader_role(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """READER role is below ADMIN — /api-keys must return 403."""
+    keys_path = tmp_path / "api_keys.json"
+    monkeypatch.setattr(env, "API_KEYS_PATH", str(keys_path))
+    api_key = ApiKey.generate_new(
+        comment="test-reader",
+        valid_until=datetime(2030, 12, 31, tzinfo=_UTC),
+        role=AccessRole.READER,
+    )
+    assert EphemeralAPIKeyStore.append(api_key)
+    client.post("/auth", json={"token": api_key.key, "next": "/"})
+
+    response = client.get("/api-keys")
+
+    assert response.status_code == 403
+
+
+def test_api_keys_page_returns_403_for_operator_role(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """NOTIFICATION_OPERATOR role is below ADMIN — /api-keys must return 403."""
+    keys_path = tmp_path / "api_keys.json"
+    monkeypatch.setattr(env, "API_KEYS_PATH", str(keys_path))
+    api_key = ApiKey.generate_new(
+        comment="test-operator",
+        valid_until=datetime(2030, 12, 31, tzinfo=_UTC),
+        role=AccessRole.NOTIFICATION_OPERATOR,
+    )
+    assert EphemeralAPIKeyStore.append(api_key)
+    client.post("/auth", json={"token": api_key.key, "next": "/"})
+
+    response = client.get("/api-keys")
+
+    assert response.status_code == 403
+
+
+def test_api_keys_page_renders_for_admin(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """ADMIN role must be able to access /api-keys."""
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+
+    response = client.get("/api-keys")
+
+    assert response.status_code == 200
+    assert "API-Schlüssel verwalten" in response.text
+    assert 'id="create-key-form"' in response.text
+    assert 'id="key-list-table"' in response.text
+    assert f'value="{AccessRole.READER.value}"' in response.text  # role options populated from AccessRole
+    assert "data-role-labels" in response.text
+
+
+def test_index_shows_api_keys_btn_for_admin(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Admin users should see the API keys floating button on the index page."""
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(env, "is_login_button_enabled", lambda: True)
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert 'href="/api-keys"' in response.text
+
+
+def test_index_hides_api_keys_btn_for_operator(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Operator-role users should not see the API keys button."""
+    keys_path = tmp_path / "api_keys.json"
+    monkeypatch.setattr(env, "API_KEYS_PATH", str(keys_path))
+    api_key = ApiKey.generate_new(
+        comment="test-operator",
+        valid_until=datetime(2030, 12, 31, tzinfo=_UTC),
+        role=AccessRole.NOTIFICATION_OPERATOR,
+    )
+    assert EphemeralAPIKeyStore.append(api_key)
+    client.post("/auth", json={"token": api_key.key, "next": "/"})
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert 'href="/api-keys"' not in response.text
+
+
+def test_index_hides_api_keys_btn_when_not_signed_in(client: TestClient) -> None:
+    """Unauthenticated visitors must not see the API keys button."""
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert 'href="/api-keys"' not in response.text
+
+
+def test_api_keys_page_has_back_button(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The /api-keys page is a sub-page and should show a back button."""
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+
+    response = client.get("/api-keys")
+
+    assert response.status_code == 200
+    assert 'title="Zurück"' in response.text
+
+
+# ---------------------------------------------------------------------------
+# API key self-delete protection
+# ---------------------------------------------------------------------------
+
+
+def test_delete_own_api_key_returns_403(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """An admin API key must not be allowed to delete itself."""
+    keys_path = tmp_path / "api_keys.json"
+    monkeypatch.setattr(env, "API_KEYS_PATH", str(keys_path))
+    api_key = ApiKey.generate_new(
+        comment="self-key",
+        valid_until=datetime(2030, 12, 31, tzinfo=_UTC),
+        role=AccessRole.ADMIN,
+    )
+    assert EphemeralAPIKeyStore.append(api_key)
+    client.post("/auth", json={"token": api_key.key, "next": "/"})
+
+    response = client.request(
+        "DELETE",
+        "/api/internal/api_key",
+        json={"key": api_key.key[:5]},
+        headers=_get_csrf_headers(client),
+    )
+
+    assert response.status_code == 403
+    assert "own" in response.json()["detail"].lower()
+
+
+def test_admin_token_can_delete_any_api_key(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """ADMIN_TOKEN users are not API keys themselves and can delete any key."""
+    keys_path = tmp_path / "api_keys.json"
+    monkeypatch.setattr(env, "API_KEYS_PATH", str(keys_path))
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    api_key = ApiKey.generate_new(
+        comment="deletable",
+        valid_until=datetime(2030, 12, 31, tzinfo=_UTC),
+        role=AccessRole.ADMIN,
+    )
+    assert EphemeralAPIKeyStore.append(api_key)
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+
+    response = client.request(
+        "DELETE",
+        "/api/internal/api_key",
+        json={"key": api_key.key[:5]},
+        headers=_get_csrf_headers(client),
+    )
+
+    assert response.status_code == 200
+
+
+def test_list_api_keys_includes_self_key_prefix(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """The list endpoint must include self_key_prefix when authenticated with an API key."""
+    keys_path = tmp_path / "api_keys.json"
+    monkeypatch.setattr(env, "API_KEYS_PATH", str(keys_path))
+    api_key = ApiKey.generate_new(
+        comment="self-key",
+        valid_until=datetime(2030, 12, 31, tzinfo=_UTC),
+        role=AccessRole.ADMIN,
+    )
+    assert EphemeralAPIKeyStore.append(api_key)
+    client.post("/auth", json={"token": api_key.key, "next": "/"})
+
+    response = client.get("/api/internal/api_keys")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["self_key_prefix"] is not None
+    assert body["self_key_prefix"] == api_key.key[:5] + "..."
+
+
+def test_list_api_keys_has_null_self_key_prefix_for_admin_token(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """ADMIN_TOKEN sessions should have null self_key_prefix."""
+    keys_path = tmp_path / "api_keys.json"
+    monkeypatch.setattr(env, "API_KEYS_PATH", str(keys_path))
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    api_key = ApiKey.generate_new(
+        comment="other-key",
+        valid_until=datetime(2030, 12, 31, tzinfo=_UTC),
+        role=AccessRole.ADMIN,
+    )
+    assert EphemeralAPIKeyStore.append(api_key)
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+
+    response = client.get("/api/internal/api_keys")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["self_key_prefix"] is None
+
+
+# ---------------------------------------------------------------------------
+# API key create validation
+# ---------------------------------------------------------------------------
+
+
+def test_create_api_key_rejects_empty_comment(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Creating a key without a comment must fail with 422."""
+    keys_path = tmp_path / "api_keys.json"
+    monkeypatch.setattr(env, "API_KEYS_PATH", str(keys_path))
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+
+    response = client.post(
+        "/api/internal/api_key",
+        json={"comment": ""},
+        headers=_get_csrf_headers(client),
+    )
+
+    assert response.status_code == 422
+
+
+def test_create_api_key_rejects_oversized_comment(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Creating a key with a comment exceeding 200 characters must fail with 422."""
+    keys_path = tmp_path / "api_keys.json"
+    monkeypatch.setattr(env, "API_KEYS_PATH", str(keys_path))
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+
+    response = client.post(
+        "/api/internal/api_key",
+        json={"comment": "x" * 201},
+        headers=_get_csrf_headers(client),
+    )
+
+    assert response.status_code == 422

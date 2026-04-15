@@ -29,6 +29,7 @@ class Route(StrEnum):
     URL_SIGNOUT = "/signout"
     URL_NOTIFICATION_CREATE = "/notification-create"
     URL_NOTIFICATION_PREVIEW = "/preview/notifications"
+    URL_API_KEYS = "/api-keys"
 
     # HTML fragment routes (polled by JS)
     URL_STATUS_CONTENT = "/status/content"
@@ -118,6 +119,7 @@ class NavContext(Mapping[str, object]):
     request: InitVar[Request]
     show_auth_button: bool | NavPredicate = False
     show_notification_create_btn: bool | NavPredicate = False
+    show_api_keys_btn: bool | NavPredicate = False
     show_preview_btn: bool | NavPredicate = False
     role: AccessRole | None = field(init=False)
     signed_in: bool = field(init=False)
@@ -129,6 +131,7 @@ class NavContext(Mapping[str, object]):
         self.signed_in = self.role is not None
         self.show_auth_button = _resolve_predicate(val=self.show_auth_button, role=self.role)
         self.show_notification_create_btn = _resolve_predicate(val=self.show_notification_create_btn, role=self.role)
+        self.show_api_keys_btn = _resolve_predicate(val=self.show_api_keys_btn, role=self.role)
         self.show_preview_btn = _resolve_predicate(val=self.show_preview_btn, role=self.role)
         self.show_back_btn = request.url.path not in {Route.URL_INDEX, Route.URL_AUTH}
 
