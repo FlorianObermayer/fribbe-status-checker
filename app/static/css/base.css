@@ -1,4 +1,4 @@
-/* Shared styles — used on all pages */
+/* Base styles — used on all pages (loaded via base.html) */
 
 :root {
     --color-red: #f44336;
@@ -73,6 +73,13 @@ html.dark-mode {
         --border-light-ring: #1e1e1e;
     }
     
+    /* Clipboard fallback textarea — positioned off-screen to avoid flash */
+    .clipboard-textarea {
+        position: fixed;
+        left: -9999px;
+        top: -9999px;
+    }
+
     .hidden {
         display: none !important;
     }
