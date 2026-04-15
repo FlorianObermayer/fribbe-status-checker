@@ -204,7 +204,7 @@ body.status-many {
     border: 1px solid var(--border-input);
     background: var(--bg-control);
     color: var(--text-heading);
-    max-width: 120px;
+    max-width: 140px;
 }
 
 .occupancy-card #today-btn {
