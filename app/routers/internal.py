@@ -45,7 +45,7 @@ def details(
 async def config(request: ConfigRequest, _: Annotated[str, Depends(HybridAuth(min_role=AccessRole.ADMIN))]) -> Response:
     """Update presence detection thresholds."""
     if not any((request.threshold_min_non_empty_ct, request.threshold_min_many_ct)):
-        return Response(status_code=304)  # ^= Not Modified
+        return Response(status_code=204)
 
     thresholds = PresenceThresholds()
 
