@@ -373,7 +373,7 @@ def test_admin_token_accesses_admin_endpoint(
         json={},
         headers={"api_key": TEST_ADMIN_TOKEN},
     )
-    assert response.status_code == 304  # not modified (no thresholds set), but not 403
+    assert response.status_code == 204  # no content
 
 
 def test_admin_api_key_can_access_admin_endpoints(
