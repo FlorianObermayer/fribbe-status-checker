@@ -16,6 +16,6 @@ function showToast(message, status = 'success') {
     toast.classList.add(status);
     requestAnimationFrame(() => toast.classList.add('visible'));
     if (_toastTimeout) clearTimeout(_toastTimeout);
-    const timeout = parseInt(toast.dataset.timeout);
+    const timeout = parseInt(toast.dataset.timeout || '3000', 10);
     _toastTimeout = setTimeout(() => toast.classList.remove('visible'), timeout);
 }
