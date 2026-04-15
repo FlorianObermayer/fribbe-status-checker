@@ -39,6 +39,7 @@ dev = [
     "pytest-dotenv>=0.5.2",
     "pip-licenses>=5.5.5",
     "python-dotenv>=1.0.0",
+    "diff-cover>=9.6.0",
 ]
 
 [tool.pytest.ini_options]
@@ -49,6 +50,10 @@ env_override_existing_values = true
 filterwarnings = [
     "error" # turn all warnings into errors
 ]
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["tests/*", "scripts/*"]
 
 [tool.ruff]
 line-length = 120

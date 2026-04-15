@@ -146,75 +146,107 @@ def test_validate_raises_when_session_secret_key_too_short(
         env.validate()
 
 
-def test_feature_presence_true_when_all_router_creds_set(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("ROUTER_IP", "192.168.1.1")
-    monkeypatch.setenv("ROUTER_USERNAME", "admin")
-    monkeypatch.setenv("ROUTER_PASSWORD", "secret")
+# ---------------------------------------------------------------------------
+# Feature flag checks — parametrized
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("set_vars", "del_vars", "feature_fn", "expected"),
+    [
+        # presence
+        (
+            {"ROUTER_IP": "192.168.1.1", "ROUTER_USERNAME": "admin", "ROUTER_PASSWORD": "secret"},
+            [],
+            env.is_presence_enabled,
+            True,
+        ),
+        (
+            {"ROUTER_IP": "192.168.1.1"},
+            ["ROUTER_USERNAME", "ROUTER_PASSWORD"],
+            env.is_presence_enabled,
+            False,
+        ),
+        # push
+        (
+            {
+                "VAPID_PRIVATE_KEY": "private",
+                "VAPID_PUBLIC_KEY": "public",
+                "VAPID_CLAIM_SUBJECT": "https://example.com",
+            },
+            [],
+            env.is_push_enabled,
+            True,
+        ),
+        (
+            {"VAPID_PRIVATE_KEY": "private"},
+            ["VAPID_PUBLIC_KEY", "VAPID_CLAIM_SUBJECT"],
+            env.is_push_enabled,
+            False,
+        ),
+        # weather
+        (
+            {"OPENWEATHERMAP_API_KEY": "apikey", "WEATHER_LAT": "48.3", "WEATHER_LON": "10.9"},
+            [],
+            env.is_weather_enabled,
+            True,
+        ),
+        (
+            {"OPENWEATHERMAP_API_KEY": "apikey"},
+            ["WEATHER_LAT", "WEATHER_LON"],
+            env.is_weather_enabled,
+            False,
+        ),
+        # legal page
+        (
+            {"OPERATOR_NAME": "Max Mustermann", "OPERATOR_EMAIL": "max@example.com"},
+            [],
+            env.is_legal_page_enabled,
+            True,
+        ),
+        (
+            {"OPERATOR_NAME": "Max Mustermann"},
+            ["OPERATOR_EMAIL"],
+            env.is_legal_page_enabled,
+            False,
+        ),
+        # login button
+        (
+            {"SHOW_AUTH_BUTTON": "true"},
+            [],
+            env.is_login_button_enabled,
+            True,
+        ),
+        (
+            {},
+            ["SHOW_AUTH_BUTTON"],
+            env.is_login_button_enabled,
+            False,
+        ),
+    ],
+    ids=[
+        "presence-enabled",
+        "presence-disabled",
+        "push-enabled",
+        "push-disabled",
+        "weather-enabled",
+        "weather-disabled",
+        "legal-enabled",
+        "legal-disabled",
+        "login-button-enabled",
+        "login-button-disabled",
+    ],
+)
+def test_feature_flags(
+    monkeypatch: pytest.MonkeyPatch,
+    set_vars: dict[str, str],
+    del_vars: list[str],
+    feature_fn: object,
+    expected: bool,  # noqa: FBT001
+) -> None:
+    for k, v in set_vars.items():
+        monkeypatch.setenv(k, v)
+    for k in del_vars:
+        monkeypatch.delenv(k, raising=False)
     env.load()
-    assert env.is_presence_enabled() is True
-
-
-def test_feature_presence_false_when_any_router_cred_missing(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("ROUTER_IP", "192.168.1.1")
-    monkeypatch.delenv("ROUTER_USERNAME", raising=False)
-    monkeypatch.delenv("ROUTER_PASSWORD", raising=False)
-    env.load()
-    assert env.is_presence_enabled() is False
-
-
-def test_feature_push_true_when_all_vapid_vars_set(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("VAPID_PRIVATE_KEY", "private")
-    monkeypatch.setenv("VAPID_PUBLIC_KEY", "public")
-    monkeypatch.setenv("VAPID_CLAIM_SUBJECT", "https://example.com")
-    env.load()
-    assert env.is_push_enabled() is True
-
-
-def test_feature_push_false_when_any_vapid_var_missing(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("VAPID_PRIVATE_KEY", "private")
-    monkeypatch.delenv("VAPID_PUBLIC_KEY", raising=False)
-    monkeypatch.delenv("VAPID_CLAIM_SUBJECT", raising=False)
-    env.load()
-    assert env.is_push_enabled() is False
-
-
-def test_feature_weather_true_when_all_owm_vars_set(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("OPENWEATHERMAP_API_KEY", "apikey")
-    monkeypatch.setenv("WEATHER_LAT", "48.3")
-    monkeypatch.setenv("WEATHER_LON", "10.9")
-    env.load()
-    assert env.is_weather_enabled() is True
-
-
-def test_feature_weather_false_when_any_owm_var_missing(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("OPENWEATHERMAP_API_KEY", "apikey")
-    monkeypatch.delenv("WEATHER_LAT", raising=False)
-    monkeypatch.delenv("WEATHER_LON", raising=False)
-    env.load()
-    assert env.is_weather_enabled() is False
-
-
-def test_feature_legal_page_true_when_both_operator_vars_set(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("OPERATOR_NAME", "Max Mustermann")
-    monkeypatch.setenv("OPERATOR_EMAIL", "max@example.com")
-    env.load()
-    assert env.is_legal_page_enabled() is True
-
-
-def test_feature_legal_page_false_when_any_operator_var_missing(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("OPERATOR_NAME", "Max Mustermann")
-    monkeypatch.delenv("OPERATOR_EMAIL", raising=False)
-    env.load()
-    assert env.is_legal_page_enabled() is False
-
-
-def test_feature_login_button_true_when_show_auth_button_set(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("SHOW_AUTH_BUTTON", "true")
-    env.load()
-    assert env.is_login_button_enabled() is True
-
-
-def test_feature_login_button_false_when_show_auth_button_not_set(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("SHOW_AUTH_BUTTON", raising=False)
-    env.load()
-    assert env.is_login_button_enabled() is False
+    assert feature_fn() is expected  # type: ignore[operator]
