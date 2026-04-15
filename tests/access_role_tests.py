@@ -71,13 +71,13 @@ def test_access_role_ordering() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_api_key_role_defaults_to_admin() -> None:
+def test_api_key_role_defaults_to_reader() -> None:
     key = ApiKey(
         key="A" * env.MIN_TOKEN_LENGTH,
         comment="test",
         valid_until=datetime(2030, 1, 1, tzinfo=_UTC),
     )
-    assert key.role == AccessRole.ADMIN
+    assert key.role == AccessRole.READER
 
 
 def test_api_key_to_dict_includes_role() -> None:
