@@ -45,17 +45,17 @@ class FormFieldCSRFMiddleware(CSRFMiddleware):
                 return {"type": "http.request", "body": b"", "more_body": False}
 
             submitted_csrf_token = await self._get_submitted_csrf_token(request)
+            wrapped_send = functools.partial(self.send, send=send, scope=scope)
             if (
                 not csrf_cookie
                 or not submitted_csrf_token
                 or not self._csrf_tokens_match(csrf_cookie, submitted_csrf_token)
             ):
                 response = self._get_error_response(request)
-                await response(scope, replay_receive, send)
+                await response(scope, replay_receive, wrapped_send)
                 return
 
-            send = functools.partial(self.send, send=send, scope=scope)
-            await self.app(scope, replay_receive, send)
+            await self.app(scope, replay_receive, wrapped_send)
         else:
             await self.app(scope, receive, send)
 
