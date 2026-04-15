@@ -74,6 +74,3 @@ def test_read_toast_returns_defaults_for_malformed_json() -> None:
 
     assert message == ""
     assert type_ == "success"
-
-
-

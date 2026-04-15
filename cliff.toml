@@ -19,7 +19,10 @@ body = """
       ([{{ commit.id | truncate(length=7, end="") }}]({{ self::remote_url() }}/commit/{{ commit.id }}))\
       {%- if commit.remote.username %} by @{{ commit.remote.username }}{%- endif %}
   {%- endfor %}
-{% endfor %}\n
+{% endfor %}
+{%- if previous.version %}\n
+**Full Changelog**: [{{ previous.version }}...{{ version }}]({{ self::remote_url() }}/compare/{{ previous.version }}...{{ version }})\n
+{%- endif %}\n
 """
 footer = ""
 trim = true
