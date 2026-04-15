@@ -20,10 +20,10 @@ def main() -> None:
     private_key = base64.urlsafe_b64encode(private_scalar).rstrip(b"=").decode()  # pyright: ignore[reportUnknownArgumentType]
     public_key = base64.urlsafe_b64encode(public_uncompressed).rstrip(b"=").decode()  # pyright: ignore[reportUnknownArgumentType]
 
-    print("Add these to your .env file:\n")  # noqa: T201
-    print(f"VAPID_PRIVATE_KEY={private_key}")  # noqa: T201
-    print(f"VAPID_PUBLIC_KEY={public_key}")  # noqa: T201
-    print("VAPID_CLAIM_SUBJECT=mailto:your@email.com  # or https://yourdomain.com")  # noqa: T201
+    print("Add these to your .env file:\n")
+    print(f"VAPID_PRIVATE_KEY={private_key}")
+    print(f"VAPID_PUBLIC_KEY={public_key}")
+    print("VAPID_CLAIM_SUBJECT=mailto:your@email.com  # or https://yourdomain.com")
 
 
 if __name__ == "__main__":

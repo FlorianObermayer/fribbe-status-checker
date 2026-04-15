@@ -45,8 +45,8 @@ def main() -> None:
     if not packages:
         sys.exit(1)
 
-    result = subprocess.run(  # noqa: S603
-        [  # noqa: S607
+    result = subprocess.run(
+        [
             "uv",
             "run",
             "pip-licenses",

@@ -21,8 +21,8 @@ NODE_BIN = Path(PROJECT_ROOT) / "node_modules" / ".bin"
 
 
 def _run(args: list[str], summary: str, env: dict[str, str] | None = None) -> None:
-    print(f"\n>>> {summary}", flush=True)  # noqa: T201
-    result = subprocess.run(args, cwd=PROJECT_ROOT, env=env, check=False)  # noqa: S603
+    print(f"\n>>> {summary}", flush=True)
+    result = subprocess.run(args, cwd=PROJECT_ROOT, env=env, check=False)
     if result.returncode != 0:
         sys.exit(result.returncode)
 

@@ -93,9 +93,17 @@ ignore = [
     "ASYNC240", # sync pathlib I/O in async function — acceptable in tests
 ]
 "scripts/*" = [
-    "D103", # missing docstring in public function
-    "BLE001", # Do not catch blind exception
-
+    "D103",    # missing docstring in public function
+    "BLE001",  # Do not catch blind exception
+    "T201",    # print found — scripts legitimately use print for progress output
+    "S603",    # subprocess call: untrusted input — scripts call known commands (git, uv)
+    "S607",    # partial executable path — git / uv are expected to be on PATH
+    "S310",    # URL open: permitted schemes — URLs are hardcoded constants
+    "PLR2004", # Magic value in comparison — len(argv) checks are self-evident
+    "PLR0915", # Too many statements — procedural CLI scripts are intentionally flat
+    "ANN401",  # Any disallowed — GitHub API JSON responses are inherently dynamic
+    "C901",    # Too complex — procedural CLI scripts are intentionally flat
+    "PLR0912", # Too many branches — dry-run guards add necessary branching
 ]
 "app/services/persistent_collections.py" = [
     "ANN401", # Any required for generic serialization and Python descriptor protocol

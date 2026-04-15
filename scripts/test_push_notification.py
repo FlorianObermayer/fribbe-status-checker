@@ -44,7 +44,7 @@ def main() -> None:
         sys.exit(1)
 
     title = sys.argv[1] if len(sys.argv) > 1 else "Fribbe Beach Test 🏐"
-    body = sys.argv[2] if len(sys.argv) > 2 else "Das ist eine Test-Benachrichtigung. " + secrets.token_hex(4)  # noqa: PLR2004
+    body = sys.argv[2] if len(sys.argv) > 2 else "Das ist eine Test-Benachrichtigung. " + secrets.token_hex(4)
 
     subscription_path = Path(data_path) / "push_subscriptions.json"
     subscriptions = load_subscriptions(subscription_path)
