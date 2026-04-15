@@ -124,7 +124,7 @@ class NotificationService(PollingService):
                 self._known_active_nids = {*known_active_nids, nid}
         return nid
 
-    def get(self, notification_ids: list[str] | None = None) -> list[Notification]:
+    def get(self, notification_ids: list[NotificationFilterId | str] | None = None) -> list[Notification]:
         """Return notifications matching the given filter IDs."""
         if notification_ids is None:
             notification_ids = [NotificationFilterId.ALL_ACTIVE]
