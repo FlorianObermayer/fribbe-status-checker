@@ -90,7 +90,7 @@ class EphemeralAPIKeyStore:
 
     @staticmethod
     def _is_not_expired(valid_until: datetime) -> bool:
-        """Return True if valid_until is in the future. Naive datetimes are assumed to be Europe/Berlin."""
+        """Return True if valid_until is in the future. Naive datetimes are assumed to be in the configured local timezone (env.TZ)."""
         if valid_until.tzinfo is None:
             valid_until = valid_until.replace(tzinfo=_local_tz())
         return valid_until >= datetime.now(tz=_local_tz())

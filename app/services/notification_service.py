@@ -108,7 +108,7 @@ class NotificationService(PollingService):
         """Create a notification, send a push if active, and return its ID."""
         nid = str(f"nid-{uuid.uuid4()}")
         notification = Notification(
-            created=datetime.now(tz=ZoneInfo("Europe/Berlin")),
+            created=datetime.now(tz=ZoneInfo(env.TZ)),
             id=nid,
             message=message,
             valid_from=valid_from,

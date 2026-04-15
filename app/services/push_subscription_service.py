@@ -103,7 +103,7 @@ class PushSubscriptionService:
             endpoint=endpoint,
             p256dh=p256dh,
             auth=auth,
-            created=datetime.now(tz=ZoneInfo("Europe/Berlin")),
+            created=datetime.now(tz=ZoneInfo(env.TZ)),
             topics=list(topics) if topics is not None else list(ALL_TOPICS),
         )
         self._store[auth] = sub

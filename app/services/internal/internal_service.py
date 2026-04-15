@@ -41,7 +41,7 @@ class InternalService(PollingService):
 
     def __init__(self) -> None:
         super().__init__()
-        self._last_service_started: datetime = datetime.now(tz=ZoneInfo("Europe/Berlin"))
+        self._last_service_started: datetime = datetime.now(tz=ZoneInfo(env.TZ))
 
         self._internal_data = InternalPersistentData()
         self._last_updated: datetime | None = None
@@ -98,7 +98,7 @@ class InternalService(PollingService):
         - First device: Set when we see devices > 0 for the first time after reset
         - Last device: Set when the last devices leave (count goes from > 0 to 0)
         """
-        now = datetime.now(tz=ZoneInfo("Europe/Berlin"))
+        now = datetime.now(tz=ZoneInfo(env.TZ))
 
         # Reset timestamps at 5am if we crossed the virtual day boundary
         if crossed_virtual_day(self._last_updated, now):
@@ -142,7 +142,7 @@ class InternalService(PollingService):
                     self._internal_data.wardens_on_site = wardens_on_site
                     self._update_device_statistics(self._internal_data.active_devices_ct, active_member_devices_ct)
                     self._internal_data.active_devices_ct = active_member_devices_ct
-                    self._last_updated = datetime.now(tz=ZoneInfo("Europe/Berlin"))
+                    self._last_updated = datetime.now(tz=ZoneInfo(env.TZ))
                     self._last_error = None
             logger.info("Refresh Internal... DONE)")
         except Exception as e:
