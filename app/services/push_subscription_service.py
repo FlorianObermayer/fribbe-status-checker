@@ -40,7 +40,7 @@ class PushSubscription:
     p256dh: str
     auth: str
     created: datetime
-    topics: list[PushTopic] = field(default_factory=list[PushTopic])
+    topics: list[PushTopic] = field(default_factory=lambda: list(PushTopic))
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a plain dict."""
