@@ -116,10 +116,10 @@ jobs:
       - name: Compute image tags
         id: tags
         run: |
-          TAGS="${IMAGE_REPO}:latest"
-          TAGS="${TAGS},${IMAGE_REPO}:${{ steps.version.outputs.build_version }}"
+          TAGS="${IMAGE_REPO}:${{ steps.version.outputs.build_version }}"
           if [ "${{ steps.check_tag.outputs.is_new_version }}" = "true" ]; then
             TAGS="${TAGS},${IMAGE_REPO}:${{ steps.version.outputs.version }}"
+            TAGS="${TAGS},${IMAGE_REPO}:latest"
           fi
           echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
 
