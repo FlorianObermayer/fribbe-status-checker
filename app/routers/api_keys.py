@@ -4,6 +4,7 @@ from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from app import env
 from app.api.access_role import AccessRole
 from app.api.ephemeral_api_key_store import EphemeralAPIKeyStore, RemoveResult
 from app.api.hybrid_auth import HybridAuth
@@ -33,7 +34,7 @@ def create_api_key(
     - comment: Optional comment for the key
     - valid_until: Optional datetime (default: 6 months from now).
     """
-    valid_until = (request.valid_until or datetime.now(tz=ZoneInfo("Europe/Berlin")) + timedelta(days=180)).replace(
+    valid_until = (request.valid_until or datetime.now(tz=ZoneInfo(env.TZ)) + timedelta(days=180)).replace(
         microsecond=0,
     )
     new_api_key = ApiKey.generate_new(request.comment, valid_until, request.role)

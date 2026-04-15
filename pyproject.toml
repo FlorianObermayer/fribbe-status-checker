@@ -23,7 +23,6 @@ dependencies = [
 [project.scripts]
 lint = "scripts.lint:main"
 dev = "scripts.dev:main"
-watch = "scripts.watch:main"
 generate-vapid-keys = "scripts.generate_vapid_keys:main"
 test-push-notification = "scripts.test_push_notification:main"
 generate-licenses = "scripts.generate_licenses:main"

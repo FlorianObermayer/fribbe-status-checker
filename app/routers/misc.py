@@ -6,7 +6,6 @@ from fastapi.responses import FileResponse, PlainTextResponse, Response
 
 from app import env
 from app.api.responses import LicenseEntry, VersionResponse
-from app.version import VERSION
 
 router = APIRouter()
 
@@ -17,7 +16,13 @@ _third_party_licenses: list[dict[str, str]] = json.loads(_licenses_path.read_tex
 @router.get("/api/version")
 async def version() -> VersionResponse:
     """Return the application version."""
-    return VersionResponse(version=VERSION)
+    return VersionResponse(version=env.BUILD_VERSION)
+
+
+@router.get("/api/version/content-hash")
+async def version_content_hash() -> VersionResponse:
+    """Return the content hash version."""
+    return VersionResponse(version=env.CONTENT_HASH_VERSION)
 
 
 @router.get("/api/licenses")

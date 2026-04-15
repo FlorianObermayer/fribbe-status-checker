@@ -1,93 +1,54 @@
-<!DOCTYPE html>
-<html lang="de">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+{% block head_meta %}
     <meta name="robots" content="noindex, nofollow">
+{% endblock %}
 
-    <title>Fribbe - Nachricht erstellen</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+{% block title %}Fribbe - Nachricht erstellen{% endblock %}
+
+{% block head_styles %}
     <link rel="stylesheet" href="/static/vendor/easymde/easymde.min.css">
     <script src="/static/vendor/easymde/easymde.min.js"></script>
-    <link rel="stylesheet" href="/static/css/notification-create.styles.css?v={{ version }}">
-    <!-- Prevent flash of unstyled content when dark mode is active -->
-    <script>
-        (function () {
-            var t = localStorage.getItem('theme');
-            if (t === 'dark' || (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                document.documentElement.classList.add('dark-mode');
-            }
-        }());
-    </script>
-</head>
+    <link rel="stylesheet" href="/static/css/notification-create.styles.css?v={{ content_hash_version }}">
+{% endblock %}
 
-<body>
+{% block content %}
     <div class="container">
-        <button id="theme-toggle-btn" class="theme-toggle-btn" aria-label="Erscheinungsbild wechseln"
-            title="Erscheinungsbild wechseln">
-            <svg id="theme-icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="5" />
-                <line x1="12" y1="1" x2="12" y2="3" />
-                <line x1="12" y1="21" x2="12" y2="23" />
-                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-                <line x1="1" y1="12" x2="3" y2="12" />
-                <line x1="21" y1="12" x2="23" y2="12" />
-                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-            </svg>
-            <svg id="theme-icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-            </svg>
-        </button>
+        {% include "_theme_toggle.html" %}
         <h1>Fribbe - Nachricht erstellen</h1>
         <p class="subtitle">Erstelle Nachrichten, die auf der Status Seite angezeigt werden!</p>
 
-        <div class="form-group">
-            <label for="message">Nachricht (unterstützt Markdown)</label>
-            <textarea id="message" placeholder="Schreibe deine Nachricht..."></textarea>
-        </div>
+        <form method="post" action="{{ url_notification_create }}">
+            <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token }}">
 
-        <div class="datetime-group">
             <div class="form-group">
-                <label for="validFrom">Gilt ab (optional)</label>
-                <input type="datetime-local" id="validFrom">
-            </div>
-            <div class="form-group">
-                <label for="validUntil">Gilt bis (optional)</label>
-                <input type="datetime-local" id="validUntil">
-            </div>
+                <label for="message">Nachricht (unterstützt Markdown)</label>
+                <textarea id="message" name="message" placeholder="Schreibe deine Nachricht..."></textarea>
+                </div>
+
+            <div class="datetime-group">
+                <div class="form-group">
+                    <label for="validFrom">Gilt ab (optional)</label>
+                    <input type="datetime-local" id="validFrom" name="valid_from" value="{{ valid_from_default }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="validUntil">Gilt bis (optional)</label>
+                    <input type="datetime-local" id="validUntil" name="valid_until" value="{{ valid_until_default }}">
+                    </div>
             </div>
 
-        <button id="submitBtn">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                <circle cx="12" cy="12" r="3" />
-            </svg>
-            Vorschau Erstellen
-        </button>
-
-        <div id="result"></div>
+            <button type="submit" id="submitBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                </svg>
+                Vorschau Erstellen
+            </button>
+        </form>
     </div>
-    
-    <div id="nav-btn-group">
-        <a href="/" class="nav-btn" title="Zurück zur Startseite" data-tooltip="Zurück zur Startseite">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M19 12H5" />
-                <polyline points="12 19 5 12 12 5" />
-            </svg>
-        </a>
-    </div>
+{% endblock %}
 
-    <script src="/static/js/csrf.js?v={{ version }}"></script>
-    <script src="/static/js/theme.js?v={{ version }}"></script>
-    <script src="/static/js/notification-create.js?v={{ version }}"></script>
-
-</body>
-
-</html>
+{% block scripts %}
+    <script src="/static/js/notification-create.js?v={{ content_hash_version }}"></script>
+{% endblock %}

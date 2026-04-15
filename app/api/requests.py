@@ -1,35 +1,71 @@
 from datetime import datetime
+from enum import StrEnum
 
 from fastapi import Query
 from pydantic import BaseModel, Field, field_validator
 
 from app import env
 from app.api.access_role import AccessRole
-from app.services.push_subscription_service import ALL_TOPICS, VALID_TOPICS, PushTopic
+from app.services.push_subscription_service import PushTopic
+
+
+class NotificationFilterId(StrEnum):
+    """Keyword filter IDs for notification queries."""
+
+    ALL_ACTIVE = "all_active"
+    LATEST_ACTIVE = "latest_active"
+    ALL_ENABLED = "all_enabled"
+    ALL_INACTIVE = "all_inactive"
+    ALL = "all"
+
 
 # Single source of truth for all keyword filter options.
 # Order here determines the order in the UI selector.
 NOTIFICATION_FILTERS: list[dict[str, str]] = [
-    {"value": "all_active", "label": "Aktive"},
-    {"value": "latest_active", "label": "Neueste aktive"},
-    {"value": "all_enabled", "label": "Alle aktivierten"},
-    {"value": "all_inactive", "label": "Inaktive"},
-    {"value": "all", "label": "Alle"},
+    {"value": NotificationFilterId.ALL_ACTIVE.value, "label": "Aktive"},
+    {"value": NotificationFilterId.LATEST_ACTIVE.value, "label": "Neueste aktive"},
+    {"value": NotificationFilterId.ALL_ENABLED.value, "label": "Alle aktivierten"},
+    {"value": NotificationFilterId.ALL_INACTIVE.value, "label": "Inaktive"},
+    {"value": NotificationFilterId.ALL.value, "label": "Alle"},
 ]
 
 # Keyword IDs that require an authenticated request
-_protected_ids = ["all", "all_enabled", "all_inactive"]
+_protected_ids = [NotificationFilterId.ALL, NotificationFilterId.ALL_ENABLED, NotificationFilterId.ALL_INACTIVE]
 # Keyword IDs allowed for unauthenticated requests
-_default_ids = ["all_active", "latest_active"]
+_default_ids = [NotificationFilterId.ALL_ACTIVE, NotificationFilterId.LATEST_ACTIVE]
 
 _keyword_ids = [f["value"] for f in NOTIFICATION_FILTERS]
 _examples = [*_keyword_ids, "nid-<...>"]
 
 
+class AuthRedirectQuery(BaseModel):
+    """Common query parameters for page requests."""
+
+    next: str = Query(
+        default="/",
+        description="Optional relative URL to redirect to after successful authentication (e.g., /notification-create)",
+    )
+
+    @field_validator("next", mode="before", check_fields=False)
+    @classmethod
+    def validate_next_url(cls, value: str | None) -> str:
+        """Ensure the URLs are safe relative paths."""
+        return cls.sanitize_url(value) or "/"
+
+    @staticmethod
+    def sanitize_url(value: str | None) -> str | None:
+        """Ensure the URLs are safe relative paths."""
+        if value is None:
+            return value
+        if not value.startswith("/") or value.startswith("//"):
+            return "/"
+        return value
+
+
 class NotificationQuery(BaseModel):
     """Query parameters for filtering notifications."""
 
-    n_ids: list[str] = Query(
+    n_ids: list[NotificationFilterId | str] = Query(
         examples=[*_examples],
     )
 
@@ -40,7 +76,7 @@ class NotificationQuery(BaseModel):
 
     @field_validator("n_ids", mode="before", check_fields=True)
     @classmethod
-    def validate_ids(cls, value: str | list[str]) -> list[str]:
+    def validate_ids(cls, value: NotificationFilterId | str | list[str | NotificationFilterId]) -> list[str]:
         """Coerce single-string values into a list and validate IDs."""
         if isinstance(value, str):  # Handle single values (e.g., ?q=all_active)
             value = [value]
@@ -51,21 +87,27 @@ class NotificationQuery(BaseModel):
         return value
 
 
+class AuthBody(AuthRedirectQuery):
+    """Request body for POST /auth."""
+
+    token: str
+
+
 class PushAuthRequest(BaseModel):
     """Request body carrying a push subscription auth token."""
 
     auth: str
 
 
-def _validate_topics(v: list[str]) -> list[PushTopic]:
-    invalid = set(v) - VALID_TOPICS
+def _validate_topics(topics: list[str]) -> list[PushTopic]:
+    if not topics:
+        msg = "At least one topic is required"
+        raise ValueError(msg)
+    invalid = set(topics) - {t.value for t in PushTopic}
     if invalid:
         msg = f"Invalid topics: {sorted(invalid)}"
         raise ValueError(msg)
-    if not v:
-        msg = "At least one topic is required"
-        raise ValueError(msg)
-    return sorted(set(v))  # type: ignore[return-value]
+    return list(dict.fromkeys(PushTopic(t) for t in topics))
 
 
 class PushSubscribeRequest(BaseModel):
@@ -74,7 +116,7 @@ class PushSubscribeRequest(BaseModel):
     endpoint: str
     p256dh: str
     auth: str
-    topics: list[PushTopic] = Field(default_factory=lambda: list(ALL_TOPICS))
+    topics: list[PushTopic] = Field(default_factory=lambda: list(PushTopic))
 
     @field_validator("topics")
     @classmethod

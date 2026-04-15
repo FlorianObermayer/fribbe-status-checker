@@ -37,7 +37,7 @@ def details(
 
 
 @router.patch(
-    "/internal/config",
+    "/api/internal/config",
     response_class=Response,
     tags=["Config"],
     openapi_extra=requires_auth_extra(),

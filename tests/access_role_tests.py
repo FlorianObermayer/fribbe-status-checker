@@ -248,7 +248,7 @@ def test_reader_cannot_update_config(
     api_key = _make_key(tmp_path, monkeypatch, AccessRole.READER)
 
     response = client.patch(
-        "/internal/config",
+        "/api/internal/config",
         json={"threshold_min_non_empty_ct": 5},
         headers={"api_key": api_key.key},
     )
@@ -321,7 +321,7 @@ def test_notification_operator_cannot_update_config(
     api_key = _make_key(tmp_path, monkeypatch, AccessRole.NOTIFICATION_OPERATOR)
 
     response = client.patch(
-        "/internal/config",
+        "/api/internal/config",
         json={"threshold_min_non_empty_ct": 5},
         headers={"api_key": api_key.key},
     )
@@ -369,7 +369,7 @@ def test_admin_token_accesses_admin_endpoint(
     monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
 
     response = client.patch(
-        "/internal/config",
+        "/api/internal/config",
         json={},
         headers={"api_key": TEST_ADMIN_TOKEN},
     )

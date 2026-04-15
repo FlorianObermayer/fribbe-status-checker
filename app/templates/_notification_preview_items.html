@@ -1,0 +1,47 @@
+{% for n, html, preview_url in items %}
+<div class="notification-preview-item" data-notification-id="{{ n.id }}">
+    <div class="notification-id-controls">
+        {% if n.id == selected_filter %}
+        <button class="notification-id-btn selected copy-nid-btn" data-nid="{{ n.id }}" data-tooltip="{{ n.id }}"
+            title="{{ n.id }}">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+        </button>
+        {% else %}
+        <a href="{{ preview_url }}" class="notification-id-btn" data-tooltip="{{ n.id }}"
+            title="{{ n.id }}">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+            </svg>
+        </a>
+        {% endif %}
+    </div>
+    {% if not selected_filter.startswith('nid-') %}
+    <div class="notification-badge-row">
+        {% if n.is_active() %}
+        <span class="notification-badge badge-active">Aktiv</span>
+        {% elif n.is_outdated(0) %}
+        <span class="notification-badge badge-expired">Abgelaufen</span>
+        {% elif n.enabled %}
+        <span class="notification-badge badge-scheduled">Geplant</span>
+        {% else %}
+        <span class="notification-badge badge-disabled">Deaktiviert</span>
+        {% endif %}
+        {% if n.valid_from and n.valid_until %}
+        <span class="notification-badge badge-date">{{ n.valid_from.strftime('%d.%m.%Y %H:%M') }} - {{
+            n.valid_until.strftime('%d.%m.%Y %H:%M') }}</span>
+        {% elif n.valid_from %}
+        <span class="notification-badge badge-date">ab {{ n.valid_from.strftime('%d.%m.%Y %H:%M') }}</span>
+        {% elif n.valid_until %}
+        <span class="notification-badge badge-date">bis {{ n.valid_until.strftime('%d.%m.%Y %H:%M') }}</span>
+        {% endif %}
+    </div>
+    {% endif %}
+    {{ html | safe }}
+</div>
+{% if not loop.last %}<hr/>{% endif %}
+{% endfor %}

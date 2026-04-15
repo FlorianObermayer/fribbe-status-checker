@@ -9,11 +9,13 @@ from huawei_lte_api.Client import Client
 from huawei_lte_api.Connection import Connection
 from readerwriterlock import rwlock
 
+from app import env
 from app.services.mac_address_helper import should_ignore_device
 from app.services.occupancy.model import OccupancyType
 from app.services.polling_service import PollingService
 from app.services.presence_level import PresenceLevel
 from app.services.presence_thresholds import PresenceThresholds
+from app.services.push_subscription_service import PushTopic
 from app.services.virtual_day import get_virtual_date
 
 if TYPE_CHECKING:
@@ -91,7 +93,7 @@ class PresenceLevelService(PollingService):
                 with self._rwlock.gen_wlock():
                     prev_level = self._presence_level
                     self._presence_level = new_level
-                    self._last_updated = datetime.now(tz=ZoneInfo("Europe/Berlin"))
+                    self._last_updated = datetime.now(tz=ZoneInfo(env.TZ))
                     self._last_error = None
             logger.info("Refresh Presence Level... DONE (%s)", self._presence_level)
             try:
@@ -119,7 +121,7 @@ class PresenceLevelService(PollingService):
         if prev_level != PresenceLevel.EMPTY:
             return False
 
-        now = datetime.now(tz=ZoneInfo("Europe/Berlin"))
+        now = datetime.now(tz=ZoneInfo(env.TZ))
 
         virtual_today = get_virtual_date(now)
 
@@ -129,7 +131,7 @@ class PresenceLevelService(PollingService):
         self._last_push_virtual_date = virtual_today
         title, body = self._build_push_message(new_level)
         logger.info("First non-empty presence today — sending push notifications")
-        self._push_sender.send_to_topic_sync("presence", title, body)
+        self._push_sender.send_to_topic_sync(PushTopic.PRESENCE, title, body)
         return True
 
     def _build_push_message(self, level: PresenceLevel) -> tuple[str, str]:

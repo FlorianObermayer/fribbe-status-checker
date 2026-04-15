@@ -1,9 +1,8 @@
 import hashlib
-import os
 from pathlib import Path
 
 
-def _compute_static_hash() -> str:
+def get_content_hash_version() -> str:
     """Hash the content of CSS/JS static assets as a cache-busting version string."""
     h = hashlib.sha256()
     static_dir = Path(__file__).parent / "static"
@@ -11,6 +10,3 @@ def _compute_static_hash() -> str:
         for f in sorted(static_dir.glob(pattern)):
             h.update(f.read_bytes())
     return h.hexdigest()[:8]
-
-
-VERSION = os.getenv("BUILD_VERSION") or f"hash__{_compute_static_hash()}"

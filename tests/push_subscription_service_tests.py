@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-from app.services.push_subscription_service import PushSubscriptionService
+from app.services.push_subscription_service import PushSubscriptionService, PushTopic
 
 # A realistic base64url-encoded value (length >= 10, valid alphabet)
 _VALID_P256DH = "BMXnh6yJ52cJeZKnDFKwW385snzKJtqaVDDBuADUMsez"
@@ -95,8 +95,8 @@ def test_has_returns_false_after_remove() -> None:
 def test_add_stores_custom_topics() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         svc = _make_service(tmpdir)
-        svc.add(_VALID_ENDPOINT, _VALID_P256DH, _VALID_AUTH, topics=["presence"])
-        assert svc.get_topics(_VALID_AUTH) == ["presence"]
+        svc.add(_VALID_ENDPOINT, _VALID_P256DH, _VALID_AUTH, topics=[PushTopic.PRESENCE])
+        assert svc.get_topics(_VALID_AUTH) == [PushTopic.PRESENCE]
 
 
 def test_add_defaults_to_all_topics() -> None:
@@ -104,7 +104,7 @@ def test_add_defaults_to_all_topics() -> None:
         svc = _make_service(tmpdir)
         svc.add(_VALID_ENDPOINT, _VALID_P256DH, _VALID_AUTH)
         topics = svc.get_topics(_VALID_AUTH)
-        assert set(topics) == {"presence", "notifications"}
+        assert set(topics) == {PushTopic.PRESENCE, PushTopic.NOTIFICATIONS}
 
 
 def test_get_topics_returns_empty_for_unknown_auth() -> None:
@@ -117,14 +117,14 @@ def test_update_topics_returns_true_when_found() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         svc = _make_service(tmpdir)
         svc.add(_VALID_ENDPOINT, _VALID_P256DH, _VALID_AUTH)
-        assert svc.update_topics(_VALID_AUTH, ["presence"]) is True
-        assert svc.get_topics(_VALID_AUTH) == ["presence"]
+        assert svc.update_topics(_VALID_AUTH, [PushTopic.PRESENCE]) is True
+        assert svc.get_topics(_VALID_AUTH) == [PushTopic.PRESENCE]
 
 
 def test_update_topics_returns_false_when_not_found() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         svc = _make_service(tmpdir)
-        assert svc.update_topics(_VALID_AUTH, ["presence"]) is False
+        assert svc.update_topics(_VALID_AUTH, [PushTopic.PRESENCE]) is False
 
 
 _VALID_AUTH_2 = "GTaYpIIoXyzABCDF"
@@ -134,8 +134,8 @@ _VALID_ENDPOINT_2 = "https://fcm.googleapis.com/fcm/send/xyz789"
 def test_send_to_topic_sync_skips_non_matching_subscribers() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         svc = _make_service(tmpdir)
-        svc.add(_VALID_ENDPOINT, _VALID_P256DH, _VALID_AUTH, topics=["presence"])
-        svc.add(_VALID_ENDPOINT_2, _VALID_P256DH, _VALID_AUTH_2, topics=["notifications"])
+        svc.add(_VALID_ENDPOINT, _VALID_P256DH, _VALID_AUTH, topics=[PushTopic.PRESENCE])
+        svc.add(_VALID_ENDPOINT_2, _VALID_P256DH, _VALID_AUTH_2, topics=[PushTopic.NOTIFICATIONS])
 
         sent_to: list[str] = []
 
@@ -143,7 +143,7 @@ def test_send_to_topic_sync_skips_non_matching_subscribers() -> None:
             sent_to.append(subscription_info["keys"]["auth"])
 
         with patch("app.services.push_subscription_service.webpush", _fake_webpush):
-            svc.send_to_topic_sync("presence", "T", "B")
+            svc.send_to_topic_sync(PushTopic.PRESENCE, "T", "B")
 
         assert sent_to == [_VALID_AUTH]
 
@@ -151,8 +151,8 @@ def test_send_to_topic_sync_skips_non_matching_subscribers() -> None:
 def test_send_to_topic_sync_sends_to_all_matching_subscribers() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         svc = _make_service(tmpdir)
-        svc.add(_VALID_ENDPOINT, _VALID_P256DH, _VALID_AUTH, topics=["notifications", "presence"])
-        svc.add(_VALID_ENDPOINT_2, _VALID_P256DH, _VALID_AUTH_2, topics=["notifications"])
+        svc.add(_VALID_ENDPOINT, _VALID_P256DH, _VALID_AUTH, topics=[PushTopic.NOTIFICATIONS, PushTopic.PRESENCE])
+        svc.add(_VALID_ENDPOINT_2, _VALID_P256DH, _VALID_AUTH_2, topics=[PushTopic.NOTIFICATIONS])
 
         sent_to: list[str] = []
 
@@ -160,6 +160,6 @@ def test_send_to_topic_sync_sends_to_all_matching_subscribers() -> None:
             sent_to.append(subscription_info["keys"]["auth"])
 
         with patch("app.services.push_subscription_service.webpush", _fake_webpush):
-            svc.send_to_topic_sync("notifications", "T", "B")
+            svc.send_to_topic_sync(PushTopic.NOTIFICATIONS, "T", "B")
 
         assert set(sent_to) == {_VALID_AUTH, _VALID_AUTH_2}

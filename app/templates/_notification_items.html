@@ -1,0 +1,1 @@
+{% for n, html in items %}<div data-notification-id="{{ n.id }}">{{ html | safe }}</div>{% if not loop.last %}<hr/>{% endif %}{% endfor %}

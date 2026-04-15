@@ -10,18 +10,17 @@ from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from secure import ContentSecurityPolicy, Secure
-from starlette_csrf.middleware import CSRFMiddleware
 from starsessions import SessionAutoloadMiddleware, SessionMiddleware
 
 from app import env
 from app.api.hybrid_auth import AuthRedirectError
 from app.api.redact import redact_key
+from app.api.requests import AuthRedirectQuery
 from app.api.schema import update_openapi_schema
+from app.csrf import FormFieldCSRFMiddleware
 from app.dependencies import shutdown, startup
-from app.routers import api_keys, internal, misc, notifications, pages, push, status, wardens
-from app.routers.pages import sanitize_next
+from app.routers import api_keys, auth, internal, misc, notification_ui, notifications, pages, push, status, wardens
 from app.stores.file_session_store import FileSessionStore
-from app.version import VERSION
 
 _logger = logging.getLogger("uvicorn.error")
 
@@ -34,6 +33,9 @@ _csp = (
         "'self'",
         *_csp_domain_src,
         "'sha256-nMQAQejeJNzygq389v6PkLiAKpJ1N8/ayX83QB0thSU='",  # Hash of the FOUC-prevention inline <script>
+        "'sha256-DIQ1RaTtUo9GPKKQTmYlDKPWeVZ/5yJDxcmPLjeANOQ='",  # Hash of the filter select auto-submit inline <script>
+        "'sha256-44DGSBn+e429Ni0dl6Z6IySdj3HfSimS3d9NB8iaZKk='",  # Hash of the delete confirmation inline <script>
+        "'sha256-r9TKje4DFt2fXHs5rlgTniLwWHB9qoDg/F7i06HnACQ='",  # Hash of the back-button history.back() inline <script>
     )
     .style_src("'self'", *_csp_domain_src, "https://fonts.googleapis.com")
     .font_src("'self'", *_csp_domain_src, "https://fonts.gstatic.com")
@@ -68,7 +70,7 @@ async def _session_cleanup_loop() -> None:
 
 app = FastAPI(
     title="Fribbe Status Checker",
-    version=VERSION,
+    version=env.BUILD_VERSION,
     lifespan=lifespan,
     license_info={
         "name": "MIT",
@@ -78,7 +80,7 @@ app = FastAPI(
 )
 
 app.add_middleware(
-    CSRFMiddleware,
+    FormFieldCSRFMiddleware,
     secret=env.SESSION_SECRET_KEY,
     sensitive_cookies={"session_cookie"},
     header_name="x-csrf-token",
@@ -104,7 +106,7 @@ app.add_middleware(
 @app.exception_handler(AuthRedirectError)
 async def auth_redirect_handler(_request: Request, exc: AuthRedirectError) -> RedirectResponse:
     """Redirect unauthenticated page requests to /auth."""
-    safe_next = sanitize_next(exc.next_url)
+    safe_next = AuthRedirectQuery.sanitize_url(exc.next_url) or "/"
     return RedirectResponse(url=f"/auth?next={quote(safe_next, safe='/:?=&')}", status_code=302)
 
 
@@ -130,11 +132,13 @@ async def log_requests(request: Request, call_next: Callable[[Request], Awaitabl
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 app.include_router(misc.router)
+app.include_router(auth.router)
 app.include_router(push.router)
 app.include_router(status.router)
 app.include_router(api_keys.router)
 app.include_router(internal.router)
 app.include_router(notifications.router)
+app.include_router(notification_ui.router)
 app.include_router(wardens.router)
 app.include_router(pages.router)
 

@@ -3,7 +3,40 @@ from zoneinfo import ZoneInfo
 
 import dateparser
 
-_TZ_BERLIN = ZoneInfo("Europe/Berlin")
+from app import env
+
+# German month names for deterministic locale-independent output
+_GERMAN_MONTHS = [
+    "Jan.",
+    "Feb.",
+    "Mär.",
+    "Apr.",
+    "Mai",
+    "Jun.",
+    "Jul.",
+    "Aug.",
+    "Sep.",
+    "Okt.",
+    "Nov.",
+    "Dez.",
+]
+
+
+def format_datetime(dt: datetime) -> str:
+    """Format a datetime as a short German-locale string (e.g. '11. Apr., 12:00')."""
+    hour = dt.hour
+    minute = dt.minute
+    return f"{dt.day}. {_GERMAN_MONTHS[dt.month - 1]}, {hour:02d}:{minute:02d}"
+
+
+def format_date_long(d: str | None) -> str:
+    """Format an ISO date string as a long German weekday+date (e.g. 'Freitag, 11. Apr.')."""
+    parsed = date.fromisoformat(d) if d else None
+    if parsed is None:
+        return ""
+    weekdays = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"]
+    return f"{weekdays[parsed.weekday()]}, {parsed.day}. {_GERMAN_MONTHS[parsed.month - 1]}"
+
 
 _KNOWN_TIME_RANGES: dict[str, tuple[str, str]] = {
     "ganztags": ("00:00", "23:59"),
@@ -41,13 +74,17 @@ def _parse_with_dateparser(time_str: str, event_date: date | str) -> tuple[str, 
         time_str.strip(),
         languages=["de"],
         settings={
-            "TIMEZONE": "Europe/Berlin",
-            "RELATIVE_BASE": datetime.strptime(f"{event_date} 00:00", "%Y-%m-%d %H:%M").replace(tzinfo=_TZ_BERLIN),
+            "TIMEZONE": env.TZ,
+            "RELATIVE_BASE": datetime.strptime(f"{event_date} 00:00", "%Y-%m-%d %H:%M").replace(
+                tzinfo=ZoneInfo(env.TZ)
+            ),
         },
     )
     try:
         start_str = parsed.strftime("%H:%M") if parsed else time_str.replace(" Uhr", "").strip()
-        end_str = (datetime.strptime(start_str, "%H:%M").replace(tzinfo=_TZ_BERLIN) + timedelta(hours=2)).strftime(
+        end_str = (
+            datetime.strptime(start_str, "%H:%M").replace(tzinfo=ZoneInfo(env.TZ)) + timedelta(hours=2)
+        ).strftime(
             "%H:%M",
         )
         if parsed:
@@ -62,8 +99,8 @@ def parse_event_times(date: date | str, time_str: str) -> tuple[datetime, dateti
     start_str, end_str, date = _parse_time_range(time_str, date)
 
     try:
-        start_time = datetime.strptime(f"{date} {start_str}", "%Y-%m-%d %H:%M").replace(tzinfo=_TZ_BERLIN)
-        end_time = datetime.strptime(f"{date} {end_str}", "%Y-%m-%d %H:%M").replace(tzinfo=_TZ_BERLIN)
+        start_time = datetime.strptime(f"{date} {start_str}", "%Y-%m-%d %H:%M").replace(tzinfo=ZoneInfo(env.TZ))
+        end_time = datetime.strptime(f"{date} {end_str}", "%Y-%m-%d %H:%M").replace(tzinfo=ZoneInfo(env.TZ))
 
         if start_time > end_time:
             end_time += timedelta(days=1)
@@ -71,6 +108,6 @@ def parse_event_times(date: date | str, time_str: str) -> tuple[datetime, dateti
         return (start_time, end_time)
     except ValueError:
         # fallback to all-day
-        fallback_start = datetime.strptime(f"{date} 00:00", "%Y-%m-%d %H:%M").replace(tzinfo=_TZ_BERLIN)
-        fallback_end = datetime.strptime(f"{date} 23:59", "%Y-%m-%d %H:%M").replace(tzinfo=_TZ_BERLIN)
+        fallback_start = datetime.strptime(f"{date} 00:00", "%Y-%m-%d %H:%M").replace(tzinfo=ZoneInfo(env.TZ))
+        fallback_end = datetime.strptime(f"{date} 23:59", "%Y-%m-%d %H:%M").replace(tzinfo=ZoneInfo(env.TZ))
         return (fallback_start, fallback_end)

@@ -7,8 +7,9 @@ Optional variables fall back to their stated defaults.
 
 import logging
 import os
+from zoneinfo import ZoneInfo
 
-from app.version import VERSION as _VERSION
+from app.version import get_content_hash_version
 
 # ----------------------------------------------------------------------------
 # Constants
@@ -25,6 +26,11 @@ SESSION_MAX_AGE_SECONDS: int = 60 * 60 * 24 * 7
 SESSION_CLEANUP_INTERVAL_SECONDS: int = 60 * 60  # 1 hour
 
 POLLING_STOP_TIMEOUT_SECONDS: int = 10
+
+TOAST_DISPLAY_SECONDS: int = 3
+
+CONTENT_HASH_VERSION: str = get_content_hash_version()
+
 
 # ---------------------------------------------------------------------------
 # Required
@@ -79,7 +85,7 @@ SHOW_AUTH_BUTTON: bool = False
 ADMIN_TOKEN: str | None = None
 
 # Build-time version tag injected by CI; falls back to "dev" locally.
-BUILD_VERSION: str = _VERSION
+BUILD_VERSION: str = "dev"
 
 # All three must be set together to enable Web Push; individually optional.
 VAPID_PRIVATE_KEY: str | None = None
@@ -95,6 +101,9 @@ WEATHER_CACHE_TTL_SECONDS: int = 1800  # 30 minutes
 # Optional domain added to all Content-Security-Policy source lists (e.g. "https://*.example.com").
 # When unset only 'self' is used.
 CSP_DOMAIN: str | None = None
+
+# IANA timezone name used for all local datetime calculations (e.g. "Europe/Berlin").
+TZ: str = "Europe/Berlin"
 
 # Operator identity shown on the Impressum / Datenschutz page.
 OPERATOR_NAME: str = ""
@@ -182,7 +191,7 @@ def load() -> None:
 
     g["ADMIN_TOKEN"] = os.environ.get("ADMIN_TOKEN") or None
 
-    g["BUILD_VERSION"] = os.environ.get("BUILD_VERSION") or _VERSION
+    g["BUILD_VERSION"] = os.environ.get("BUILD_VERSION") or "dev"
 
     g["VAPID_PRIVATE_KEY"] = os.environ.get("VAPID_PRIVATE_KEY") or None
     g["VAPID_PUBLIC_KEY"] = os.environ.get("VAPID_PUBLIC_KEY") or None
@@ -196,6 +205,8 @@ def load() -> None:
 
     g["WEATHER_CACHE_TTL_SECONDS"] = int(os.environ.get("WEATHER_CACHE_TTL_SECONDS") or 1800)  # 30 minutes
     g["CSP_DOMAIN"] = os.environ.get("CSP_DOMAIN") or None
+
+    g["TZ"] = os.environ.get("TZ") or "UTC"
 
     g["OPERATOR_NAME"] = os.environ.get("OPERATOR_NAME") or ""
     g["OPERATOR_EMAIL"] = os.environ.get("OPERATOR_EMAIL") or ""
@@ -237,6 +248,12 @@ def validate() -> None:
     if ADMIN_TOKEN is not None and len(ADMIN_TOKEN) < MIN_TOKEN_LENGTH:
         msg = f"ADMIN_TOKEN must be at least {MIN_TOKEN_LENGTH} characters long"
         raise RuntimeError(msg)
+
+    try:
+        _ = ZoneInfo(TZ)
+    except Exception as e:
+        msg = f"Invalid timezone in TZ: {TZ} ({e})"
+        raise RuntimeError(msg) from e
 
 
 # Populate from os.environ at import time.

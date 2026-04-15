@@ -3,7 +3,8 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-DEFAULT_TZ = ZoneInfo("Europe/Berlin")
+from app import env
+
 DEFAULT_RESET_HOUR = 5
 
 
@@ -13,7 +14,7 @@ def get_virtual_date(dt: datetime, reset_hour: int = DEFAULT_RESET_HOUR) -> date
     The virtual date is defined as (dt - reset_hour hours).date().
     """
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=DEFAULT_TZ)
+        dt = dt.replace(tzinfo=ZoneInfo(env.TZ))
     return (dt - timedelta(hours=reset_hour)).date()
 
 

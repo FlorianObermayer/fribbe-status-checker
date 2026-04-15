@@ -7,10 +7,9 @@ from fastapi.responses import HTMLResponse
 
 from app.api.access_role import AccessRole
 from app.api.hybrid_auth import HybridAuth
-from app.api.requests import NOTIFICATION_FILTERS, NotificationQuery, PostNotificationRequest, UpdateNotificationRequest
+from app.api.requests import NotificationQuery, PostNotificationRequest, UpdateNotificationRequest
 from app.api.responses import (
     DeletedResponse,
-    NotificationFilterResponse,
     NotificationResponse,
     PostNotificationResponse,
 )
@@ -18,15 +17,6 @@ from app.api.schema import requires_auth_extra
 from app.dependencies import NotificationServiceDep
 
 router = APIRouter(prefix="/api/notifications", tags=["Notifications"])
-
-
-@router.get(
-    "/filters",
-    openapi_extra=requires_auth_extra(),
-)
-async def get_notification_filters(_: Annotated[str, Depends(HybridAuth())]) -> list[NotificationFilterResponse]:
-    """Return the available notification filter options."""
-    return [NotificationFilterResponse(**f) for f in NOTIFICATION_FILTERS]
 
 
 @router.get(

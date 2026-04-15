@@ -9,15 +9,6 @@
             "jinja2": true,
             "python": "${workspaceFolder}/.venv/bin/python",
             "envFile": "${workspaceFolder}/.env.dev"
-        },
-        {
-            "name": "Python: Run (watch)",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "scripts.watch",
-            "jinja2": true,
-            "python": "${workspaceFolder}/.venv/bin/python",
-            "envFile": "${workspaceFolder}/.env.dev"
         }
     ]
 }

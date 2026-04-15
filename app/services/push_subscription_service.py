@@ -4,8 +4,9 @@ import re
 from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import datetime
+from enum import StrEnum
 from pathlib import Path
-from typing import Any, Literal, Self, get_args
+from typing import Any, Self
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
 
@@ -23,9 +24,12 @@ _B64URL_RE = re.compile(r"^[A-Za-z0-9\-_]+=*$")
 # conservative lower bound to reject obviously invalid input.
 _MIN_PUSH_KEY_LENGTH = 10
 
-PushTopic = Literal["presence", "notifications"]
-VALID_TOPICS: frozenset[PushTopic] = frozenset(get_args(PushTopic))
-ALL_TOPICS: list[PushTopic] = sorted(VALID_TOPICS)
+
+class PushTopic(StrEnum):
+    """Push notification topic identifiers."""
+
+    PRESENCE = "presence"
+    NOTIFICATIONS = "notifications"
 
 
 @dataclass
@@ -36,7 +40,7 @@ class PushSubscription:
     p256dh: str
     auth: str
     created: datetime
-    topics: list[PushTopic] = field(default_factory=lambda: list(ALL_TOPICS))
+    topics: list[PushTopic] = field(default_factory=lambda: list(PushTopic))
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a plain dict."""
@@ -51,14 +55,14 @@ class PushSubscription:
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> Self:
         """Deserialize from a plain dict."""
-        raw_topics: list[str] = list(d.get("topics") or ALL_TOPICS)
-        valid_topics: list[PushTopic] = [t for t in raw_topics if t in VALID_TOPICS]  # type: ignore[reportUnknownVariableType]
+        raw_topics: list[str] = list(d.get("topics") or PushTopic)
+        valid_topics: list[PushTopic] = [PushTopic(t) for t in raw_topics if t in frozenset(PushTopic)]
         return cls(
             endpoint=str(d["endpoint"]),
             p256dh=str(d["p256dh"]),
             auth=str(d["auth"]),
             created=datetime.fromisoformat(str(d["created"])),
-            topics=valid_topics or list(ALL_TOPICS),
+            topics=valid_topics or list(PushTopic),
         )
 
 
@@ -103,8 +107,8 @@ class PushSubscriptionService:
             endpoint=endpoint,
             p256dh=p256dh,
             auth=auth,
-            created=datetime.now(tz=ZoneInfo("Europe/Berlin")),
-            topics=list(topics) if topics is not None else list(ALL_TOPICS),
+            created=datetime.now(tz=ZoneInfo(env.TZ)),
+            topics=list(topics) if topics is not None else list(PushTopic),
         )
         self._store[auth] = sub
 

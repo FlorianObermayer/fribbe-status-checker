@@ -1,20 +1,19 @@
 (function auth() {
     const next = document.body.dataset.next || '/';
     const signedIn = document.body.dataset.signedIn === 'true';
+    const urlAuth = document.body.dataset.urlAuth;
+    const urlSignout = document.body.dataset.urlSignout;
     const form = document.getElementById('auth-form');
     const tokenInput = document.getElementById('token-input');
     const errorBox = document.getElementById('auth-error');
     const submitButton = document.getElementById('auth-submit');
-    const cancelLink = document.getElementById('auth-cancel');
     const signedInPanel = document.getElementById('signed-in-panel');
     const continueButton = document.getElementById('continue-button');
     const signoutButton = document.getElementById('signout-button');
 
-    if (!form || !tokenInput || !errorBox || !submitButton || !cancelLink || !signedInPanel || !continueButton || !signoutButton) {
+    if (!form || !tokenInput || !errorBox || !submitButton || !signedInPanel || !continueButton || !signoutButton) {
         return;
     }
-
-    cancelLink.href = next;
 
     function setError(message) {
         if (!message) {
@@ -28,7 +27,7 @@
 
     async function signOut() {
         const csrfToken = getCsrfToken();
-        const response = await fetch('/signout', {
+        const response = await fetch(urlSignout, {
             method: 'POST',
             headers: csrfToken ? { 'X-CSRF-Token': csrfToken } : {},
         });
@@ -47,8 +46,6 @@
     }
 
     if (signedIn) {
-        form.hidden = true;
-        signedInPanel.hidden = false;
         continueButton.addEventListener('click', () => {
             window.location.href = next;
         });
@@ -78,7 +75,7 @@
         submitButton.disabled = true;
 
         try {
-            const resp = await fetch('/auth', {
+            const resp = await fetch(urlAuth, {
                 method: 'POST',
                 headers: withCsrfHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({ token, next }),

@@ -12,7 +12,11 @@ from app.api.responses import ApiKey
 from app.services.persistent_collections import PersistentList
 
 _write_lock = threading.Lock()
-_LOCAL_TZ = ZoneInfo("Europe/Berlin")
+
+
+def _local_tz() -> ZoneInfo:
+    return ZoneInfo(env.TZ)
+
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -86,10 +90,10 @@ class EphemeralAPIKeyStore:
 
     @staticmethod
     def _is_not_expired(valid_until: datetime) -> bool:
-        """Return True if valid_until is in the future. Naive datetimes are assumed to be Europe/Berlin."""
+        """Return True if valid_until is in the future. Naive datetimes are assumed to be in the configured local timezone (env.TZ)."""
         if valid_until.tzinfo is None:
-            valid_until = valid_until.replace(tzinfo=_LOCAL_TZ)
-        return valid_until >= datetime.now(tz=_LOCAL_TZ)
+            valid_until = valid_until.replace(tzinfo=_local_tz())
+        return valid_until >= datetime.now(tz=_local_tz())
 
     @staticmethod
     def is_key_valid(key: str | None) -> bool:
