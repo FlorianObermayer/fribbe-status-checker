@@ -7,8 +7,9 @@ Optional variables fall back to their stated defaults.
 
 import logging
 import os
+from zoneinfo import ZoneInfo
 
-from app.version import get_content_hash_version, get_git_commit_version
+from app.version import get_content_hash_version
 
 # ----------------------------------------------------------------------------
 # Constants
@@ -84,7 +85,7 @@ SHOW_AUTH_BUTTON: bool = False
 ADMIN_TOKEN: str | None = None
 
 # Build-time version tag injected by CI; falls back to "dev" locally.
-BUILD_VERSION: str = get_git_commit_version()
+BUILD_VERSION: str = "dev"
 
 # All three must be set together to enable Web Push; individually optional.
 VAPID_PRIVATE_KEY: str | None = None
@@ -190,7 +191,7 @@ def load() -> None:
 
     g["ADMIN_TOKEN"] = os.environ.get("ADMIN_TOKEN") or None
 
-    g["BUILD_VERSION"] = os.environ.get("BUILD_VERSION") or get_git_commit_version()
+    g["BUILD_VERSION"] = os.environ.get("BUILD_VERSION") or "dev"
 
     g["VAPID_PRIVATE_KEY"] = os.environ.get("VAPID_PRIVATE_KEY") or None
     g["VAPID_PUBLIC_KEY"] = os.environ.get("VAPID_PUBLIC_KEY") or None
@@ -247,6 +248,12 @@ def validate() -> None:
     if ADMIN_TOKEN is not None and len(ADMIN_TOKEN) < MIN_TOKEN_LENGTH:
         msg = f"ADMIN_TOKEN must be at least {MIN_TOKEN_LENGTH} characters long"
         raise RuntimeError(msg)
+
+    try:
+        _ = ZoneInfo(TZ)
+    except Exception as e:
+        msg = f"Invalid timezone in TZ: {TZ} ({e})"
+        raise RuntimeError(msg) from e
 
 
 # Populate from os.environ at import time.

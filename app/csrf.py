@@ -17,7 +17,7 @@ class FormFieldCSRFMiddleware(CSRFMiddleware):
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """Process a request, validating the CSRF token from header or form field."""
-        if scope["type"] not in ("http", "websocket"):  # pragma: no cover
+        if scope["type"] not in ("http"):
             await self.app(scope, receive, send)
             return
 
