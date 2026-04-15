@@ -119,10 +119,35 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 
 ## Deployment
 
-A production-ready Docker setup is included:
+### Docker image
+
+Pre-built images are published to GitHub Container Registry on every push to `main`:
 
 ```sh
-docker compose up --build   # builds image, runs on port 8007
+docker pull ghcr.io/florianobermayer/fribbe-status-checker:latest
 ```
 
-See [`Dockerfile`](Dockerfile) and [`docker-compose.yml`](docker-compose.yml) for details. The CI/CD pipeline ([`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml)) lints, tests, builds and pushes the Docker image on every push to `main`.
+Available image tags:
+
+| Tag | Description |
+| --- | --- |
+| `latest` | Most recent build from `main`. |
+| `<version>` (e.g. `0.5.0`) | Immutable tag, created once when the version in `pyproject.toml` is bumped. |
+| `<version>-<run>` (e.g. `0.5.0-42`) | Unique per-build tag for traceability. |
+
+### Local build
+
+```sh
+docker compose up --build   # builds image locally, runs on port 8007
+```
+
+### Releases
+
+The CI/CD pipeline ([`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml)) automates releases:
+
+- **Stable release** — Created automatically (with changelog) when the version in `pyproject.toml` is bumped and pushed to `main`.
+- **Nightly pre-release** — Updated on every subsequent push to `main` under the same version. Tagged `nightly`.
+
+The pipeline can also be triggered manually via `workflow_dispatch`.
+
+See [`Dockerfile`](Dockerfile) and [`docker-compose.yml`](docker-compose.yml) for container details.
