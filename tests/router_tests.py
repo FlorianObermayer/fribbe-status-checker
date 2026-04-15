@@ -181,27 +181,27 @@ def test_get_auth_page_renders_password_field(client: TestClient) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Bootstrap banner
+# Setup banner
 # ---------------------------------------------------------------------------
 
 
-def test_index_shows_bootstrap_banner_in_bootstrap_mode(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+def test_index_shows_setup_banner_when_no_admin_token(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Bootstrap banner must be visible (no 'hidden' class) when in bootstrap mode."""
-    keys_path = tmp_path / "api_keys.json"
-    monkeypatch.setattr(env, "API_KEYS_PATH", str(keys_path))
-    monkeypatch.setattr(env, "ADMIN_TOKEN", "")  # no token + empty store → bootstrap mode
+    """Setup banner must be visible (no 'hidden' class) when no ADMIN_TOKEN is set."""
+    monkeypatch.setattr(env, "ADMIN_TOKEN", "")
 
     response = client.get("/")
 
     assert response.status_code == 200
     assert 'id="bootstrap-banner"' in response.text
     assert "bootstrap-banner hidden" not in response.text
+    assert "ADMIN_TOKEN" in response.text
 
 
-def test_index_hides_bootstrap_banner_normally(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Bootstrap banner must have the 'hidden' class when not in bootstrap mode."""
+def test_index_hides_setup_banner_when_admin_token_set(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Setup banner must have the 'hidden' class when ADMIN_TOKEN is configured."""
     monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
 
     response = client.get("/")

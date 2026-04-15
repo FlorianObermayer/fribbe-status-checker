@@ -23,13 +23,11 @@ MIN_KEY_PREFIX_LENGTH = 5
 )
 def create_api_key(
     request: CreateApiKeyRequest,
-    auth_subject: Annotated[
-        str | None, Depends(HybridAuth(min_role=AccessRole.ADMIN, bypass_on_empty_api_key_list=True))
-    ],
+    _auth_subject: Annotated[str, Depends(HybridAuth(min_role=AccessRole.ADMIN))],
 ) -> ApiKey:
     """Create a new API key, store it in the JSON file, and return it.
 
-    Require valid API key to create or no API keys to begin with at all (admin setup mode).
+    Requires ADMIN role authentication.
 
     - comment: Required comment for the key. Length constraints are validated by `CreateApiKeyRequest`.
     - valid_until: Optional datetime. Defaults to now plus `env.DEFAULT_API_KEY_VALIDITY_DAYS`.
@@ -40,10 +38,9 @@ def create_api_key(
         microsecond=0,
     )
     new_api_key = ApiKey.generate_new(request.comment, valid_until, request.role)
-    bootstrap_mode = auth_subject is None
-    appended = EphemeralAPIKeyStore.append(new_api_key, require_empty=bootstrap_mode)
+    appended = EphemeralAPIKeyStore.append(new_api_key)
     if not appended:
-        raise HTTPException(status_code=409, detail="Bootstrap window closed: store is no longer empty")
+        raise HTTPException(status_code=500, detail="Failed to save API key")
     return new_api_key
 
 

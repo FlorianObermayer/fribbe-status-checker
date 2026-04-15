@@ -87,7 +87,6 @@ HTTPS_ONLY: bool = False
 SHOW_AUTH_BUTTON: bool = False
 
 # When set, accepted as a master credential on all protected endpoints.
-# Also disables the empty-store bypass, so setup mode never opens the API to the world.
 ADMIN_TOKEN: str | None = None
 
 # Build-time version tag injected by CI; falls back to "dev" locally.

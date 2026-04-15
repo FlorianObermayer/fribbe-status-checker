@@ -51,7 +51,7 @@ README.md                  # Project overview, setup, conventions, instructions
 - **Lifecycle**: `app.dependencies.startup()` / `shutdown()` are called from the FastAPI lifespan in `main.py`. Service singletons and background pollers are created/stopped there - never at import time. This keeps module imports side-effect free so tests can import routers without spawning threads.
 - `PresenceLevelService` polls router → `PresenceLevel` (empty/few/many) → on first daily EMPTY→active transition fires push notification via `PushSubscriptionService`
 - `MessageService` provides German-language text; uses `Weather` from `WeatherService` (OWM, 30-min cache)
-- `HybridAuth` checks an opaque server-side session referenced by the session cookie first, then `api_key` header; one-time bootstrap bypass when key store is empty
+- `HybridAuth` checks an opaque server-side session referenced by the session cookie first, then `api_key` header
 - **Access roles**: `AccessRole` (`READER < NOTIFICATION_OPERATOR < ADMIN`) in `app/api/access_role.py`. `HybridAuth(min_role=...)` enforces the minimum role; 403 when authenticated but insufficient. `ADMIN_TOKEN` always maps to `ADMIN`. API keys carry a `role` field; when the field is missing in stored keys, `ApiKey.from_dict()` falls back to `READER`. `PageAuth(min_role=...)` works the same way for HTML page routes.
 
 ## Conventions
@@ -59,7 +59,7 @@ README.md                  # Project overview, setup, conventions, instructions
 - **Env vars**: Declared as typed globals in `app/env.py`; `load()` populates from `os.environ`. Never read `os.environ` outside `env.py`. `.env.template` is the canonical var list.
 - **Auth**: The browser cookie must store only an opaque `auth_session_id`. Raw API keys and `ADMIN_TOKEN` values are never stored in the cookie. Admin sessions are bound to the current `ADMIN_TOKEN` fingerprint server-side, so rotating `ADMIN_TOKEN` invalidates existing admin sessions. Unsafe requests authenticated by cookie also require the per-session `X-CSRF-Token` header; header-based `api_key` auth does not.
 - **Token length**: `env.MIN_TOKEN_LENGTH = 48` is character count (not bytes). Use with `Field(min_length=...)`. For generation: `secrets.token_urlsafe(env.MIN_TOKEN_LENGTH)` (byte param, yields ≥48 chars).
-- **Threading**: `EphemeralAPIKeyStore` has module-level `_write_lock`. Use `append(key, require_empty=True)` (not `save()`); returns `False` on failure.
+- **Threading**: `EphemeralAPIKeyStore` has module-level `_write_lock`. Use `append(key)` (not `save()`); returns `False` on failure.
 - **Weather types**: `WeatherService.get_condition()` → `Weather | None` with `temperature: Temperature` (HOT/WARM/MILD/COLD) and `state: WeatherState` (CLEAR/CLOUDY/MILD_RAIN/HEAVY_RAIN/THUNDERSTORM/SNOW). In `MessageService`, precipitation states take priority over temperature messages.
 - **Type checking**: PyRight strict. All public functions need return-type annotations. Avoid `# type: ignore`.
 - **Linting**: Line length 120. Ruff rules: `ALL`. Tests rules differ. See `pyproject.toml` for details.
