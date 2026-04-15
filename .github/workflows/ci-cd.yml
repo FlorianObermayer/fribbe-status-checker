@@ -120,6 +120,8 @@ jobs:
           if [ "${{ steps.check_tag.outputs.is_new_version }}" = "true" ]; then
             TAGS="${TAGS},${IMAGE_REPO}:${{ steps.version.outputs.version }}"
             TAGS="${TAGS},${IMAGE_REPO}:latest"
+          else
+            TAGS="${TAGS},${IMAGE_REPO}:nightly"
           fi
           echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
 
