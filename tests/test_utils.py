@@ -5,6 +5,16 @@ from bs4 import BeautifulSoup, Tag
 import app.dependencies as _deps
 
 
+class FakePushSender:
+    """Test double for push sender used across multiple test files."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, str, str]] = []
+
+    def send_to_topic_sync(self, topic: str, title: str, body: str) -> None:
+        self.calls.append((topic, title, body))
+
+
 def reset_dependency_singletons() -> None:
     """Stop any running pollers and clear all service singletons. Test-only."""
     _deps.shutdown()

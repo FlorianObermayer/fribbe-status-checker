@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -61,16 +62,15 @@ def test_reset_at_5am(service: InternalService) -> None:
     assert service._internal_data.last_device_on_site is None
 
 
-@pytest.mark.skipif(
-    datetime.now(tz=ZoneInfo("Europe/Berlin")).hour >= 5 and datetime.now(tz=ZoneInfo("Europe/Berlin")).hour < 6,
-    reason="Test is not reliable during the hour after 5am due to time-based reset logic",
-)
 def test_no_reset_if_same_virtual_day(service: InternalService) -> None:
-    now = datetime.now(tz=ZoneInfo("Europe/Berlin"))
+    # Use a fixed time well away from the 5 AM boundary so the test is deterministic
+    now = datetime(2026, 4, 15, 14, 0, 0, tzinfo=ZoneInfo("Europe/Berlin"))
     service._last_updated = now - timedelta(hours=1)
     service._internal_data.first_device_on_site = now
     service._internal_data.last_device_on_site = now
     service._internal_data.active_devices_ct = 0
-    service._update_device_statistics(0, 0)
+    with patch("app.services.internal.internal_service.datetime") as mock_dt:
+        mock_dt.now.return_value = now
+        service._update_device_statistics(0, 0)
     assert service._internal_data.first_device_on_site == now
     assert service._internal_data.last_device_on_site == now

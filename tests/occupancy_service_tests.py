@@ -40,14 +40,12 @@ def test_get_todays_occupancy_no_occupancy() -> None:
     assert isinstance(daily.date, date)
 
 
-@pytest.mark.skip("test flaky")
 def test_get_todays_week_occupancy_with_occupancy() -> None:
     s = service()
     occ = parse_weekly_plan(get_weekly_mock_table())
-    occ[
-        0
-    ].begin = datetime.now()  # HACK: Don't use Datetime with timezone as we can't compare it to the mock data then...
-    occ[0].end = occ[0].begin + timedelta(hours=4)
+    now = datetime.now(tz=ZoneInfo("Europe/Berlin"))
+    occ[0].begin = now
+    occ[0].end = now + timedelta(hours=4)
     s._week_occupancy = occ
     daily = s.get_occupancy("today")
     assert len(daily.lines) > 0
