@@ -5,6 +5,39 @@ import dateparser
 
 from app import env
 
+# German month names for deterministic locale-independent output
+_GERMAN_MONTHS = [
+    "Jan.",
+    "Feb.",
+    "Mär.",
+    "Apr.",
+    "Mai",
+    "Jun.",
+    "Jul.",
+    "Aug.",
+    "Sep.",
+    "Okt.",
+    "Nov.",
+    "Dez.",
+]
+
+
+def format_datetime(dt: datetime) -> str:
+    """Format a datetime as a short German-locale string (e.g. '11. Apr., 12:00')."""
+    hour = dt.hour
+    minute = dt.minute
+    return f"{dt.day}. {_GERMAN_MONTHS[dt.month - 1]}, {hour:02d}:{minute:02d}"
+
+
+def format_date_long(d: str | None) -> str:
+    """Format an ISO date string as a long German weekday+date (e.g. 'Freitag, 11. Apr.')."""
+    parsed = date.fromisoformat(d) if d else None
+    if parsed is None:
+        return ""
+    weekdays = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"]
+    return f"{weekdays[parsed.weekday()]}, {parsed.day}. {_GERMAN_MONTHS[parsed.month - 1]}"
+
+
 _KNOWN_TIME_RANGES: dict[str, tuple[str, str]] = {
     "ganztags": ("00:00", "23:59"),
     "ganztägig": ("00:00", "23:59"),

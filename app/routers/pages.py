@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from typing import Annotated
 from zoneinfo import ZoneInfo
 
@@ -17,6 +17,7 @@ from app.dependencies import (
 from app.format import seconds_to_human
 from app.routers._page_utils import templates
 from app.routers.nav_context import NavContext, Route, operator_or_above
+from app.services.datetime_parser import format_date_long, format_datetime
 from app.services.occupancy.model import OccupancySource, OccupancyType
 from app.services.presence_level import PresenceLevel
 from app.services.presence_thresholds import PresenceThresholds
@@ -52,25 +53,11 @@ def get_html(request: Request, for_date: str | None = None) -> HTMLResponse:
     )
 
 
-def _format_datetime(dt: datetime) -> str:
-    """Format a datetime as a short German-locale string (e.g. '11. Apr., 12:00')."""
-    return f"{dt.day}. {dt.strftime('%b.')}, {dt.strftime('%H:%M')}"
-
-
-def _format_date_long(d: str | None) -> str:
-    """Format an ISO date string as a long German weekday+date (e.g. 'Freitag, 11. Apr.')."""
-    parsed = date.fromisoformat(d) if d else None
-    if parsed is None:
-        return ""
-    weekdays = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"]
-    return f"{weekdays[parsed.weekday()]}, {parsed.day}. {parsed.strftime('%b.')}"
-
-
 def _build_occupancy_header(source: OccupancySource, for_date: str | None, for_date_iso: str) -> str:
     """Build the occupancy card header string."""
     if source == OccupancySource.EVENT_CALENDAR:
-        return f"Veranstaltungen ({_format_date_long(for_date_iso)})" if for_date else "Heutige Veranstaltungen"
-    return f"Belegungsplan ({_format_date_long(for_date_iso)})" if for_date else "Heutiger Belegungsplan"
+        return f"Veranstaltungen ({format_date_long(for_date_iso)})" if for_date else "Heutige Veranstaltungen"
+    return f"Belegungsplan ({format_date_long(for_date_iso)})" if for_date else "Heutiger Belegungsplan"
 
 
 def _build_combined_updated_text(
@@ -80,9 +67,9 @@ def _build_combined_updated_text(
     """Build the combined 'last updated' text."""
     parts: list[str] = []
     if presence_last_updated:
-        parts.append(f"Anwesenheit vom {_format_datetime(presence_last_updated)}")
+        parts.append(f"Anwesenheit vom {format_datetime(presence_last_updated)}")
     if occupancy_last_updated:
-        parts.append(f"Belegung vom {_format_datetime(occupancy_last_updated)}")
+        parts.append(f"Belegung vom {format_datetime(occupancy_last_updated)}")
     return " - ".join(parts) if parts else "Aktualisiert: Nie"
 
 
