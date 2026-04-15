@@ -103,7 +103,7 @@ WEATHER_CACHE_TTL_SECONDS: int = 1800  # 30 minutes
 CSP_DOMAIN: str | None = None
 
 # IANA timezone name used for all local datetime calculations (e.g. "Europe/Berlin").
-TZ: str = "UTC"
+TZ: str = "Europe/Berlin"
 
 # Operator identity shown on the Impressum / Datenschutz page.
 OPERATOR_NAME: str = ""
