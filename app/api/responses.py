@@ -79,7 +79,7 @@ class ApiKey(BaseModel):
     key: str = Field(..., min_length=env.MIN_TOKEN_LENGTH)
     comment: str = Field(..., max_length=env.API_KEY_COMMENT_MAX_LENGTH)
     valid_until: datetime
-    role: AccessRole = AccessRole.ADMIN
+    role: AccessRole = AccessRole.READER
 
     @staticmethod
     def generate_new(comment: str, valid_until: datetime, role: AccessRole = AccessRole.READER) -> "ApiKey":
