@@ -5,6 +5,7 @@ import pytest
 from pydantic import ValidationError
 
 from app import env
+from app.api.access_role import AccessRole
 from app.api.ephemeral_api_key_store import EphemeralAPIKeyStore, RemoveResult
 from app.api.responses import ApiKey
 
@@ -159,3 +160,43 @@ def test_remove_returns_ambiguous_when_multiple_matches() -> None:
 
     assert EphemeralAPIKeyStore.remove(shared_prefix) == RemoveResult.AMBIGUOUS
     assert len(EphemeralAPIKeyStore.load()) == 2
+
+
+# ---------------------------------------------------------------------------
+# has_valid_admin_key
+# ---------------------------------------------------------------------------
+
+
+def test_has_valid_admin_key_empty_store() -> None:
+    EphemeralAPIKeyStore.save([])
+    assert EphemeralAPIKeyStore.has_valid_admin_key() is False
+
+
+def test_has_valid_admin_key_non_admin_role() -> None:
+    key = ApiKey.generate_new(
+        comment="reader",
+        valid_until=datetime.now(tz=ZoneInfo("Europe/Berlin")) + timedelta(days=1),
+        role=AccessRole.READER,
+    )
+    EphemeralAPIKeyStore.save([key])
+    assert EphemeralAPIKeyStore.has_valid_admin_key() is False
+
+
+def test_has_valid_admin_key_expired_admin() -> None:
+    key = ApiKey.generate_new(
+        comment="expired admin",
+        valid_until=datetime.now(tz=ZoneInfo("Europe/Berlin")) - timedelta(days=1),
+        role=AccessRole.ADMIN,
+    )
+    EphemeralAPIKeyStore.save([key])
+    assert EphemeralAPIKeyStore.has_valid_admin_key() is False
+
+
+def test_has_valid_admin_key_valid_admin() -> None:
+    key = ApiKey.generate_new(
+        comment="valid admin",
+        valid_until=datetime.now(tz=ZoneInfo("Europe/Berlin")) + timedelta(days=1),
+        role=AccessRole.ADMIN,
+    )
+    EphemeralAPIKeyStore.save([key])
+    assert EphemeralAPIKeyStore.has_valid_admin_key() is True

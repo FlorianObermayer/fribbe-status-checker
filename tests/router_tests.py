@@ -176,9 +176,12 @@ def test_get_auth_page_renders_password_field(client: TestClient) -> None:
 def test_index_shows_setup_banner_when_no_admin_token(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     """Setup banner must be visible (no 'hidden' class) when no ADMIN_TOKEN is set."""
+    monkeypatch.setattr(env, "API_KEYS_PATH", str(tmp_path / "api_keys.json"))
     monkeypatch.setattr(env, "ADMIN_TOKEN", "")
+    EphemeralAPIKeyStore.save([])
 
     response = client.get("/")
 
@@ -444,81 +447,37 @@ def test_get_legal_page_shows_push_section_when_feature_enabled(
     assert "OpenWeatherMap" not in response.text
 
 
-def test_get_legal_page_hides_push_section_when_feature_disabled(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize(
+    ("push", "presence", "weather", "expected_in", "expected_not_in"),
+    [
+        (False, False, False, [], ["Push-Benachrichtigungen", "WLAN-Anwesenheitserkennung", "OpenWeatherMap"]),
+        (False, True, False, ["WLAN-Anwesenheitserkennung", "Namentliche Zuordnung"], ["OpenWeatherMap"]),
+        (False, False, True, ["OpenWeatherMap"], ["WLAN-Anwesenheitserkennung"]),
+    ],
+    ids=["all-disabled", "presence-only", "weather-only"],
+)
+def test_get_legal_page_feature_sections(  # noqa: PLR0913
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    push: bool,  # noqa: FBT001
+    presence: bool,  # noqa: FBT001
+    weather: bool,  # noqa: FBT001
+    expected_in: list[str],
+    expected_not_in: list[str],
 ) -> None:
     monkeypatch.setattr(env, "OPERATOR_NAME", "Max Mustermann")
     monkeypatch.setattr(env, "OPERATOR_EMAIL", "max@example.com")
-    monkeypatch.setattr(env, "is_push_enabled", lambda: False)
-    monkeypatch.setattr(env, "is_presence_enabled", lambda: False)
-    monkeypatch.setattr(env, "is_weather_enabled", lambda: False)
+    monkeypatch.setattr(env, "is_push_enabled", lambda: push)
+    monkeypatch.setattr(env, "is_presence_enabled", lambda: presence)
+    monkeypatch.setattr(env, "is_weather_enabled", lambda: weather)
 
     response = client.get("/legal")
 
     assert response.status_code == 200
-    assert "Push-Benachrichtigungen" not in response.text
-
-
-def test_get_legal_page_shows_presence_section_when_feature_enabled(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setattr(env, "OPERATOR_NAME", "Max Mustermann")
-    monkeypatch.setattr(env, "OPERATOR_EMAIL", "max@example.com")
-    monkeypatch.setattr(env, "is_push_enabled", lambda: False)
-    monkeypatch.setattr(env, "is_presence_enabled", lambda: True)
-    monkeypatch.setattr(env, "is_weather_enabled", lambda: False)
-
-    response = client.get("/legal")
-
-    assert response.status_code == 200
-    assert "WLAN-Anwesenheitserkennung" in response.text
-    assert "Namentliche Zuordnung" in response.text
-
-
-def test_get_legal_page_hides_presence_section_when_feature_disabled(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setattr(env, "OPERATOR_NAME", "Max Mustermann")
-    monkeypatch.setattr(env, "OPERATOR_EMAIL", "max@example.com")
-    monkeypatch.setattr(env, "is_push_enabled", lambda: False)
-    monkeypatch.setattr(env, "is_presence_enabled", lambda: False)
-    monkeypatch.setattr(env, "is_weather_enabled", lambda: False)
-
-    response = client.get("/legal")
-
-    assert response.status_code == 200
-    assert "WLAN-Anwesenheitserkennung" not in response.text
-    assert "Namentliche Zuordnung" not in response.text
-
-
-def test_get_legal_page_shows_weather_section_when_feature_enabled(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setattr(env, "OPERATOR_NAME", "Max Mustermann")
-    monkeypatch.setattr(env, "OPERATOR_EMAIL", "max@example.com")
-    monkeypatch.setattr(env, "is_push_enabled", lambda: False)
-    monkeypatch.setattr(env, "is_presence_enabled", lambda: False)
-    monkeypatch.setattr(env, "is_weather_enabled", lambda: True)
-
-    response = client.get("/legal")
-
-    assert response.status_code == 200
-    assert "OpenWeatherMap" in response.text
-
-
-def test_get_legal_page_hides_weather_section_when_feature_disabled(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setattr(env, "OPERATOR_NAME", "Max Mustermann")
-    monkeypatch.setattr(env, "OPERATOR_EMAIL", "max@example.com")
-    monkeypatch.setattr(env, "is_push_enabled", lambda: False)
-    monkeypatch.setattr(env, "is_presence_enabled", lambda: False)
-    monkeypatch.setattr(env, "is_weather_enabled", lambda: False)
-
-    response = client.get("/legal")
-
-    assert response.status_code == 200
-    assert "OpenWeatherMap" not in response.text
+    for text in expected_in:
+        assert text in response.text
+    for text in expected_not_in:
+        assert text not in response.text
 
 
 def test_index_shows_legal_link_when_operator_configured(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1453,5 +1412,299 @@ def test_create_api_key_rejects_oversized_comment(
         json={"comment": "x" * 201},
         headers=_get_csrf_headers(client),
     )
+
+    assert response.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# /api/version, /api/version/content-hash, /api/licenses
+# ---------------------------------------------------------------------------
+
+
+def test_version_returns_build_version(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(env, "BUILD_VERSION", "1.2.3")
+
+    response = client.get("/api/version")
+
+    assert response.status_code == 200
+    assert response.json()["version"] == "1.2.3"
+
+
+def test_version_content_hash_returns_hash(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(env, "CONTENT_HASH_VERSION", "abc123")
+
+    response = client.get("/api/version/content-hash")
+
+    assert response.status_code == 200
+    assert response.json()["version"] == "abc123"
+
+
+def test_licenses_returns_list(client: TestClient) -> None:
+    response = client.get("/api/licenses")
+
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
+
+
+def test_favicon_returns_200(client: TestClient) -> None:
+    response = client.get("/favicon.ico")
+
+    assert response.status_code == 200
+
+
+def test_service_worker_returns_js(client: TestClient) -> None:
+    response = client.get("/sw.js")
+
+    assert response.status_code == 200
+    assert "application/javascript" in response.headers["content-type"]
+    assert response.headers.get("service-worker-allowed") == "/"
+
+
+def test_robots_txt_contains_disallows(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(env, "APP_URL", "https://example.com")
+
+    response = client.get("/robots.txt")
+
+    assert response.status_code == 200
+    assert "Disallow: /api/" in response.text
+    assert "Sitemap: https://example.com/sitemap.xml" in response.text
+
+
+def test_sitemap_xml_returns_valid_xml(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(env, "APP_URL", "https://example.com")
+
+    response = client.get("/sitemap.xml")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/xml"
+    assert "<loc>https://example.com/</loc>" in response.text
+
+
+# ---------------------------------------------------------------------------
+# /api/internal/wardens — CRUD
+# ---------------------------------------------------------------------------
+
+
+def test_wardens_list_returns_200_with_auth(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(env, "LOCAL_DATA_PATH", str(tmp_path))
+
+    response = client.get("/api/internal/wardens", headers={"api_key": TEST_ADMIN_TOKEN})
+
+    assert response.status_code == 200
+    assert response.json()["wardens"] == []
+
+
+def test_wardens_crud_lifecycle(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(env, "LOCAL_DATA_PATH", str(tmp_path))
+    auth = {"api_key": TEST_ADMIN_TOKEN}
+
+    # Create (header-based auth — no CSRF needed)
+    response = client.post(
+        "/api/internal/wardens",
+        json={"name": "Alice", "device_macs": ["AA:BB:CC:DD:EE:FF"], "device_names": ["Phone"]},
+        headers=auth,
+    )
+    assert response.status_code == 201
+    assert response.json()["name"] == "Alice"
+
+    # List
+    client.cookies.clear()
+    wardens = client.get("/api/internal/wardens", headers=auth).json()["wardens"]
+    assert len(wardens) == 1
+
+    # Update
+    client.cookies.clear()
+    response = client.put(
+        "/api/internal/wardens/Alice",
+        json={"device_names": ["Laptop"]},
+        headers=auth,
+    )
+    assert response.status_code == 200
+    assert response.json()["device_names"] == ["laptop"]
+
+    # Delete
+    client.cookies.clear()
+    response = client.request("DELETE", "/api/internal/wardens/Alice", headers=auth)
+    assert response.status_code == 204
+
+    # Confirm deleted
+    wardens = client.get("/api/internal/wardens", headers=auth).json()["wardens"]
+    assert len(wardens) == 0
+
+
+def test_wardens_create_duplicate_returns_409(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(env, "LOCAL_DATA_PATH", str(tmp_path))
+    auth = {"api_key": TEST_ADMIN_TOKEN}
+
+    client.post(
+        "/api/internal/wardens",
+        json={"name": "Bob", "device_macs": ["AA:BB:CC:DD:EE:FF"], "device_names": ["Phone"]},
+        headers=auth,
+    )
+    client.cookies.clear()
+    response = client.post(
+        "/api/internal/wardens",
+        json={"name": "Bob", "device_macs": ["11:22:33:44:55:66"], "device_names": ["Tab"]},
+        headers=auth,
+    )
+
+    assert response.status_code == 409
+
+
+def test_wardens_update_not_found_returns_404(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(env, "LOCAL_DATA_PATH", str(tmp_path))
+
+    response = client.put(
+        "/api/internal/wardens/NonExistent",
+        json={"device_names": ["x"]},
+        headers={"api_key": TEST_ADMIN_TOKEN},
+    )
+
+    assert response.status_code == 404
+
+
+def test_wardens_delete_not_found_returns_404(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(env, "LOCAL_DATA_PATH", str(tmp_path))
+
+    response = client.request(
+        "DELETE",
+        "/api/internal/wardens/NonExistent",
+        headers={"api_key": TEST_ADMIN_TOKEN},
+    )
+
+    assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# /api/internal/config — threshold updates
+# ---------------------------------------------------------------------------
+
+
+def test_config_returns_304_when_no_thresholds_sent(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+
+    response = client.patch("/api/internal/config", json={}, headers={"api_key": TEST_ADMIN_TOKEN})
+
+    assert response.status_code == 304
+
+
+def test_config_updates_min_non_empty_ct(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(env, "LOCAL_DATA_PATH", str(tmp_path))
+
+    response = client.patch(
+        "/api/internal/config",
+        json={"threshold_min_non_empty_ct": 5},
+        headers={"api_key": TEST_ADMIN_TOKEN},
+    )
+
+    assert response.status_code == 200
+
+
+def test_config_updates_min_many_ct(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(env, "LOCAL_DATA_PATH", str(tmp_path))
+
+    response = client.patch(
+        "/api/internal/config",
+        json={"threshold_min_many_ct": 15},
+        headers={"api_key": TEST_ADMIN_TOKEN},
+    )
+
+    assert response.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# /api/push — validation paths (422)
+# ---------------------------------------------------------------------------
+
+
+def test_push_status_returns_422_for_invalid_auth(client: TestClient, test_app: FastAPI) -> None:
+    push_svc = MagicMock()
+    test_app.dependency_overrides[get_push_subscription_service] = lambda: push_svc
+
+    response = client.post("/api/push/status", json={"auth": ""})
+
+    assert response.status_code == 422
+
+
+def test_push_subscribe_returns_422_for_invalid_subscription(
+    client: TestClient,
+    test_app: FastAPI,
+) -> None:
+    push_svc = MagicMock()
+    test_app.dependency_overrides[get_push_subscription_service] = lambda: push_svc
+
+    response = client.post(
+        "/api/push/subscribe",
+        json={"endpoint": "", "p256dh": "", "auth": ""},
+    )
+
+    assert response.status_code == 422
+
+
+def test_push_subscribe_returns_201_for_valid_subscription(
+    client: TestClient,
+    test_app: FastAPI,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    push_svc = MagicMock()
+    test_app.dependency_overrides[get_push_subscription_service] = lambda: push_svc
+    monkeypatch.setattr(
+        PushSubscriptionService,
+        "validate_subscription",
+        staticmethod(lambda *_a: None),  # type: ignore[reportUnknownLambdaType]
+    )
+
+    response = client.post(
+        "/api/push/subscribe",
+        json={"endpoint": "https://push.example.com", "p256dh": "key", "auth": "auth"},
+    )
+
+    assert response.status_code == 201
+    push_svc.add.assert_called_once()
+
+
+def test_push_topics_returns_422_for_invalid_auth(client: TestClient, test_app: FastAPI) -> None:
+    push_svc = MagicMock()
+    test_app.dependency_overrides[get_push_subscription_service] = lambda: push_svc
+
+    response = client.patch("/api/push/topics", json={"auth": "", "topics": ["presence"]})
 
     assert response.status_code == 422

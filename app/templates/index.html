@@ -77,7 +77,7 @@ data-push-topics-url="{{ url_api_push_topics }}"{% endblock %}
     <div id="bootstrap-banner" class="bootstrap-banner{% if not (setup_banner | default(false)) %} hidden{% endif %}"
         role="alert" aria-live="polite" aria-atomic="true">
         <strong>⚠ No admin access configured.</strong> Set the <code>ADMIN_TOKEN</code> environment variable and
-        redeploy to secure the admin interface.
+        redeploy to enable or regain admin access and manage API keys.
     </div>
     <div class="container">
         {% include "_theme_toggle.html" %}

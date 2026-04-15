@@ -29,7 +29,7 @@ For larger frontend changes, validate against `http://localhost:8007`.
 .github/
   copilot-instructions.md  # Instructions for Copilot
   workflows/
-    ci-cd.yml              # CI/CD pipeline (lint, test, build, deploy)
+    ci-cd.yml              # CI/CD pipeline (lint, test, build, deploy, coverage enforcement)
     codeql.yml             # CodeQL security analysis
   dependabot.yml           # Dependabot config for dependency updates
 app/
@@ -65,6 +65,7 @@ README.md                  # Project overview, setup, conventions, instructions
 - **Linting**: Line length 120. Ruff rules: `ALL`. Tests rules differ. See `pyproject.toml` for details.
 - **Markdown linting**: `markdownlint-cli2` enforced in CI (warnings as errors). Config in `.markdownlint-cli2.yaml`. Run locally with `npx markdownlint-cli2`.
 - **Licenses**: After adding or removing any dependency in `pyproject.toml`, run `uv run generate-licenses` and commit the updated `app/licenses.json`. The CI lint job fails if this file is out of date.
+- **Coverage**: CI enforces ≥80% overall test coverage (`--cov-fail-under=80`). On PRs, `diff-cover` requires ≥80% coverage on new/changed lines (`diff-cover coverage.xml --compare-branch=origin/main --fail-under=80`).
 
 ## Copilot Instructions
 
