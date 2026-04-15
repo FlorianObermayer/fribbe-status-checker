@@ -103,7 +103,7 @@ def _validate_topics(topics: list[str]) -> list[PushTopic]:
     if not topics:
         msg = "At least one topic is required"
         raise ValueError(msg)
-    invalid = set(topics) - set(PushTopic)
+    invalid = set(topics) - {t.value for t in PushTopic}
     if invalid:
         msg = f"Invalid topics: {sorted(invalid)}"
         raise ValueError(msg)
