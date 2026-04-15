@@ -22,11 +22,11 @@ class NotificationFilterId(StrEnum):
 # Single source of truth for all keyword filter options.
 # Order here determines the order in the UI selector.
 NOTIFICATION_FILTERS: list[dict[str, str]] = [
-    {"value": NotificationFilterId.ALL_ACTIVE, "label": "Aktive"},
-    {"value": NotificationFilterId.LATEST_ACTIVE, "label": "Neueste aktive"},
-    {"value": NotificationFilterId.ALL_ENABLED, "label": "Alle aktivierten"},
-    {"value": NotificationFilterId.ALL_INACTIVE, "label": "Inaktive"},
-    {"value": NotificationFilterId.ALL, "label": "Alle"},
+    {"value": NotificationFilterId.ALL_ACTIVE.value, "label": "Aktive"},
+    {"value": NotificationFilterId.LATEST_ACTIVE.value, "label": "Neueste aktive"},
+    {"value": NotificationFilterId.ALL_ENABLED.value, "label": "Alle aktivierten"},
+    {"value": NotificationFilterId.ALL_INACTIVE.value, "label": "Inaktive"},
+    {"value": NotificationFilterId.ALL.value, "label": "Alle"},
 ]
 
 # Keyword IDs that require an authenticated request
