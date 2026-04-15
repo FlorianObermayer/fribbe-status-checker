@@ -15,6 +15,7 @@ from app.services.occupancy.model import OccupancyType
 from app.services.polling_service import PollingService
 from app.services.presence_level import PresenceLevel
 from app.services.presence_thresholds import PresenceThresholds
+from app.services.push_subscription_service import PushTopic
 from app.services.virtual_day import get_virtual_date
 
 if TYPE_CHECKING:
@@ -130,7 +131,7 @@ class PresenceLevelService(PollingService):
         self._last_push_virtual_date = virtual_today
         title, body = self._build_push_message(new_level)
         logger.info("First non-empty presence today — sending push notifications")
-        self._push_sender.send_to_topic_sync("presence", title, body)
+        self._push_sender.send_to_topic_sync(PushTopic.PRESENCE, title, body)
         return True
 
     def _build_push_message(self, level: PresenceLevel) -> tuple[str, str]:

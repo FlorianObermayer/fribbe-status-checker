@@ -15,6 +15,7 @@ from app.api.requests import NotificationFilterId
 from app.services.persistent_collections import PersistentDict
 from app.services.polling_service import PollingService
 from app.services.push_sender import PushSender
+from app.services.push_subscription_service import PushTopic
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -117,7 +118,7 @@ class NotificationService(PollingService):
         )
         self._store[nid] = notification
         if notification.is_active() and self._push_sender is not None:
-            self._push_sender.send_to_topic_sync("notifications", _PUSH_TITLE, _push_message(message))
+            self._push_sender.send_to_topic_sync(PushTopic.NOTIFICATIONS, _PUSH_TITLE, _push_message(message))
             known_active_nids = self._known_active_nids
             if known_active_nids is not None:
                 self._known_active_nids = {*known_active_nids, nid}
@@ -210,7 +211,9 @@ class NotificationService(PollingService):
                 notification.valid_until = valid_until
             store[nid] = notification
             if not was_active and notification.is_active() and self._push_sender is not None:
-                self._push_sender.send_to_topic_sync("notifications", _PUSH_TITLE, _push_message(notification.message))
+                self._push_sender.send_to_topic_sync(
+                    PushTopic.NOTIFICATIONS, _PUSH_TITLE, _push_message(notification.message)
+                )
                 if self._known_active_nids is not None:
                     self._known_active_nids = set(self._known_active_nids) | {nid}
             return True
@@ -238,7 +241,9 @@ class NotificationService(PollingService):
             notification = self._store.get(nid)
             if notification is not None:
                 logger.info("Notification %s became active - sending push", nid)
-                self._push_sender.send_to_topic_sync("notifications", _PUSH_TITLE, _push_message(notification.message))
+                self._push_sender.send_to_topic_sync(
+                    PushTopic.NOTIFICATIONS, _PUSH_TITLE, _push_message(notification.message)
+                )
 
     async def _run_clean_old_notifications(self) -> None:
         try:

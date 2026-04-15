@@ -1,5 +1,6 @@
 """Shared template instance, base context processor, and toast helper for page routers."""
 
+import json
 from typing import Literal
 
 from fastapi import Request, Response
@@ -11,8 +12,7 @@ from app.routers.nav_context import Route
 
 
 def _base_context(request: Request) -> dict[str, object]:
-    flash_raw = request.cookies.get("flash", "")
-    flash_message, _, flash_type = flash_raw.partition("|")
+    flash_message, flash_type = _read_toast_from_request(request)
     return {
         "version": env.BUILD_VERSION,
         "content_hash_version": env.CONTENT_HASH_VERSION,
@@ -50,11 +50,27 @@ templates = Jinja2Templates(directory="app/templates", context_processors=[_base
 
 def show_toast(response: Response, message: str, status: Literal["success", "error"] = "success") -> None:
     """Set a one-time toast message to be rendered on the next page."""
+    flash_data = json.dumps({"message": message, "type": status})
     response.set_cookie(
         "flash",
-        f"{message}|{status}",
+        flash_data,
         max_age=env.TOAST_DISPLAY_SECONDS,
         httponly=True,
         secure=env.HTTPS_ONLY,
         samesite="strict",
     )
+
+
+def _read_toast_from_request(request: Request) -> tuple[str, str]:
+    """Read and return any toast message from the request cookies."""
+    flash_raw = request.cookies.get("flash", "")
+    flash_message = ""
+    flash_type = "success"
+    if flash_raw:
+        try:
+            flash_data = json.loads(flash_raw)
+            flash_message = flash_data.get("message", "")
+            flash_type = flash_data.get("type", "success")
+        except (json.JSONDecodeError, TypeError):
+            pass
+    return flash_message, flash_type

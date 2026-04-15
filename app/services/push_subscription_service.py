@@ -24,6 +24,7 @@ _B64URL_RE = re.compile(r"^[A-Za-z0-9\-_]+=*$")
 # conservative lower bound to reject obviously invalid input.
 _MIN_PUSH_KEY_LENGTH = 10
 
+
 class PushTopic(StrEnum):
     """Push notification topic identifiers."""
 
@@ -39,7 +40,7 @@ class PushSubscription:
     p256dh: str
     auth: str
     created: datetime
-    topics: list[PushTopic] = field(default_factory=list)
+    topics: list[PushTopic] = field(default_factory=list[PushTopic])
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a plain dict."""
