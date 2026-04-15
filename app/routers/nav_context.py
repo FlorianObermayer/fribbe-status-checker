@@ -109,8 +109,9 @@ class NavContext(Mapping[str, object]):
 
     Note:
         Button target URLs (``url_auth``, ``url_notification_create``, ``url_preview``) are
-        injected globally via the ``_base_context`` context processor in ``pages.py`` and
-        are therefore available to ``_floating_btn_group.html`` without being fields here.
+        injected globally via the ``_base_context`` context processor in
+        ``app/routers/_page_utils.py`` and are therefore available to
+        ``_floating_btn_group.html`` without being fields here.
 
     """
 
