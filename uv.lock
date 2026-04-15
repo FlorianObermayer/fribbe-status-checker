@@ -642,7 +642,7 @@ wheels = [
 
 [[package]]
 name = "fribbe-status-checker"
-version = "0.5.1"
+version = "0.5.2"
 source = { editable = "." }
 dependencies = [
     { name = "beautifulsoup4" },
