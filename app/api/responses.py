@@ -197,13 +197,6 @@ class DeletedResponse(BaseModel):
     deleted: int
 
 
-class NotificationFilterResponse(BaseModel):
-    """A selectable notification filter option."""
-
-    value: str
-    label: str
-
-
 class NotificationResponse(BaseModel):
     """Public representation of a notification."""
 

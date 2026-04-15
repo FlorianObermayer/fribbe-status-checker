@@ -65,7 +65,7 @@ class AuthRedirectQuery(BaseModel):
 class NotificationQuery(BaseModel):
     """Query parameters for filtering notifications."""
 
-    n_ids: list[str] = Query(
+    n_ids: list[NotificationFilterId | str] = Query(
         examples=[*_examples],
     )
 
@@ -76,7 +76,7 @@ class NotificationQuery(BaseModel):
 
     @field_validator("n_ids", mode="before", check_fields=True)
     @classmethod
-    def validate_ids(cls, value: str | list[str]) -> list[str]:
+    def validate_ids(cls, value: NotificationFilterId | str | list[str | NotificationFilterId]) -> list[str]:
         """Coerce single-string values into a list and validate IDs."""
         if isinstance(value, str):  # Handle single values (e.g., ?q=all_active)
             value = [value]
