@@ -54,7 +54,7 @@ def get_html(request: Request, for_date: str | None = None) -> HTMLResponse:
 
 def _format_datetime(dt: datetime) -> str:
     """Format a datetime as a short German-locale string (e.g. '11. Apr., 12:00')."""
-    return dt.strftime("%-d. %b., %H:%M")
+    return f"{dt.day}. {dt.strftime('%b.')}, {dt.strftime('%H:%M')}"
 
 
 def _format_date_long(d: str | None) -> str:
@@ -63,7 +63,7 @@ def _format_date_long(d: str | None) -> str:
     if parsed is None:
         return ""
     weekdays = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"]
-    return f"{weekdays[parsed.weekday()]}, {parsed.strftime('%-d. %b.')}"
+    return f"{weekdays[parsed.weekday()]}, {parsed.day}. {parsed.strftime('%b.')}"
 
 
 def _build_occupancy_header(source: OccupancySource, for_date: str | None, for_date_iso: str) -> str:
@@ -167,7 +167,7 @@ def get_legal_page(
 ) -> HTMLResponse:
     """Serve the Impressum & Datenschutz page.
 
-    Returns 404 legal page is not configured.
+    Returns 404 when the legal page is not configured.
     """
     if not env.is_legal_page_enabled():
         raise HTTPException(status_code=404, detail="Legal page not configured")
