@@ -185,7 +185,7 @@ jobs:
       # First push with a new version: create a stable release
       - name: Create release
         if: needs.build-and-push.outputs.is_new_version == 'true'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ needs.build-and-push.outputs.version }}
           name: v${{ needs.build-and-push.outputs.version }}
@@ -204,15 +204,9 @@ jobs:
           generate_release_notes: false
 
       # Subsequent pushes under the same version: update rolling nightly pre-release
-      - name: Delete existing nightly tag
+      - name: Update nightly release
         if: needs.build-and-push.outputs.is_new_version == 'false'
-        run: git push origin :refs/tags/nightly 2>/dev/null || true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create nightly release
-        if: needs.build-and-push.outputs.is_new_version == 'false'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: nightly
           name: Nightly (${{ needs.build-and-push.outputs.build_version }})
