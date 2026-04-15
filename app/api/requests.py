@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from app import env
 from app.api.access_role import AccessRole
-from app.services.push_subscription_service import ALL_TOPICS, VALID_TOPICS, PushTopic
+from app.services.push_subscription_service import PushTopic
 
 
 class NotificationFilterId(StrEnum):
@@ -100,14 +100,14 @@ class PushAuthRequest(BaseModel):
 
 
 def _validate_topics(topics: list[str]) -> list[PushTopic]:
-    invalid = set(topics) - VALID_TOPICS
-    if invalid:
-        msg = f"Invalid topics: {sorted(invalid)}"
-        raise ValueError(msg)
     if not topics:
         msg = "At least one topic is required"
         raise ValueError(msg)
-    return list(dict.fromkeys(topics))  # type: ignore[return-value]
+    invalid = set(topics) - set(PushTopic)
+    if invalid:
+        msg = f"Invalid topics: {sorted(invalid)}"
+        raise ValueError(msg)
+    return list(dict.fromkeys(PushTopic(t) for t in topics))
 
 
 class PushSubscribeRequest(BaseModel):
@@ -116,7 +116,7 @@ class PushSubscribeRequest(BaseModel):
     endpoint: str
     p256dh: str
     auth: str
-    topics: list[PushTopic] = Field(default_factory=lambda: list(ALL_TOPICS))
+    topics: list[PushTopic] = Field(default_factory=list[PushTopic])
 
     @field_validator("topics")
     @classmethod
