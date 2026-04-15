@@ -9,24 +9,17 @@ import pytest
 
 from app import env
 from app.services.notification_service import _PUSH_TITLE, NotificationService, _push_message
+from tests.test_utils import FakePushSender
 
 _TZ = ZoneInfo("Europe/Berlin")
 _NOW = datetime.now(tz=_TZ)
 _FUTURE = _NOW + timedelta(hours=2)
 
 
-class _FakePushSender:
-    def __init__(self) -> None:
-        self.calls: list[tuple[str, str, str]] = []
-
-    def send_to_topic_sync(self, topic: str, title: str, body: str) -> None:
-        self.calls.append((topic, title, body))
-
-
 def _make_service(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    push: _FakePushSender | None = None,
+    push: FakePushSender | None = None,
 ) -> NotificationService:
     monkeypatch.setattr(env, "LOCAL_DATA_PATH", str(tmp_path))
     return NotificationService(push_sender=push)
@@ -70,7 +63,7 @@ def test_push_message(markdown_text: str, expected: str) -> None:
 
 
 def test_add_sends_push_when_notification_is_active(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    push = _FakePushSender()
+    push = FakePushSender()
     svc = _make_service(tmp_path, monkeypatch, push)
 
     svc.add("Hallo **Welt**", None, None, enabled=True)
@@ -84,7 +77,7 @@ def test_add_sends_push_when_notification_is_active(tmp_path: Path, monkeypatch:
 
 
 def test_add_skips_push_when_notification_is_disabled(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    push = _FakePushSender()
+    push = FakePushSender()
     svc = _make_service(tmp_path, monkeypatch, push)
 
     svc.add("Test", None, None, enabled=False)
@@ -93,7 +86,7 @@ def test_add_skips_push_when_notification_is_disabled(tmp_path: Path, monkeypatc
 
 
 def test_add_skips_push_when_valid_from_is_in_future(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    push = _FakePushSender()
+    push = FakePushSender()
     svc = _make_service(tmp_path, monkeypatch, push)
 
     svc.add("Test", _FUTURE, None, enabled=True)
@@ -115,7 +108,7 @@ def test_add_skips_push_when_no_push_sender(tmp_path: Path, monkeypatch: pytest.
 
 
 def test_update_sends_push_when_notification_becomes_active(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    push = _FakePushSender()
+    push = FakePushSender()
     svc = _make_service(tmp_path, monkeypatch, push)
     svc.add("Hallo Welt", None, None, enabled=False)  # no push (disabled)
     nid = svc.list_all()[0].id
@@ -128,7 +121,7 @@ def test_update_sends_push_when_notification_becomes_active(tmp_path: Path, monk
 
 
 def test_update_skips_push_when_already_active(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    push = _FakePushSender()
+    push = FakePushSender()
     svc = _make_service(tmp_path, monkeypatch, push)
     svc.add("Hallo Welt", None, None, enabled=True)
     nid = svc.list_all()[0].id
@@ -154,7 +147,7 @@ def test_update_skips_push_when_no_push_sender(tmp_path: Path, monkeypatch: pyte
 
 @pytest.mark.asyncio
 async def test_poll_sends_push_for_newly_active_notification(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    push = _FakePushSender()
+    push = FakePushSender()
     svc = _make_service(tmp_path, monkeypatch, push)
     # Add an inactive notification
     svc.add("Test", None, None, enabled=False)
@@ -178,7 +171,7 @@ async def test_poll_sends_push_for_newly_active_notification(tmp_path: Path, mon
 
 @pytest.mark.asyncio
 async def test_poll_first_run_does_not_push_for_already_active(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    push = _FakePushSender()
+    push = FakePushSender()
     svc = _make_service(tmp_path, monkeypatch, push)
     svc.add("Bereits aktiv", None, None, enabled=True)
     push.calls.clear()

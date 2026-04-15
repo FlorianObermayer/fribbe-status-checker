@@ -6,7 +6,10 @@ individual tests can inject mocks cleanly via ``app.dependency_overrides``.
 """
 
 from collections.abc import Generator
+from datetime import datetime
+from unittest.mock import MagicMock
 from urllib.parse import quote
+from zoneinfo import ZoneInfo
 
 import pytest
 from fastapi import FastAPI, Request
@@ -21,6 +24,22 @@ from app.csrf import FormFieldCSRFMiddleware
 from app.routers import api_keys, auth, internal, misc, notification_ui, notifications, pages, push, status, wardens
 
 TEST_ADMIN_TOKEN = "test-admin-token-" + "A" * 32
+
+_UTC = ZoneInfo("UTC")
+_MOCK_NOW = datetime(2026, 4, 13, 12, 0, 0, tzinfo=_UTC)
+
+
+def mock_internal_svc() -> MagicMock:
+    """Create a MagicMock for InternalService with sensible defaults."""
+    svc = MagicMock()
+    svc.get_last_updated.return_value = _MOCK_NOW
+    svc.get_last_error.return_value = None
+    svc.get_wardens_on_site.return_value = []
+    svc.get_active_devices_ct.return_value = 0
+    svc.get_first_device_on_site.return_value = None
+    svc.get_last_device_on_site.return_value = None
+    svc.get_last_service_started.return_value = _MOCK_NOW
+    return svc
 
 
 @pytest.fixture

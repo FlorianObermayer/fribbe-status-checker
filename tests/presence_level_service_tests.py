@@ -10,17 +10,10 @@ from app.services.message_service import MessageService
 from app.services.occupancy.occupancy_service import OccupancyService
 from app.services.presence_level import PresenceLevel
 from app.services.presence_level_service import PresenceLevelService
+from tests.test_utils import FakePushSender
 
 
-class _FakePushSender:
-    def __init__(self) -> None:
-        self.calls: list[tuple[str, str, str]] = []
-
-    def send_to_topic_sync(self, topic: str, title: str, body: str) -> None:
-        self.calls.append((topic, title, body))
-
-
-def _make_service(push: _FakePushSender | None = None) -> PresenceLevelService:
+def _make_service(push: FakePushSender | None = None) -> PresenceLevelService:
     return PresenceLevelService(None, MessageService(), push, OccupancyService())
 
 
@@ -31,7 +24,7 @@ def _make_service(push: _FakePushSender | None = None) -> PresenceLevelService:
 
 def test_first_transition_does_not_send_push() -> None:
     """The very first empty→non-empty transition must not fire a push (cold-start guard)."""
-    push = _FakePushSender()
+    push = FakePushSender()
     svc = _make_service(push)
 
     svc._try_send_first_active_push(PresenceLevel.EMPTY, PresenceLevel.FEW)
@@ -41,7 +34,7 @@ def test_first_transition_does_not_send_push() -> None:
 
 def test_second_transition_sends_push() -> None:
     """After the cold-start guard is cleared, the next transition should fire."""
-    push = _FakePushSender()
+    push = FakePushSender()
     svc = _make_service(push)
 
     # First call arms the guard
@@ -58,7 +51,7 @@ def test_second_transition_sends_push() -> None:
 
 
 def test_no_push_when_not_transitioning_from_empty() -> None:
-    push = _FakePushSender()
+    push = FakePushSender()
     svc = _make_service(push)
     svc._push_initialized = True  # skip cold-start guard
 
@@ -75,7 +68,7 @@ def test_no_push_when_not_transitioning_from_empty() -> None:
 
 
 def test_second_transition_same_day_does_not_send_again() -> None:
-    push = _FakePushSender()
+    push = FakePushSender()
     svc = _make_service(push)
     svc._push_initialized = True
 
@@ -87,7 +80,7 @@ def test_second_transition_same_day_does_not_send_again() -> None:
 
 
 def test_transition_sends_again_on_new_virtual_day() -> None:
-    push = _FakePushSender()
+    push = FakePushSender()
     svc = _make_service(push)
     svc._push_initialized = True
 
@@ -112,7 +105,7 @@ def test_transition_sends_again_on_new_virtual_day() -> None:
 
 @pytest.mark.parametrize("level", [PresenceLevel.FEW, PresenceLevel.MANY])
 def test_push_body(level: PresenceLevel) -> None:
-    push = _FakePushSender()
+    push = FakePushSender()
     svc = _make_service(push)
     svc._push_initialized = True
 
@@ -124,7 +117,7 @@ def test_push_body(level: PresenceLevel) -> None:
 
 @pytest.mark.parametrize("level", [PresenceLevel.FEW, PresenceLevel.MANY])
 def test_push_title(level: PresenceLevel) -> None:
-    push = _FakePushSender()
+    push = FakePushSender()
     svc = _make_service(push)
     svc._push_initialized = True
 

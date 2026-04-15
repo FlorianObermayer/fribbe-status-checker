@@ -37,7 +37,7 @@ from app.services.notification_service import Notification
 from app.services.occupancy.model import DailyOccupancy, OccupancySource, OccupancyType
 from app.services.presence_level import PresenceLevel
 from app.services.push_subscription_service import PushSubscriptionService
-from tests.conftest import TEST_ADMIN_TOKEN
+from tests.conftest import TEST_ADMIN_TOKEN, mock_internal_svc
 
 _UTC = ZoneInfo("UTC")
 _NOW = datetime(2026, 4, 11, 12, 0, 0, tzinfo=_UTC)
@@ -77,18 +77,6 @@ def _mock_presence_svc(level: PresenceLevel = PresenceLevel.EMPTY) -> MagicMock:
 def _mock_message_svc(message: str = "Niemand da") -> MagicMock:
     svc = MagicMock()
     svc.get_status_message.return_value = StatusMessage(message=message)
-    return svc
-
-
-def _mock_internal_svc() -> MagicMock:
-    svc = MagicMock()
-    svc.get_last_updated.return_value = _NOW
-    svc.get_last_error.return_value = None
-    svc.get_wardens_on_site.return_value = []
-    svc.get_active_devices_ct.return_value = 0
-    svc.get_first_device_on_site.return_value = None
-    svc.get_last_device_on_site.return_value = None
-    svc.get_last_service_started.return_value = _NOW
     return svc
 
 
@@ -164,7 +152,7 @@ def test_post_auth_admin_token_grants_api_access(
 ) -> None:
     """Logging in via the form with ADMIN_TOKEN should allow access to protected API endpoints."""
     monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
-    test_app.dependency_overrides[get_internal_service] = _mock_internal_svc
+    test_app.dependency_overrides[get_internal_service] = mock_internal_svc
 
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
 
@@ -895,7 +883,7 @@ def test_push_unsubscribe_returns_404_when_not_found(client: TestClient, test_ap
 
 
 def test_internal_details_returns_401_without_auth(client: TestClient, test_app: FastAPI) -> None:
-    test_app.dependency_overrides[get_internal_service] = _mock_internal_svc
+    test_app.dependency_overrides[get_internal_service] = mock_internal_svc
 
     response = client.get("/api/internal/details")
 
@@ -908,7 +896,7 @@ def test_internal_details_returns_200_with_admin_auth(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
-    test_app.dependency_overrides[get_internal_service] = _mock_internal_svc
+    test_app.dependency_overrides[get_internal_service] = mock_internal_svc
 
     response = client.get("/api/internal/details", headers={"api_key": TEST_ADMIN_TOKEN})
 
@@ -925,7 +913,7 @@ def test_internal_details_surfaces_active_device_count(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
-    svc = _mock_internal_svc()
+    svc = mock_internal_svc()
     svc.get_active_devices_ct.return_value = 5
     warden = MagicMock()
     warden.name = "Alice"
@@ -945,7 +933,7 @@ def test_admin_session_invalidated_after_token_rotation(
 ) -> None:
     """After ADMIN_TOKEN is rotated, an existing admin session must be rejected."""
     monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
-    test_app.dependency_overrides[get_internal_service] = _mock_internal_svc
+    test_app.dependency_overrides[get_internal_service] = mock_internal_svc
 
     # Establish an admin session with the original token
     response = client.get("/api/internal/details", headers={"api_key": TEST_ADMIN_TOKEN})
@@ -965,7 +953,7 @@ def test_header_auth_regenerates_session_id(
 ) -> None:
     """Session ID must change when transitioning unauthenticated → authenticated via API key header."""
     monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
-    test_app.dependency_overrides[get_internal_service] = _mock_internal_svc
+    test_app.dependency_overrides[get_internal_service] = mock_internal_svc
 
     # Sign in and immediately sign out to get an existing session cookie in unauthenticated state
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
