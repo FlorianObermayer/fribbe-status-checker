@@ -437,7 +437,7 @@ class MessageService:
                 return random.choice(weather_message_pool)  # noqa: S311
 
         # 20% chance for a combo message
-        if random.random() < _COMBO_MSG_CHANCE: # noqa: S311
+        if random.random() < _COMBO_MSG_CHANCE:  # noqa: S311
             return random.choice(self.combo_messages)  # noqa: S311
 
         for_datetime = datetime.now(tz=ZoneInfo(env.TZ))
