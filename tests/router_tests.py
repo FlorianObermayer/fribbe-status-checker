@@ -32,6 +32,7 @@ from app.dependencies import (
     get_push_subscription_service,
     get_weather_service,
 )
+from app.services.internal.warden_store import WardenStore
 from app.services.message_service import StatusMessage
 from app.services.notification_service import Notification
 from app.services.occupancy.model import DailyOccupancy, OccupancySource, OccupancyType
@@ -1492,6 +1493,7 @@ def test_wardens_list_returns_200_with_auth(
 ) -> None:
     monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     monkeypatch.setattr(env, "LOCAL_DATA_PATH", str(tmp_path))
+    WardenStore._instance = None
 
     response = client.get("/api/internal/wardens", headers={"api_key": TEST_ADMIN_TOKEN})
 
@@ -1506,6 +1508,7 @@ def test_wardens_crud_lifecycle(
 ) -> None:
     monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     monkeypatch.setattr(env, "LOCAL_DATA_PATH", str(tmp_path))
+    WardenStore._instance = None
     auth = {"api_key": TEST_ADMIN_TOKEN}
 
     # Create (header-based auth — no CSRF needed)
@@ -1549,6 +1552,7 @@ def test_wardens_create_duplicate_returns_409(
 ) -> None:
     monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     monkeypatch.setattr(env, "LOCAL_DATA_PATH", str(tmp_path))
+    WardenStore._instance = None
     auth = {"api_key": TEST_ADMIN_TOKEN}
 
     client.post(
@@ -1573,6 +1577,7 @@ def test_wardens_update_not_found_returns_404(
 ) -> None:
     monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     monkeypatch.setattr(env, "LOCAL_DATA_PATH", str(tmp_path))
+    WardenStore._instance = None
 
     response = client.put(
         "/api/internal/wardens/NonExistent",
@@ -1590,6 +1595,7 @@ def test_wardens_delete_not_found_returns_404(
 ) -> None:
     monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     monkeypatch.setattr(env, "LOCAL_DATA_PATH", str(tmp_path))
+    WardenStore._instance = None
 
     response = client.request(
         "DELETE",
@@ -1605,7 +1611,7 @@ def test_wardens_delete_not_found_returns_404(
 # ---------------------------------------------------------------------------
 
 
-def test_config_returns_304_when_no_thresholds_sent(
+def test_config_returns_204_when_no_thresholds_sent(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1613,7 +1619,7 @@ def test_config_returns_304_when_no_thresholds_sent(
 
     response = client.patch("/api/internal/config", json={}, headers={"api_key": TEST_ADMIN_TOKEN})
 
-    assert response.status_code == 304
+    assert response.status_code == 204
 
 
 def test_config_updates_min_non_empty_ct(
@@ -1708,3 +1714,311 @@ def test_push_topics_returns_422_for_invalid_auth(client: TestClient, test_app: 
     response = client.patch("/api/push/topics", json={"auth": "", "topics": ["presence"]})
 
     assert response.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# /notification-create — POST form handler (notification_ui)
+# ---------------------------------------------------------------------------
+
+
+def test_post_notification_create_redirects_to_preview(
+    client: TestClient,
+    test_app: FastAPI,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+    svc = _mock_notification_svc()
+    svc.add.return_value = "nid-test-123"
+    test_app.dependency_overrides[get_notification_service] = lambda: svc
+    csrf_token = client.cookies.get("csrftoken")
+    assert csrf_token is not None
+
+    response = client.post(
+        "/notification-create",
+        data={"message": "Hello Welt", "x-csrf-token": csrf_token},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert "nid-test-123" in response.headers["location"]
+    svc.add.assert_called_once()
+
+
+def test_post_notification_create_empty_message_redirects_back(
+    client: TestClient,
+    test_app: FastAPI,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+    svc = _mock_notification_svc()
+    test_app.dependency_overrides[get_notification_service] = lambda: svc
+    csrf_token = client.cookies.get("csrftoken")
+    assert csrf_token is not None
+
+    response = client.post(
+        "/notification-create",
+        data={"message": "   ", "x-csrf-token": csrf_token},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert response.headers["location"].endswith("/notification-create")
+    svc.add.assert_not_called()
+
+
+def test_post_notification_create_invalid_date_redirects_back(
+    client: TestClient,
+    test_app: FastAPI,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+    svc = _mock_notification_svc()
+    test_app.dependency_overrides[get_notification_service] = lambda: svc
+    csrf_token = client.cookies.get("csrftoken")
+    assert csrf_token is not None
+
+    response = client.post(
+        "/notification-create",
+        data={"message": "Test", "valid_from": "not-a-date", "x-csrf-token": csrf_token},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert response.headers["location"].endswith("/notification-create")
+    svc.add.assert_not_called()
+
+
+def test_post_notification_create_redirects_to_auth_when_unauthenticated(
+    client: TestClient,
+    test_app: FastAPI,
+) -> None:
+    svc = _mock_notification_svc()
+    test_app.dependency_overrides[get_notification_service] = lambda: svc
+
+    response = client.post("/notification-create", data={"message": "Hello"}, follow_redirects=False)
+
+    assert response.status_code in (302, 303)
+    assert "/auth" in response.headers["location"]
+
+
+# ---------------------------------------------------------------------------
+# /preview/notifications — GET preview page (notification_ui)
+# ---------------------------------------------------------------------------
+
+
+def test_get_notification_preview_renders_page(
+    client: TestClient,
+    test_app: FastAPI,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+    svc = _mock_notification_svc()
+    notification = MagicMock()
+    notification.id = "nid-test-abc"
+    notification.is_outdated.return_value = False
+    notification.enabled = False
+    svc.get.return_value = [notification]
+    test_app.dependency_overrides[get_notification_service] = lambda: svc
+
+    response = client.get("/preview/notifications?n_ids=nid-test-abc")
+
+    assert response.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# /preview/notifications/{id}/enable — POST (notification_ui)
+# ---------------------------------------------------------------------------
+
+
+def test_enable_notification_redirects_to_preview(
+    client: TestClient,
+    test_app: FastAPI,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+    svc = _mock_notification_svc()
+    svc.update.return_value = True
+    test_app.dependency_overrides[get_notification_service] = lambda: svc
+    csrf_token = client.cookies.get("csrftoken")
+    assert csrf_token is not None
+
+    response = client.post(
+        "/preview/notifications/nid-test/enable",
+        data={"x-csrf-token": csrf_token},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert "nid-test" in response.headers["location"]
+    svc.update.assert_called_once_with("nid-test", enabled=True)
+
+
+def test_enable_notification_returns_404_when_not_found(
+    client: TestClient,
+    test_app: FastAPI,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+    svc = _mock_notification_svc()
+    svc.update.return_value = False
+    test_app.dependency_overrides[get_notification_service] = lambda: svc
+    csrf_token = client.cookies.get("csrftoken")
+    assert csrf_token is not None
+
+    response = client.post(
+        "/preview/notifications/nid-unknown/enable",
+        data={"x-csrf-token": csrf_token},
+    )
+
+    assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# /preview/notifications/{id}/disable — POST (notification_ui)
+# ---------------------------------------------------------------------------
+
+
+def test_disable_notification_redirects_to_preview(
+    client: TestClient,
+    test_app: FastAPI,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+    svc = _mock_notification_svc()
+    svc.update.return_value = True
+    test_app.dependency_overrides[get_notification_service] = lambda: svc
+    csrf_token = client.cookies.get("csrftoken")
+    assert csrf_token is not None
+
+    response = client.post(
+        "/preview/notifications/nid-test/disable",
+        data={"x-csrf-token": csrf_token},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert "nid-test" in response.headers["location"]
+    svc.update.assert_called_once_with("nid-test", enabled=False)
+
+
+def test_disable_notification_returns_404_when_not_found(
+    client: TestClient,
+    test_app: FastAPI,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+    svc = _mock_notification_svc()
+    svc.update.return_value = False
+    test_app.dependency_overrides[get_notification_service] = lambda: svc
+    csrf_token = client.cookies.get("csrftoken")
+    assert csrf_token is not None
+
+    response = client.post(
+        "/preview/notifications/nid-unknown/disable",
+        data={"x-csrf-token": csrf_token},
+    )
+
+    assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# /preview/notifications/{id}/delete — POST (notification_ui)
+# ---------------------------------------------------------------------------
+
+
+def test_delete_notification_action_redirects_to_preview(
+    client: TestClient,
+    test_app: FastAPI,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+    svc = _mock_notification_svc()
+    svc.delete.return_value = True
+    test_app.dependency_overrides[get_notification_service] = lambda: svc
+    csrf_token = client.cookies.get("csrftoken")
+    assert csrf_token is not None
+
+    response = client.post(
+        "/preview/notifications/nid-test/delete",
+        data={"x-csrf-token": csrf_token},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert "preview/notifications" in response.headers["location"]
+    svc.delete.assert_called_once_with("nid-test")
+
+
+def test_delete_notification_action_returns_404_when_not_found(
+    client: TestClient,
+    test_app: FastAPI,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+    svc = _mock_notification_svc()
+    svc.delete.return_value = False
+    test_app.dependency_overrides[get_notification_service] = lambda: svc
+    csrf_token = client.cookies.get("csrftoken")
+    assert csrf_token is not None
+
+    response = client.post(
+        "/preview/notifications/nid-unknown/delete",
+        data={"x-csrf-token": csrf_token},
+    )
+
+    assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# /preview/notifications/content — GET HTML fragment (notification_ui)
+# ---------------------------------------------------------------------------
+
+
+def test_get_notification_preview_content_returns_html(
+    client: TestClient,
+    test_app: FastAPI,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+    svc = _mock_notification_svc()
+    n1 = MagicMock()
+    n1.id = "nid-1"
+    n1.message = "Hello **World**"
+    n2 = MagicMock()
+    n2.id = "nid-2"
+    n2.message = "Test"
+    svc.get.return_value = [n1, n2]
+    test_app.dependency_overrides[get_notification_service] = lambda: svc
+
+    response = client.get("/preview/notifications/content?n_ids=nid-1&n_ids=nid-2")
+
+    assert response.status_code == 200
+    assert "Hello" in response.text
+
+
+def test_get_notification_preview_content_returns_empty_when_no_notifications(
+    client: TestClient,
+    test_app: FastAPI,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+    svc = _mock_notification_svc()
+    svc.get.return_value = []
+    test_app.dependency_overrides[get_notification_service] = lambda: svc
+
+    response = client.get("/preview/notifications/content?n_ids=nid-none")
+
+    assert response.status_code == 200
+    assert response.text == ""

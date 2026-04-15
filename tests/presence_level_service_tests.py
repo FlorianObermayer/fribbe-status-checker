@@ -137,3 +137,32 @@ def test_no_push_without_service() -> None:
 
     # Should not raise
     svc._try_send_first_active_push(PresenceLevel.EMPTY, PresenceLevel.FEW)
+
+
+# ---------------------------------------------------------------------------
+# start_polling() — early return when credentials missing
+# ---------------------------------------------------------------------------
+
+
+def test_start_polling_does_not_start_when_router_ip_missing() -> None:
+    svc = _make_service()
+
+    svc.start_polling(router_ip=None, username="admin", password="pass")
+
+    assert not svc.is_polling
+
+
+def test_start_polling_does_not_start_when_username_missing() -> None:
+    svc = _make_service()
+
+    svc.start_polling(router_ip="192.168.1.1", username=None, password="pass")
+
+    assert not svc.is_polling
+
+
+def test_start_polling_does_not_start_when_password_missing() -> None:
+    svc = _make_service()
+
+    svc.start_polling(router_ip="192.168.1.1", username="admin", password=None)
+
+    assert not svc.is_polling

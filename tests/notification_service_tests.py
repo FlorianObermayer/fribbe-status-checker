@@ -188,3 +188,81 @@ async def test_poll_skips_when_no_push_sender(tmp_path: Path, monkeypatch: pytes
     svc.add("Test", None, None, enabled=True)
 
     await svc._check_newly_active_notifications()  # must not raise
+
+
+# ---------------------------------------------------------------------------
+# delete_many()
+# ---------------------------------------------------------------------------
+
+
+def test_delete_many_all_clears_store(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.api.requests import NotificationFilterId
+
+    svc = _make_service(tmp_path, monkeypatch)
+    svc.add("first", None, None, enabled=True)
+    svc.add("second", None, None, enabled=False)
+
+    count = svc.delete_many([NotificationFilterId.ALL])
+
+    assert count == 2
+    assert svc.list_all() == []
+
+
+def test_delete_many_all_active_deletes_only_active(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.api.requests import NotificationFilterId
+
+    svc = _make_service(tmp_path, monkeypatch)
+    svc.add("active msg", None, None, enabled=True)
+    svc.add("disabled msg", None, None, enabled=False)
+
+    count = svc.delete_many([NotificationFilterId.ALL_ACTIVE])
+
+    assert count == 1
+    remaining = svc.list_all()
+    assert len(remaining) == 1
+    assert remaining[0].message == "disabled msg"
+
+
+def test_delete_many_by_specific_nid(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    svc = _make_service(tmp_path, monkeypatch)
+    svc.add("hello", None, None, enabled=True)
+    nid = svc.list_all()[0].id
+
+    count = svc.delete_many([nid])
+
+    assert count == 1
+    assert svc.list_all() == []
+
+
+def test_delete_many_nonexistent_nid_returns_zero(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    svc = _make_service(tmp_path, monkeypatch)
+
+    count = svc.delete_many(["nid-does-not-exist"])
+
+    assert count == 0
+
+
+# ---------------------------------------------------------------------------
+# _run_clean_old_notifications()
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_run_clean_old_notifications_deletes_outdated(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    svc = _make_service(tmp_path, monkeypatch)
+    past = _NOW - timedelta(days=2)
+    svc.add("outdated", None, past, enabled=True)
+
+    await svc._run_clean_old_notifications()
+
+    assert svc.list_all() == []
+
+
+@pytest.mark.asyncio
+async def test_run_clean_old_notifications_keeps_active(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    svc = _make_service(tmp_path, monkeypatch)
+    svc.add("still active", None, _FUTURE, enabled=True)
+
+    await svc._run_clean_old_notifications()
+
+    assert len(svc.list_all()) == 1
