@@ -139,8 +139,8 @@ jobs:
           context: .
           push: true
           tags: ${{ steps.tags.outputs.tags }}
-          cache-from: type=registry,ref=${{ env.IMAGE_REPO }}:buildcache
-          cache-to: type=registry,ref=${{ env.IMAGE_REPO }}:buildcache,mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           build-args: |
             BUILD_VERSION=${{ steps.version.outputs.build_version }}
 
