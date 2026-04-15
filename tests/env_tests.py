@@ -1,5 +1,6 @@
 """Tests for app.env load() / validate()."""
 
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -241,7 +242,7 @@ def test_feature_flags(
     monkeypatch: pytest.MonkeyPatch,
     set_vars: dict[str, str],
     del_vars: list[str],
-    feature_fn: object,
+    feature_fn: Callable[[], bool],
     expected: bool,  # noqa: FBT001
 ) -> None:
     for k, v in set_vars.items():
@@ -249,4 +250,4 @@ def test_feature_flags(
     for k in del_vars:
         monkeypatch.delenv(k, raising=False)
     env.load()
-    assert feature_fn() is expected  # type: ignore[operator]
+    assert feature_fn() is expected
