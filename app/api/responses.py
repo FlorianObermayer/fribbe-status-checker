@@ -77,7 +77,7 @@ class ApiKey(BaseModel):
     """An API key with metadata."""
 
     key: str = Field(..., min_length=env.MIN_TOKEN_LENGTH)
-    comment: str = Field(..., max_length=200)
+    comment: str = Field(..., max_length=env.COMMENT_MAX_LENGTH)
     valid_until: datetime
     role: AccessRole = AccessRole.ADMIN
 
