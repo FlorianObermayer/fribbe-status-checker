@@ -10,8 +10,7 @@
 <link rel="stylesheet" href="/static/css/api-keys.styles.css?v={{ content_hash_version }}">
 {% endblock %}
 
-{% block body_attrs %} data-url-api-keys="{{ url_api_internal_api_keys }}" data-url-api-key="{{ url_api_internal_api_key
-}}" data-role-label-admin="{{ admin_role_label }}" data-role-labels='{{ role_labels | tojson }}'{% endblock %}
+{% block body_attrs %} data-url-api-keys="{{ url_api_internal_api_keys }}" data-url-api-key="{{ url_api_internal_api_key }}" data-role-label-admin="{{ admin_role_label }}" data-role-labels='{{ role_labels | tojson }}'{% endblock %}
 
 {% block content %}
 <div class="container">
