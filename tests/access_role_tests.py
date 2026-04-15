@@ -19,7 +19,7 @@ from app.api.access_role import AccessRole
 from app.api.ephemeral_api_key_store import EphemeralAPIKeyStore
 from app.api.responses import ApiKey, MaskedApiKey
 from app.dependencies import get_internal_service, get_notification_service
-from tests.conftest import TEST_ADMIN_TOKEN
+from tests.conftest import TEST_ADMIN_TOKEN, mock_internal_svc
 
 _UTC = ZoneInfo("UTC")
 _NOW = datetime(2026, 4, 13, 12, 0, 0, tzinfo=_UTC)
@@ -36,18 +36,6 @@ def _make_key(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, role: AccessRole)
     )
     EphemeralAPIKeyStore.save([api_key])
     return api_key
-
-
-def _mock_internal_svc() -> MagicMock:
-    svc = MagicMock()
-    svc.get_last_updated.return_value = _NOW
-    svc.get_last_error.return_value = None
-    svc.get_wardens_on_site.return_value = []
-    svc.get_active_devices_ct.return_value = 0
-    svc.get_first_device_on_site.return_value = None
-    svc.get_last_device_on_site.return_value = None
-    svc.get_last_service_started.return_value = _NOW
-    return svc
 
 
 def _mock_notification_svc() -> MagicMock:
@@ -195,7 +183,7 @@ def test_reader_can_access_internal_details(
     tmp_path: Path,
 ) -> None:
     api_key = _make_key(tmp_path, monkeypatch, AccessRole.READER)
-    test_app.dependency_overrides[get_internal_service] = _mock_internal_svc
+    test_app.dependency_overrides[get_internal_service] = mock_internal_svc
 
     response = client.get("/api/internal/details", headers={"api_key": api_key.key})
 
@@ -280,7 +268,7 @@ def test_notification_operator_can_read_details(
     tmp_path: Path,
 ) -> None:
     api_key = _make_key(tmp_path, monkeypatch, AccessRole.NOTIFICATION_OPERATOR)
-    test_app.dependency_overrides[get_internal_service] = _mock_internal_svc
+    test_app.dependency_overrides[get_internal_service] = mock_internal_svc
 
     response = client.get("/api/internal/details", headers={"api_key": api_key.key})
 
@@ -352,7 +340,7 @@ def test_admin_token_accesses_reader_endpoint(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
-    test_app.dependency_overrides[get_internal_service] = _mock_internal_svc
+    test_app.dependency_overrides[get_internal_service] = mock_internal_svc
 
     response = client.get("/api/internal/details", headers={"api_key": TEST_ADMIN_TOKEN})
     assert response.status_code == 200
@@ -395,7 +383,7 @@ def test_admin_api_key_can_access_admin_endpoints(
     tmp_path: Path,
 ) -> None:
     api_key = _make_key(tmp_path, monkeypatch, AccessRole.ADMIN)
-    test_app.dependency_overrides[get_internal_service] = _mock_internal_svc
+    test_app.dependency_overrides[get_internal_service] = mock_internal_svc
 
     response = client.get("/api/internal/details", headers={"api_key": api_key.key})
 
@@ -415,7 +403,7 @@ def test_session_preserves_role_for_api_key(
 ) -> None:
     """After header-based auth creates a session, session-only requests must honour the role."""
     api_key = _make_key(tmp_path, monkeypatch, AccessRole.READER)
-    test_app.dependency_overrides[get_internal_service] = _mock_internal_svc
+    test_app.dependency_overrides[get_internal_service] = mock_internal_svc
     test_app.dependency_overrides[get_notification_service] = _mock_notification_svc
 
     # Authenticate via header — creates a session
