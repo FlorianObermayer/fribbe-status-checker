@@ -99,5 +99,9 @@
     },
     "chat.tools.terminal.autoApprove": {
         "uv": true
+    },
+    "github.copilot.chat.commitMessageGeneration.instructions": [
+        {
+            "text": "Always use Conventional Commits format: <type>[optional scope]: <description>. Allowed types: feat (new feature), fix (bug fix), refactor (code restructure, no behaviour change), perf (performance), docs (documentation), style (formatting, no logic change), test (tests), chore (tooling, deps, CI, build). Use feat! or fix! (or add 'BREAKING CHANGE:' in the footer) for breaking changes. The description must be lowercase and imperative. Keep the subject line under 72 characters. Do NOT use chore(release) — that prefix is reserved for the automated version bump script."
     }
 }
