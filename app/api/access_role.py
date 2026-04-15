@@ -8,6 +8,6 @@ class AccessRole(IntEnum):
     all permissions of lower roles.
     """
 
-    READER = 1
-    NOTIFICATION_OPERATOR = 2
-    ADMIN = 3
+    READER = 100
+    NOTIFICATION_OPERATOR = 200
+    ADMIN = 300

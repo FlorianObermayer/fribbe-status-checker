@@ -141,7 +141,7 @@ class PatchPushTopicsRequest(BaseModel):
 class CreateApiKeyRequest(BaseModel):
     """Request body for creating a new API key."""
 
-    comment: str = ""
+    comment: str = Field(..., min_length=env.COMMENT_MIN_LENGTH, max_length=env.COMMENT_MAX_LENGTH)
     valid_until: datetime | None = None
     role: AccessRole = AccessRole.READER
 

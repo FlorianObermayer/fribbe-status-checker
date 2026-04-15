@@ -77,7 +77,7 @@ class ApiKey(BaseModel):
     """An API key with metadata."""
 
     key: str = Field(..., min_length=env.MIN_TOKEN_LENGTH)
-    comment: str
+    comment: str = Field(..., max_length=200)
     valid_until: datetime
     role: AccessRole = AccessRole.ADMIN
 
@@ -96,12 +96,19 @@ class ApiKey(BaseModel):
     @classmethod
     def from_dict(cls, d: dict[str, str]) -> Self:
         """Deserialize from a plain dict."""
-        role_str = d.get("role", "reader")
+        raw_role = d.get("role")
+        if isinstance(raw_role, int) or (isinstance(raw_role, str) and raw_role.isdigit()):
+            role = AccessRole(int(raw_role))
+        elif isinstance(raw_role, str):
+            # Legacy: stored by name (e.g. "reader"). Fall back to READER on unknown names.
+            role = next((r for r in AccessRole if r.name.lower() == raw_role.lower()), AccessRole.READER)
+        else:
+            role = AccessRole.READER
         return cls(
             key=d["key"],
             comment=d["comment"],
             valid_until=datetime.fromisoformat(d["valid_until"]),
-            role=AccessRole[role_str.upper()],
+            role=role,
         )
 
     def to_dict(self) -> dict[str, str]:
@@ -110,7 +117,7 @@ class ApiKey(BaseModel):
             "key": self.key,
             "comment": self.comment,
             "valid_until": self.valid_until.isoformat(),
-            "role": self.role.name.lower(),
+            "role": str(self.role.value),
         }
 
 
@@ -118,7 +125,7 @@ class MaskedApiKey(BaseModel):
     """API key with the raw value replaced by a short prefix."""
 
     key_prefix: str
-    comment: str
+    comment: str = Field(..., max_length=200)
     valid_until: datetime
     role: AccessRole
 
@@ -126,17 +133,24 @@ class MaskedApiKey(BaseModel):
     def from_api_key(api_key: "ApiKey") -> "MaskedApiKey":
         """Create a masked representation of the given API key."""
         return MaskedApiKey(
-            key_prefix=api_key.key[: env.MIN_KEY_PREFIX_LENGTH] + "...",
+            key_prefix=MaskedApiKey.get_masked_prefix(api_key.key),
             comment=api_key.comment,
             valid_until=api_key.valid_until,
             role=api_key.role,
         )
+
+    @staticmethod
+    def get_masked_prefix(key: str) -> str:
+        """Get the masked prefix for a given API key value."""
+        return key[: env.MIN_KEY_PREFIX_LENGTH] + "..."
 
 
 class ApiKeys(BaseModel):
     """Wrapper for a list of masked API keys."""
 
     api_keys: list[MaskedApiKey]
+    self_key_prefix: str | None = None
+    admin_token_prefix: str | None = None
 
 
 class PostNotificationResponse(BaseModel):

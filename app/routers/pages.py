@@ -6,7 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
 
 from app import env
+from app.api.access_role import AccessRole
 from app.api.ephemeral_api_key_store import EphemeralAPIKeyStore
+from app.api.hybrid_auth import PageAuth
 from app.api.requests import AuthRedirectQuery
 from app.dependencies import (
     MessageServiceDep,
@@ -16,7 +18,7 @@ from app.dependencies import (
 )
 from app.format import seconds_to_human
 from app.routers._page_utils import templates
-from app.routers.nav_context import NavContext, Route, operator_or_above
+from app.routers.nav_context import NavContext, Route, admin, operator_or_above
 from app.services.datetime_parser import format_date_long, format_datetime
 from app.services.occupancy.model import OccupancySource, OccupancyType
 from app.services.presence_level import PresenceLevel
@@ -33,6 +35,7 @@ def get_html(request: Request, for_date: str | None = None) -> HTMLResponse:
         request,
         show_auth_button=env.is_login_button_enabled(),
         show_notification_create_btn=operator_or_above,
+        show_api_keys_btn=admin,
         show_preview_btn=operator_or_above,
     )
     _today = datetime.now(tz=ZoneInfo(env.TZ)).date()
@@ -188,4 +191,31 @@ def get_auth_page(request: Request, redirect: Annotated[AuthRedirectQuery, Depen
         request,
         "auth.html",
         context={**nav_ctx, "next_url": redirect.next},
+    )
+
+
+@router.get(Route.URL_API_KEYS, response_class=HTMLResponse, tags=["HTML"])
+def get_api_keys_page(
+    request: Request,
+    _: Annotated[str, Depends(PageAuth(min_role=AccessRole.ADMIN))],
+) -> HTMLResponse:
+    """Serve the API key management page."""
+    nav_ctx = NavContext(
+        request,
+        show_auth_button=False,
+        show_api_keys_btn=False,
+    )
+    roles = [{"value": r.value, "label": r.name.replace("_", " ").title()} for r in AccessRole]
+    role_labels = {r.value: r.name.replace("_", " ").title() for r in AccessRole}
+    return templates.TemplateResponse(
+        request,
+        "api-keys.html",
+        context={
+            **nav_ctx,
+            "roles": roles,
+            "role_labels": role_labels,
+            "default_validity_days": env.DEFAULT_API_KEY_VALIDITY_DAYS,
+            "comment_min_length": env.COMMENT_MIN_LENGTH,
+            "comment_max_length": env.COMMENT_MAX_LENGTH,
+        },
     )

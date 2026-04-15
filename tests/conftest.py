@@ -6,13 +6,17 @@ individual tests can inject mocks cleanly via ``app.dependency_overrides``.
 """
 
 from collections.abc import Generator
+from urllib.parse import quote
 
 import pytest
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import RedirectResponse
 from fastapi.testclient import TestClient
 from starsessions import InMemoryStore, SessionAutoloadMiddleware, SessionMiddleware
 
 from app import env
+from app.api.hybrid_auth import AuthRedirectError
+from app.api.requests import AuthRedirectQuery
 from app.csrf import FormFieldCSRFMiddleware
 from app.routers import api_keys, auth, internal, misc, notification_ui, notifications, pages, push, status, wardens
 
@@ -51,6 +55,13 @@ def test_app() -> FastAPI:
     test_app.include_router(notification_ui.router)
     test_app.include_router(wardens.router)
     test_app.include_router(pages.router)
+
+    async def _handle_auth_redirect(_request: Request, exc: AuthRedirectError) -> RedirectResponse:
+        safe_next = AuthRedirectQuery.sanitize_url(exc.next_url) or "/"
+        return RedirectResponse(url=f"/auth?next={quote(safe_next, safe='/:?=&')}", status_code=302)
+
+    test_app.add_exception_handler(AuthRedirectError, _handle_auth_redirect)  # type: ignore[arg-type]
+
     return test_app
 
 

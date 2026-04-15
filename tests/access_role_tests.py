@@ -88,7 +88,7 @@ def test_api_key_to_dict_includes_role() -> None:
         role=AccessRole.NOTIFICATION_OPERATOR,
     )
     d = key.to_dict()
-    assert d["role"] == "notification_operator"
+    assert d["role"] == "200"
 
 
 def test_api_key_from_dict_parses_role() -> None:
@@ -96,10 +96,22 @@ def test_api_key_from_dict_parses_role() -> None:
         "key": "A" * env.MIN_TOKEN_LENGTH,
         "comment": "",
         "valid_until": "2030-01-01T00:00:00+00:00",
-        "role": "reader",
+        "role": "100",
     }
     key = ApiKey.from_dict(d)
     assert key.role == AccessRole.READER
+
+
+def test_api_key_from_dict_parses_legacy_role_name() -> None:
+    """Keys stored with the old name-based format must still deserialize correctly."""
+    d = {
+        "key": "A" * env.MIN_TOKEN_LENGTH,
+        "comment": "",
+        "valid_until": "2030-01-01T00:00:00+00:00",
+        "role": "notification_operator",
+    }
+    key = ApiKey.from_dict(d)
+    assert key.role == AccessRole.NOTIFICATION_OPERATOR
 
 
 def test_api_key_from_dict_missing_role_defaults_to_reader() -> None:

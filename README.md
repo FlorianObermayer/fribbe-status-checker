@@ -12,6 +12,7 @@ A FastAPI-based status checker for [Fribbe Beach](https://fribbebeach.de), runni
 - **Occupancy parsing** — Scrapes the Fribbe Beach weekly plan and event calendar to determine booking status for any given date.
 - **Wardens** — Named device watchers that track specific people by MAC address or device name, showing who is currently on-site.
 - **Notifications** — Create and manage Markdown-formatted notifications with optional validity windows. Includes a dedicated builder UI at `/notification-create`.
+- **API key management** — Admin-only web page at `/api-keys` to create, list, and delete API keys without using the REST API or cURL. Accessible via the floating key button on the index page.
 - **Push notifications** — Browser Web Push (VAPID) alerts when someone first arrives at the Fribbe on a given day or when a notification becomes active. Topic-based subscriptions (`presence`, `notifications`).
 - **Weather-aware messages** — Optional OpenWeatherMap integration for temperature- and weather-state-aware status and push messages.
 - **REST API** — JSON API with hybrid authentication (API key header or opaque server-side session cookie). Interactive docs at `/docs`.

@@ -22,12 +22,16 @@ def _base_context(request: Request) -> dict[str, object]:
         "url_auth": Route.URL_AUTH,
         "url_signout": Route.URL_SIGNOUT,
         "url_notification_create": Route.URL_NOTIFICATION_CREATE,
+        "url_api_keys": Route.URL_API_KEYS,
         "url_preview": f"{Route.URL_NOTIFICATION_PREVIEW}?n_ids={NotificationFilterId.ALL_ACTIVE}",
         "url_notification_preview": Route.URL_NOTIFICATION_PREVIEW,
         # HTML fragment URLs (polled by JS)
         "url_status_content": Route.URL_STATUS_CONTENT,
         "url_notifications_content": Route.URL_NOTIFICATIONS_CONTENT,
         "url_notification_preview_content": Route.URL_NOTIFICATION_PREVIEW_CONTENT,
+        # API endpoints (used by API key management page)
+        "url_api_internal_api_keys": "/api/internal/api_keys",
+        "url_api_internal_api_key": "/api/internal/api_key",
         # API URLs (called from JS)
         "url_api_push_vapid_key": Route.URL_API_PUSH_VAPID_KEY,
         "url_api_push_status": Route.URL_API_PUSH_STATUS,

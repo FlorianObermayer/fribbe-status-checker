@@ -1,5 +1,6 @@
 {% set _grp_visible = (show_preview_controls | default(false)) or (show_auth_button | default(false)) or
-(show_notification_create_btn | default(false)) or (show_preview_btn | default(false)) or show_back_btn %}
+(show_notification_create_btn | default(false)) or (show_api_keys_btn | default(false)) or (show_preview_btn |
+default(false)) or show_back_btn %}
 <div id="floating-btn-group" class="{{ 'visible' if _grp_visible else '' }}">
     {% if show_preview_controls | default(false) %}
     {% include "_preview_controls.html" %}
@@ -20,6 +21,16 @@
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M12 5v14M5 12h14" />
+        </svg>
+    </a>
+    {% endif %}
+    {% if show_api_keys_btn | default(false) %}
+    <a href="{{ url_api_keys }}" class="floating-btn" title="API-Schlüssel verwalten"
+        data-tooltip="API-Schlüssel verwalten">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path
+                d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
         </svg>
     </a>
     {% endif %}

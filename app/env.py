@@ -31,6 +31,12 @@ TOAST_DISPLAY_SECONDS: int = 3
 
 CONTENT_HASH_VERSION: str = get_content_hash_version()
 
+DEFAULT_API_KEY_VALIDITY_DAYS: int = 90
+
+# Validation constraints for API key comment field.
+COMMENT_MIN_LENGTH: int = 3
+COMMENT_MAX_LENGTH: int = 200
+
 
 # ---------------------------------------------------------------------------
 # Required
