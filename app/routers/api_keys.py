@@ -56,7 +56,10 @@ def delete_api_key(
     auth_subject: Annotated[str, Depends(HybridAuth(min_role=AccessRole.ADMIN))],
 ) -> None:
     """Delete an API key by its value or prefix (at least 5 characters). Only delete if there is a unique match."""
-    if auth_subject.startswith(request.key) or request.key.startswith(auth_subject):
+    authenticated_with_stored_key = EphemeralAPIKeyStore.get_valid_key_role(auth_subject) is not None
+    if authenticated_with_stored_key and (
+        auth_subject.startswith(request.key) or request.key.startswith(auth_subject)
+    ):
         raise HTTPException(status_code=403, detail="Cannot delete your own API key")
     result = EphemeralAPIKeyStore.remove(request.key)
     if result == RemoveResult.NOT_FOUND:
