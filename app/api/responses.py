@@ -125,7 +125,7 @@ class MaskedApiKey(BaseModel):
     """API key with the raw value replaced by a short prefix."""
 
     key_prefix: str
-    comment: str = Field(..., max_length=200)
+    comment: str = Field(..., max_length=env.COMMENT_MAX_LENGTH)
     valid_until: datetime
     role: AccessRole
 
