@@ -243,7 +243,7 @@
             })
             .catch(function () {
                 createBtn.disabled = false;
-                alert('Fehler beim Erstellen des Schlüssels.');
+                showToast('Fehler beim Erstellen des Schlüssels.', 'error');
             });
     }
 
