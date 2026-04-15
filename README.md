@@ -50,8 +50,6 @@ cp .env.template .env.dev   # configure env vars (see .env.template for all opti
 uv run dev             # start app at http://localhost:8007
 ```
 
-A dev container configuration is also available. Alternatively, use the `Python: Debug` launch configuration in VS Code.
-
 ### Test, lint, format
 
 ```sh
@@ -98,21 +96,9 @@ Every authenticated subject carries an **AccessRole** (`READER < NOTIFICATION_OP
 - API keys carry a `role` field. New keys default to `READER`; specify `"role": 3` (or `"role": "admin"`) in `POST /api/internal/api_key` to set a higher role.
 - Existing stored keys without a `role` field fallback to `READER` for backward compatibility.
 
-### Bootstrap (first API key)
-
-On a fresh install with an empty key store and no `ADMIN_TOKEN`, `POST /api/internal/api_key` is open to allow creating the first key:
-
-```sh
-curl -X POST http://localhost:8007/api/internal/api_key \
-  -H "Content-Type: application/json" \
-  -d '{"comment": "bootstrap key"}'
-```
-
-Once a key exists, the endpoint requires authentication. Setting `ADMIN_TOKEN` disables this bootstrap bypass entirely.
-
 ### `ADMIN_TOKEN`
 
-A master credential accepted on all protected endpoints. Also suppresses the bootstrap warning banner on the home page. Generate a suitable value with:
+A master credential accepted on all protected endpoints. When neither `ADMIN_TOKEN` nor a valid admin API key is configured, a warning banner is shown on the home page. Generate a suitable value with:
 
 ```sh
 python -c "import secrets; print(secrets.token_urlsafe(48))"

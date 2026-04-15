@@ -30,7 +30,7 @@ router = APIRouter()
 @router.get(Route.URL_INDEX, response_class=HTMLResponse, tags=["HTML"])
 def get_html(request: Request, for_date: str | None = None) -> HTMLResponse:
     """Serve the main index page with injected runtime config."""
-    bootstrap_mode = EphemeralAPIKeyStore.is_empty() and not env.ADMIN_TOKEN
+    setup_banner = not env.ADMIN_TOKEN and not EphemeralAPIKeyStore.has_valid_admin_key()
     nav_ctx = NavContext(
         request,
         show_auth_button=env.is_login_button_enabled(),
@@ -46,7 +46,7 @@ def get_html(request: Request, for_date: str | None = None) -> HTMLResponse:
         "index.html",
         context={
             **nav_ctx,
-            "bootstrap_mode": bootstrap_mode,
+            "setup_banner": setup_banner,
             "app_url": env.APP_URL,
             "show_legal": env.is_legal_page_enabled(),
             "for_date_value": for_date or today_str,

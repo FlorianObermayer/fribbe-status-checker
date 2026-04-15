@@ -54,18 +54,13 @@ class EphemeralAPIKeyStore:
         return len(EphemeralAPIKeyStore.load()) == 0
 
     @staticmethod
-    def append(key: ApiKey, *, require_empty: bool = False) -> bool:
+    def append(key: ApiKey) -> bool:
         """Append a key under a write lock.
 
-        If require_empty=True the append only proceeds when the store is still
-        empty at the time the lock is held, closing the TOCTOU bootstrap window.
-        Returns True if the key was stored, False if require_empty was set and
-        the store was no longer empty.
+        Returns True if the key was stored, False on failure.
         """
         with _write_lock:
             keys = EphemeralAPIKeyStore.load()
-            if require_empty and keys:
-                return False
             keys.append(key)
             try:
                 EphemeralAPIKeyStore.save(keys)
@@ -94,6 +89,17 @@ class EphemeralAPIKeyStore:
         if valid_until.tzinfo is None:
             valid_until = valid_until.replace(tzinfo=_local_tz())
         return valid_until >= datetime.now(tz=_local_tz())
+
+    @staticmethod
+    def has_valid_admin_key() -> bool:
+        """Return True if at least one valid (not expired) ADMIN key exists in the store."""
+        entries = EphemeralAPIKeyStore.load()
+        return any(
+            entry.role == AccessRole.ADMIN
+            and entry.valid_until
+            and EphemeralAPIKeyStore._is_not_expired(entry.valid_until)
+            for entry in entries
+        )
 
     @staticmethod
     def is_key_valid(key: str | None) -> bool:

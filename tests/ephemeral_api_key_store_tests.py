@@ -110,33 +110,6 @@ def test_append_adds_key_to_store() -> None:
     assert EphemeralAPIKeyStore.is_key_valid(key.key) is True
 
 
-def test_append_require_empty_succeeds_when_store_is_empty() -> None:
-    EphemeralAPIKeyStore.save([])
-    key = ApiKey.generate_new(comment="", valid_until=datetime.now(tz=ZoneInfo("Europe/Berlin")) + timedelta(days=1))
-
-    result = EphemeralAPIKeyStore.append(key, require_empty=True)
-
-    assert result is True
-    assert EphemeralAPIKeyStore.is_key_valid(key.key) is True
-
-
-def test_append_require_empty_fails_when_store_is_not_empty() -> None:
-    existing = ApiKey.generate_new(
-        comment="existing",
-        valid_until=datetime.now(tz=ZoneInfo("Europe/Berlin")) + timedelta(days=1),
-    )
-    EphemeralAPIKeyStore.save([existing])
-    new_key = ApiKey.generate_new(
-        comment="new",
-        valid_until=datetime.now(tz=ZoneInfo("Europe/Berlin")) + timedelta(days=1),
-    )
-
-    result = EphemeralAPIKeyStore.append(new_key, require_empty=True)
-
-    assert result is False
-    assert EphemeralAPIKeyStore.is_key_valid(new_key.key) is False
-
-
 def test_append_returns_false_when_save_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     EphemeralAPIKeyStore.save([])
     key = ApiKey.generate_new(comment="", valid_until=datetime.now(tz=ZoneInfo("Europe/Berlin")) + timedelta(days=1))

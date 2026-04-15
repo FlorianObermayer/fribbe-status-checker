@@ -86,14 +86,12 @@ class HybridAuth:
         self,
         *,
         min_role: AccessRole = AccessRole.READER,
-        bypass_on_empty_api_key_list: bool = False,
         name: str = "api_key",
         auto_error: bool = True,
     ) -> None:
         self._min_role = min_role
         self._auto_error = auto_error
         self._name = name
-        self._bypass_on_empty_api_key_list = bypass_on_empty_api_key_list
 
     async def __call__(self, request: Request) -> str | None:
         """Resolve the authenticated subject from session or API key header."""
@@ -113,14 +111,8 @@ class HybridAuth:
             request.session.clear()
 
         # 2. Check API key header and persist a session on success.
-        admin_token = env.ADMIN_TOKEN
-        # Bootstrap bypass: store is empty and no ADMIN_TOKEN configured — allow through
-        if self._bypass_on_empty_api_key_list and EphemeralAPIKeyStore.is_empty() and not admin_token:
-            return None
-
         api_key: str | None = await EphemeralAPIKeyHeader(
             name=self._name,
-            bypass_on_empty_api_key_list=self._bypass_on_empty_api_key_list,
             auto_error=self._auto_error,
         )(request)
         if api_key:
