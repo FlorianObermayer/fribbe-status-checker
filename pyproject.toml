@@ -26,6 +26,7 @@ dev = "scripts.dev:main"
 generate-vapid-keys = "scripts.generate_vapid_keys:main"
 test-push-notification = "scripts.test_push_notification:main"
 generate-licenses = "scripts.generate_licenses:main"
+release = "scripts.release:main"
 
 
 [dependency-groups]
@@ -37,6 +38,7 @@ dev = [
     "pyright>=1.1.408",
     "pytest-dotenv>=0.5.2",
     "pip-licenses>=5.5.5",
+    "python-dotenv>=1.0.0",
 ]
 
 [tool.pytest.ini_options]

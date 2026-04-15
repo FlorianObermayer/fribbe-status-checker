@@ -18,6 +18,14 @@
             "problemMatcher": [
                 "$python"
             ]
+        },
+        {
+            "label": "create release",
+            "type": "shell",
+            "command": "uv run release",
+            "problemMatcher": [
+                "$python"
+            ]
         }
     ]
 }
