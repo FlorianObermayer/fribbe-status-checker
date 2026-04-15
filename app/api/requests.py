@@ -116,7 +116,7 @@ class PushSubscribeRequest(BaseModel):
     endpoint: str
     p256dh: str
     auth: str
-    topics: list[PushTopic] = Field(default_factory=list[PushTopic])
+    topics: list[PushTopic] = Field(default_factory=lambda: list(PushTopic))
 
     @field_validator("topics")
     @classmethod
