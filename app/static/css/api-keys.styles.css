@@ -264,6 +264,29 @@ button.secondary:hover {
     color: var(--danger-text);
 }
 
+.key-table th.sortable {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.key-table th.sortable::after {
+    content: ' ⇅';
+    opacity: 0.35;
+    font-size: 0.78em;
+    font-style: normal;
+}
+
+.key-table th.sortable[aria-sort="ascending"]::after {
+    content: ' ▲';
+    opacity: 1;
+}
+
+.key-table th.sortable[aria-sort="descending"]::after {
+    content: ' ▼';
+    opacity: 1;
+}
+
 .delete-btn {
     appearance: none;
     border: none;

@@ -11,3 +11,7 @@ class AccessRole(IntEnum):
     READER = 100
     NOTIFICATION_OPERATOR = 200
     ADMIN = 300
+
+    def display_name(self) -> str:
+        """Return a human-friendly display name for this role."""
+        return self.name.replace("_", " ").title()

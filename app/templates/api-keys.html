@@ -1,30 +1,31 @@
 {% extends "base.html" %}
 
 {% block head_meta %}
-    <meta name="robots" content="noindex, nofollow">
+<meta name="robots" content="noindex, nofollow">
 {% endblock %}
 
 {% block title %}Fribbe - API-Schlüssel verwalten{% endblock %}
 
 {% block head_styles %}
-    <link rel="stylesheet" href="/static/css/api-keys.styles.css?v={{ content_hash_version }}">
+<link rel="stylesheet" href="/static/css/api-keys.styles.css?v={{ content_hash_version }}">
 {% endblock %}
 
-{% block body_attrs %} data-url-api-keys="{{ url_api_internal_api_keys }}" data-url-api-key="{{ url_api_internal_api_key }}" data-role-labels='{{ role_labels | tojson }}'{% endblock %}
+{% block body_attrs %} data-url-api-keys="{{ url_api_internal_api_keys }}" data-url-api-key="{{ url_api_internal_api_key
+}}" data-role-label-admin="{{ admin_role_label }}" data-role-labels='{{ role_labels | tojson }}'{% endblock %}
 
 {% block content %}
-    <div class="container">
-        {% include "_theme_toggle.html" %}
-        <h1>API-Schlüssel verwalten</h1>
-        <p class="subtitle">Erstelle und verwalte API-Schlüssel für den Zugriff auf die Anwendung.</p>
+<div class="container">
+    {% include "_theme_toggle.html" %}
+    <h1>API-Schlüssel verwalten</h1>
+    <p class="subtitle">Erstelle und verwalte API-Schlüssel für den Zugriff auf die Anwendung.</p>
 
-        <section id="create-key-section" class="card">
-            <h2>Neuen Schlüssel erstellen</h2>
-            <form id="create-key-form" novalidate>
-                <div class="form-group">
-                    <label for="key-comment">Kommentar</label>
-                    <input type="text" id="key-comment" name="comment" placeholder="z.B. Mein Gerät"
-                        autocomplete="off" required minlength="{{ comment_min_length }}" maxlength="{{ comment_max_length }}">
+    <section id="create-key-section" class="card">
+        <h2>Neuen Schlüssel erstellen</h2>
+        <form id="create-key-form" novalidate>
+            <div class="form-group">
+                <label for="key-comment">Kommentar</label>
+                <input type="text" id="key-comment" name="comment" placeholder="z.B. Mein Gerät" autocomplete="off" required
+                    minlength="{{ comment_min_length }}" maxlength="{{ comment_max_length }}">
                 </div>
                 <div class="form-row">
                     <div class="form-group">
@@ -42,59 +43,59 @@
                     </div>
                 </div>
                 <button type="submit" id="create-key-btn" class="primary">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M12 5v14M5 12h14" />
                     </svg>
                     Schlüssel erstellen
                 </button>
-            </form>
-        </section>
+                </form>
+                </section>
 
-        <div id="new-key-banner" class="new-key-banner hidden" role="alert">
-            <p class="new-key-label">Neuer Schlüssel (nur jetzt sichtbar):</p>
-            <div class="new-key-value-row">
-                <code id="new-key-value"></code>
-                <button id="copy-key-btn" type="button" class="copy-btn" title="Kopieren">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                    </svg>
-                </button>
-            </div>
-        </div>
-
-        <section id="key-list-section" class="card">
-            <h2>Vorhandene Schlüssel</h2>
-            <div id="key-list-loading" class="loading-hint">Lade Schlüssel...</div>
-            <div id="key-list-empty" class="empty-hint hidden">Keine API-Schlüssel vorhanden.</div>
-            <table id="key-list-table" class="key-table hidden">
-                <thead>
-                    <tr>
-                        <th>Präfix</th>
-                        <th>Kommentar</th>
-                        <th>Rolle</th>
-                        <th>Gültig bis</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody id="key-list-body"></tbody>
-            </table>
-        </section>
-    </div>
-
-    <div id="delete-confirm-overlay" class="confirm-overlay hidden">
-        <div class="confirm-dialog">
-            <p>Schlüssel <strong id="delete-confirm-prefix"></strong> wirklich löschen?</p>
-            <div class="actions">
-                <button id="delete-confirm-yes" class="primary danger" type="button">Löschen</button>
-                <button id="delete-confirm-no" class="secondary" type="button">Abbrechen</button>
-            </div>
+    <div id="new-key-banner" class="new-key-banner hidden" role="alert">
+        <p class="new-key-label">Neuer Schlüssel (nur jetzt sichtbar):</p>
+        <div class="new-key-value-row">
+            <code id="new-key-value"></code>
+            <button id="copy-key-btn" type="button" class="copy-btn" title="Kopieren">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </svg>
+            </button>
         </div>
     </div>
+
+    <section id="key-list-section" class="card">
+        <h2>Vorhandene Schlüssel</h2>
+        <div id="key-list-loading" class="loading-hint">Lade Schlüssel...</div>
+        <div id="key-list-empty" class="empty-hint hidden">Keine API-Schlüssel vorhanden.</div>
+        <table id="key-list-table" class="key-table hidden">
+            <thead>
+                <tr>
+                    <th>Präfix</th>
+                    <th>Kommentar</th>
+                    <th data-sort="role" class="sortable" aria-sort="none">Rolle</th>
+                    <th data-sort="valid_until" class="sortable" aria-sort="none">Gültig bis</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="key-list-body"></tbody>
+        </table>
+    </section>
+    </div>
+
+<div id="delete-confirm-overlay" class="confirm-overlay hidden">
+    <div class="confirm-dialog">
+        <p>Schlüssel <strong id="delete-confirm-prefix"></strong> wirklich löschen?</p>
+        <div class="actions">
+            <button id="delete-confirm-yes" class="primary danger" type="button">Löschen</button>
+            <button id="delete-confirm-no" class="secondary" type="button">Abbrechen</button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
-    <script src="/static/js/api-keys.js?v={{ content_hash_version }}"></script>
+<script src="/static/js/api-keys.js?v={{ content_hash_version }}"></script>
 {% endblock %}

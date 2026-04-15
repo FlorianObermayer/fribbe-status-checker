@@ -205,8 +205,8 @@ def get_api_keys_page(
         show_auth_button=False,
         show_api_keys_btn=False,
     )
-    roles = [{"value": r.value, "label": r.name.replace("_", " ").title()} for r in AccessRole]
-    role_labels = {r.value: r.name.replace("_", " ").title() for r in AccessRole}
+    roles = [{"value": r.value, "label": r.display_name()} for r in AccessRole]
+    role_labels = {r.value: r.display_name() for r in AccessRole}
     return templates.TemplateResponse(
         request,
         "api-keys.html",
@@ -214,8 +214,9 @@ def get_api_keys_page(
             **nav_ctx,
             "roles": roles,
             "role_labels": role_labels,
+            "admin_role_label": AccessRole.ADMIN.display_name(),
             "default_validity_days": env.DEFAULT_API_KEY_VALIDITY_DAYS,
-            "comment_min_length": env.COMMENT_MIN_LENGTH,
-            "comment_max_length": env.COMMENT_MAX_LENGTH,
+            "comment_min_length": env.API_KEY_COMMENT_MIN_LENGTH,
+            "comment_max_length": env.API_KEY_COMMENT_MAX_LENGTH,
         },
     )

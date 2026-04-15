@@ -5,6 +5,7 @@
     var apiKeysUrl = body.getAttribute('data-url-api-keys');
     var apiKeyUrl = body.getAttribute('data-url-api-key');
     var ROLE_LABELS = JSON.parse(body.getAttribute('data-role-labels') || '{}');
+    var adminRoleLabel = body.getAttribute('data-role-label-admin');
 
     var form = document.getElementById('create-key-form');
     var createBtn = document.getElementById('create-key-btn');
@@ -28,6 +29,10 @@
 
     var pendingDeletePrefix = '';
     var selfKeyPrefix = null;
+    var currentKeys = [];
+    var currentAdminPrefix = null;
+    var sortColumn = null;
+    var sortDir = 'asc';
 
     function formatDate(isoStr) {
         try {
@@ -62,11 +67,58 @@
             .then(function (data) {
                 keyListLoading.classList.add('hidden');
                 selfKeyPrefix = data.self_key_prefix || null;
-                renderKeys(data.api_keys || [], data.admin_token_prefix || null);
+                currentKeys = data.api_keys || [];
+                currentAdminPrefix = data.admin_token_prefix || null;
+                renderKeys(sortedKeys(), currentAdminPrefix);
             })
             .catch(function () {
                 keyListLoading.textContent = 'Fehler beim Laden der Schlüssel.';
             });
+    }
+
+    function sortedKeys() {
+        if (!sortColumn) return currentKeys.slice();
+        return currentKeys.slice().sort(function (a, b) {
+            var av, bv;
+            if (sortColumn === 'role') {
+                av = a.role || 0;
+                bv = b.role || 0;
+            } else {
+                av = a.valid_until ? new Date(a.valid_until).getTime() : Infinity;
+                bv = b.valid_until ? new Date(b.valid_until).getTime() : Infinity;
+            }
+            if (av < bv) return sortDir === 'asc' ? -1 : 1;
+            if (av > bv) return sortDir === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }
+
+    function updateSortHeaders() {
+        var headers = keyListTable.querySelectorAll('th[data-sort]');
+        headers.forEach(function (th) {
+            if (th.getAttribute('data-sort') === sortColumn) {
+                th.setAttribute('aria-sort', sortDir === 'asc' ? 'ascending' : 'descending');
+            } else {
+                th.setAttribute('aria-sort', 'none');
+            }
+        });
+    }
+
+    function setupSortHeaders() {
+        var headers = keyListTable.querySelectorAll('th[data-sort]');
+        headers.forEach(function (th) {
+            th.addEventListener('click', function () {
+                var col = th.getAttribute('data-sort');
+                if (sortColumn === col) {
+                    sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    sortColumn = col;
+                    sortDir = 'asc';
+                }
+                updateSortHeaders();
+                renderKeys(sortedKeys(), currentAdminPrefix);
+            });
+        });
     }
 
     function renderAdminTokenRow(prefix) {
@@ -79,13 +131,13 @@
         tr.appendChild(tdPrefix);
 
         var tdComment = document.createElement('td');
-        tdComment.textContent = 'Admin-Token (Umgebungsvariable)';
+        tdComment.textContent = 'Admin-Token';
         tr.appendChild(tdComment);
 
         var tdRole = document.createElement('td');
         var badge = document.createElement('span');
         badge.className = 'role-badge';
-        badge.textContent = ROLE_LABELS[3] || 'Admin';
+        badge.textContent = adminRoleLabel;
         tdRole.appendChild(badge);
         tr.appendChild(tdRole);
 
@@ -263,6 +315,7 @@
         if (e.target === deleteOverlay) hideDeleteConfirm();
     });
 
-    // Initial load
+    // Setup sort headers and initial load
+    setupSortHeaders();
     loadKeys();
 })();
