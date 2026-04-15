@@ -251,7 +251,7 @@
             })
             .catch(function () {
                 hideDeleteConfirm();
-                alert('Fehler beim Löschen des Schlüssels.');
+                showToast('Fehler beim Löschen des Schlüssels.', 'error');
             });
     }
 
@@ -262,6 +262,7 @@
         var maxLen = parseInt(commentInput.getAttribute('maxlength') || '9999', 10);
         if (comment.length < minLen || comment.length > maxLen) {
             commentInput.focus();
+            showToast('Kommentar muss zwischen ' + minLen + ' und ' + maxLen + ' Zeichen lang sein.', 'error');
             return;
         }
         createBtn.disabled = true;

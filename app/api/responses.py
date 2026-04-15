@@ -77,7 +77,7 @@ class ApiKey(BaseModel):
     """An API key with metadata."""
 
     key: str = Field(..., min_length=env.MIN_TOKEN_LENGTH)
-    comment: str = Field(..., max_length=env.COMMENT_MAX_LENGTH)
+    comment: str = Field(..., max_length=env.API_KEY_COMMENT_MAX_LENGTH)
     valid_until: datetime
     role: AccessRole = AccessRole.ADMIN
 
@@ -125,7 +125,7 @@ class MaskedApiKey(BaseModel):
     """API key with the raw value replaced by a short prefix."""
 
     key_prefix: str
-    comment: str = Field(..., max_length=env.COMMENT_MAX_LENGTH)
+    comment: str = Field(..., max_length=env.API_KEY_COMMENT_MAX_LENGTH)
     valid_until: datetime
     role: AccessRole
 

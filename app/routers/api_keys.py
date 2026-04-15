@@ -63,7 +63,7 @@ def delete_api_key(
         raise HTTPException(status_code=403, detail="Cannot delete your own API key")
     result = EphemeralAPIKeyStore.remove(request.key)
     if result == RemoveResult.NOT_FOUND:
-        raise HTTPException(status_code=404, detail="Api key not found")
+        raise HTTPException(status_code=404, detail="API key not found")
     if result == RemoveResult.AMBIGUOUS:
         raise HTTPException(status_code=409, detail="Ambiguous key prefix: multiple matches found")
 
