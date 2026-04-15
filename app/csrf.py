@@ -21,6 +21,9 @@ class FormFieldCSRFMiddleware(CSRFMiddleware):
             await self.app(scope, receive, send)
             return
 
+        # Always wrap send with self.send to ensure CSRF cookie is set/refreshed consistently.
+        wrapped_send = functools.partial(self.send, send=send, scope=scope)
+
         # Pass `receive` so that `request.form()` can read the body.
         request = Request(scope, receive)
         csrf_cookie = request.cookies.get(self.cookie_name)
@@ -45,7 +48,6 @@ class FormFieldCSRFMiddleware(CSRFMiddleware):
                 return {"type": "http.request", "body": b"", "more_body": False}
 
             submitted_csrf_token = await self._get_submitted_csrf_token(request)
-            wrapped_send = functools.partial(self.send, send=send, scope=scope)
             if (
                 not csrf_cookie
                 or not submitted_csrf_token
@@ -57,7 +59,7 @@ class FormFieldCSRFMiddleware(CSRFMiddleware):
 
             await self.app(scope, replay_receive, wrapped_send)
         else:
-            await self.app(scope, receive, send)
+            await self.app(scope, receive, wrapped_send)
 
     async def _get_submitted_csrf_token(self, request: Request) -> str | None:
         header_token = await super()._get_submitted_csrf_token(request)
