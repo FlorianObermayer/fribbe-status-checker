@@ -106,7 +106,7 @@ jobs:
           gistID: ${{ secrets.COVERAGE_GIST_ID }}
           filename: fribbe-coverage.json
           label: Coverage
-          message: ${{ steps.coverage.outputs.coverage }}%
+          message: ${{ steps.coverage.outputs.coverage }}
           color: ${{ steps.coverage.outputs.color }}
 
   build-and-push:
