@@ -4,8 +4,8 @@ from pathlib import Path
 from fastapi import APIRouter
 from fastapi.responses import FileResponse, PlainTextResponse, Response
 
-from app import env
 from app.api.responses import LicenseEntry, VersionResponse
+from app.config import cfg
 
 router = APIRouter()
 
@@ -16,13 +16,13 @@ _third_party_licenses: list[dict[str, str]] = json.loads(_licenses_path.read_tex
 @router.get("/api/version")
 async def version() -> VersionResponse:
     """Return the application version."""
-    return VersionResponse(version=env.BUILD_VERSION)
+    return VersionResponse(version=cfg.BUILD_VERSION)
 
 
 @router.get("/api/version/content-hash")
 async def version_content_hash() -> VersionResponse:
     """Return the content hash version."""
-    return VersionResponse(version=env.CONTENT_HASH_VERSION)
+    return VersionResponse(version=cfg.CONTENT_HASH_VERSION)
 
 
 @router.get("/api/licenses")
@@ -56,7 +56,7 @@ async def service_worker() -> FileResponse:
 @router.get("/robots.txt", response_class=PlainTextResponse, include_in_schema=False)
 def robots() -> str:
     """Return the robots.txt content."""
-    sitemap_line = f"\nSitemap: {env.APP_URL}/sitemap.xml"
+    sitemap_line = f"\nSitemap: {cfg.APP_URL}/sitemap.xml"
     return f"""User-agent: *
 Allow: /$
 Allow: /sitemap.xml
@@ -69,7 +69,7 @@ Disallow: /static/{sitemap_line}"""
 @router.get("/sitemap.xml", response_class=Response, include_in_schema=False)
 def sitemap() -> Response:
     """Return the XML sitemap."""
-    loc = f"{env.APP_URL}/"
+    loc = f"{cfg.APP_URL}/"
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>

@@ -7,11 +7,11 @@ import nh3
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from app import env
 from app.api.access_role import AccessRole
 from app.api.hybrid_auth import HybridAuth, PageAuth
 from app.api.requests import NOTIFICATION_FILTERS, NotificationFilterId, NotificationQuery
 from app.api.schema import requires_auth_extra
+from app.config import cfg
 from app.dependencies import NotificationServiceDep
 from app.routers._page_utils import show_toast, templates
 from app.routers.nav_context import NavContext, Route
@@ -31,7 +31,7 @@ def get_notification_builder(
         show_notification_create_btn=False,
         show_preview_btn=True,
     )
-    now = datetime.now(tz=ZoneInfo(env.TZ))
+    now = datetime.now(tz=ZoneInfo(cfg.TZ))
     valid_from_default = now.replace(hour=0, minute=0, second=0, microsecond=0).strftime("%Y-%m-%dT%H:%M")
     valid_until_default = now.replace(hour=23, minute=59, second=0, microsecond=0).strftime("%Y-%m-%dT%H:%M")
     return templates.TemplateResponse(
@@ -58,7 +58,7 @@ def post_notification_builder(
         response = RedirectResponse(url=Route.URL_NOTIFICATION_CREATE, status_code=303)
         show_toast(response, "Nachricht ist ein Pflichtfeld", "error")
         return response
-    tz = ZoneInfo(env.TZ)
+    tz = ZoneInfo(cfg.TZ)
     try:
         parsed_from = datetime.fromisoformat(valid_from).replace(tzinfo=tz) if valid_from else None
         parsed_until = datetime.fromisoformat(valid_until).replace(tzinfo=tz) if valid_until else None
@@ -109,8 +109,8 @@ def get_notification_preview(
         context={
             **nav_ctx,
             "bootstrap_mode": False,
-            "app_url": env.APP_URL,
-            "show_legal": env.is_legal_page_enabled(),
+            "app_url": cfg.APP_URL,
+            "show_legal": cfg.features.is_legal_page_enabled(),
             "notification_filters": NOTIFICATION_FILTERS,
             "selected_filter": selected_filter,
             "notification_id": _nid or None,

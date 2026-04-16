@@ -8,7 +8,7 @@ from typing import ClassVar
 
 from readerwriterlock import rwlock
 
-from app import env
+from app.config import cfg
 from app.services.internal.model import Warden
 
 
@@ -30,7 +30,7 @@ class WardenStore:
         if cls._instance is None:
             with cls._instance_lock:
                 if cls._instance is None:
-                    path = str(Path(env.LOCAL_DATA_PATH) / "internal" / "wardens.json")
+                    path = str(Path(cfg.LOCAL_DATA_PATH) / "internal" / "wardens.json")
                     cls._instance = cls(path)
         return cls._instance
 

@@ -8,7 +8,7 @@ from starlette.responses import Response
 from app.routers._page_utils import _read_toast_from_request, show_toast
 
 # ---------------------------------------------------------------------------
-# show_toast()
+# show_toast
 # ---------------------------------------------------------------------------
 
 
@@ -32,7 +32,7 @@ def test_show_toast_sets_flash_cookie_with_error_type() -> None:
 
 
 # ---------------------------------------------------------------------------
-# _read_toast_from_request()
+# _read_toast_from_request
 # ---------------------------------------------------------------------------
 
 

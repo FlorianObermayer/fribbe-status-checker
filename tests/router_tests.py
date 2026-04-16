@@ -6,7 +6,7 @@ fixture in conftest.py).  The TestClient resolves dependencies through
 FastAPI's normal DI machinery, so no monkey-patching of globals is required.
 
 Auth-protected endpoints are exercised with a fixed admin token injected via
-``monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)`` and sent as
+``monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)`` and sent as
 the ``api_key`` request header.
 """
 
@@ -19,10 +19,10 @@ import pytest
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
-from app import env
 from app.api.access_role import AccessRole
 from app.api.ephemeral_api_key_store import EphemeralAPIKeyStore
 from app.api.responses import ApiKey
+from app.config import cfg
 from app.dependencies import (
     get_internal_service,
     get_message_service,
@@ -108,7 +108,7 @@ def test_post_auth_accepts_admin_token(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
 
     response = client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
 
@@ -124,7 +124,7 @@ def test_post_auth_api_key_uses_opaque_session_cookie(
     tmp_path: Path,
 ) -> None:
     keys_path = tmp_path / "api_keys.json"
-    monkeypatch.setattr(env, "API_KEYS_PATH", str(keys_path))
+    monkeypatch.setattr(cfg, "API_KEYS_PATH", str(keys_path))
     api_key = ApiKey.generate_new(comment="test", valid_until=datetime(2026, 12, 31, tzinfo=_UTC))
     assert EphemeralAPIKeyStore.append(api_key)
 
@@ -139,7 +139,7 @@ def test_post_auth_rejects_wrong_token(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
 
     response = client.post("/auth", json={"token": "wrong-token", "next": "/"})
 
@@ -152,7 +152,7 @@ def test_post_auth_admin_token_grants_api_access(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Logging in via the form with ADMIN_TOKEN should allow access to protected API endpoints."""
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     test_app.dependency_overrides[get_internal_service] = mock_internal_svc
 
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
@@ -180,8 +180,8 @@ def test_index_shows_setup_banner_when_no_admin_token(
     tmp_path: Path,
 ) -> None:
     """Setup banner must be visible (no 'hidden' class) when no ADMIN_TOKEN is set."""
-    monkeypatch.setattr(env, "API_KEYS_PATH", str(tmp_path / "api_keys.json"))
-    monkeypatch.setattr(env, "ADMIN_TOKEN", "")
+    monkeypatch.setattr(cfg, "API_KEYS_PATH", str(tmp_path / "api_keys.json"))
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", "")
     EphemeralAPIKeyStore.save([])
 
     response = client.get("/")
@@ -194,7 +194,7 @@ def test_index_shows_setup_banner_when_no_admin_token(
 
 def test_index_hides_setup_banner_when_admin_token_set(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     """Setup banner must have the 'hidden' class when ADMIN_TOKEN is configured."""
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
 
     response = client.get("/")
 
@@ -211,7 +211,7 @@ def test_index_floating_btn_group_is_visible_when_signin_btn_shown(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """floating-btn-group must carry class="visible" when the sign-in button is rendered."""
-    monkeypatch.setattr(env, "is_login_button_enabled", lambda: True)
+    monkeypatch.setattr(cfg.features, "is_login_button_enabled", lambda: True)
 
     response = client.get("/")
 
@@ -223,7 +223,7 @@ def test_index_floating_btn_group_not_visible_without_any_buttons(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """When no auth / action buttons are shown, the group must not carry class="visible"."""
-    monkeypatch.setattr(env, "is_login_button_enabled", lambda: False)
+    monkeypatch.setattr(cfg.features, "is_login_button_enabled", lambda: False)
 
     response = client.get("/")
 
@@ -237,7 +237,7 @@ def test_index_floating_btn_group_not_visible_without_any_buttons(
 
 
 def test_index_shows_signin_btn_when_not_signed_in(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(env, "is_login_button_enabled", lambda: True)
+    monkeypatch.setattr(cfg.features, "is_login_button_enabled", lambda: True)
 
     response = client.get("/")
 
@@ -247,8 +247,8 @@ def test_index_shows_signin_btn_when_not_signed_in(client: TestClient, monkeypat
 
 
 def test_index_shows_signout_btn_when_signed_in(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
-    monkeypatch.setattr(env, "is_login_button_enabled", lambda: True)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg.features, "is_login_button_enabled", lambda: True)
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
 
     response = client.get("/")
@@ -259,7 +259,7 @@ def test_index_shows_signout_btn_when_signed_in(client: TestClient, monkeypatch:
 
 
 def test_index_hides_signin_btn_when_login_button_disabled(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(env, "is_login_button_enabled", lambda: False)
+    monkeypatch.setattr(cfg.features, "is_login_button_enabled", lambda: False)
 
     response = client.get("/")
 
@@ -269,7 +269,7 @@ def test_index_hides_signin_btn_when_login_button_disabled(client: TestClient, m
 
 def test_auth_page_never_shows_signin_btn(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     """The auth form IS the sign-in UI; the floating signin button must not render."""
-    monkeypatch.setattr(env, "is_login_button_enabled", lambda: True)
+    monkeypatch.setattr(cfg.features, "is_login_button_enabled", lambda: True)
 
     response = client.get("/auth")
 
@@ -281,7 +281,7 @@ def test_auth_page_shows_no_floating_signout_btn_when_signed_in(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Auth page has its own inline signed-in panel; no floating signout button needed."""
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
 
     response = client.get("/auth")
@@ -292,10 +292,10 @@ def test_auth_page_shows_no_floating_signout_btn_when_signed_in(
 
 def test_legal_page_shows_no_floating_auth_btns(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     """Legal page has show_auth_button=False — no floating signin or signout buttons."""
-    monkeypatch.setattr(env, "OPERATOR_NAME", "Max Mustermann")
-    monkeypatch.setattr(env, "OPERATOR_EMAIL", "max@example.com")
-    monkeypatch.setattr(env, "is_login_button_enabled", lambda: True)
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "OPERATOR_NAME", "Max Mustermann")
+    monkeypatch.setattr(cfg, "OPERATOR_EMAIL", "max@example.com")
+    monkeypatch.setattr(cfg.features, "is_login_button_enabled", lambda: True)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
 
     response = client.get("/legal")
@@ -307,8 +307,8 @@ def test_legal_page_shows_no_floating_auth_btns(client: TestClient, monkeypatch:
 
 def test_legal_page_always_shows_back_button(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     """Any sub-page (not /) shows a back button that uses browser history."""
-    monkeypatch.setattr(env, "OPERATOR_NAME", "Max Mustermann")
-    monkeypatch.setattr(env, "OPERATOR_EMAIL", "max@example.com")
+    monkeypatch.setattr(cfg, "OPERATOR_NAME", "Max Mustermann")
+    monkeypatch.setattr(cfg, "OPERATOR_EMAIL", "max@example.com")
 
     response = client.get("/legal")
 
@@ -328,7 +328,7 @@ def test_index_has_no_back_button(client: TestClient) -> None:
 def test_notification_create_page_shows_preview_not_create_btn(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
 
     response = client.get("/notification-create")
@@ -348,7 +348,7 @@ def test_index_shows_notification_btns_for_operator_role(
 ) -> None:
     """when_role(NOTIFICATION_OPERATOR) predicate reveals buttons for operator-role session."""
     keys_path = tmp_path / "api_keys.json"
-    monkeypatch.setattr(env, "API_KEYS_PATH", str(keys_path))
+    monkeypatch.setattr(cfg, "API_KEYS_PATH", str(keys_path))
     api_key = ApiKey.generate_new(
         comment="test-operator",
         valid_until=datetime(2030, 12, 31, tzinfo=_UTC),
@@ -380,7 +380,7 @@ def test_index_hides_notification_btns_for_reader_role(
 ) -> None:
     """READER role is below NOTIFICATION_OPERATOR — buttons must stay hidden."""
     keys_path = tmp_path / "api_keys.json"
-    monkeypatch.setattr(env, "API_KEYS_PATH", str(keys_path))
+    monkeypatch.setattr(cfg, "API_KEYS_PATH", str(keys_path))
     api_key = ApiKey.generate_new(
         comment="test-reader",
         valid_until=datetime(2030, 12, 31, tzinfo=_UTC),
@@ -397,8 +397,8 @@ def test_index_hides_notification_btns_for_reader_role(
 
 
 def test_get_legal_page_renders_impressum(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(env, "OPERATOR_NAME", "Max Mustermann")
-    monkeypatch.setattr(env, "OPERATOR_EMAIL", "max@example.com")
+    monkeypatch.setattr(cfg, "OPERATOR_NAME", "Max Mustermann")
+    monkeypatch.setattr(cfg, "OPERATOR_EMAIL", "max@example.com")
 
     response = client.get("/legal")
 
@@ -412,8 +412,8 @@ def test_get_legal_page_renders_impressum(client: TestClient, monkeypatch: pytes
 def test_get_legal_page_returns_404_when_operator_not_configured(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(env, "OPERATOR_NAME", "")
-    monkeypatch.setattr(env, "OPERATOR_EMAIL", "")
+    monkeypatch.setattr(cfg, "OPERATOR_NAME", "")
+    monkeypatch.setattr(cfg, "OPERATOR_EMAIL", "")
 
     response = client.get("/legal")
 
@@ -423,8 +423,8 @@ def test_get_legal_page_returns_404_when_operator_not_configured(
 def test_get_legal_page_returns_404_when_only_name_configured(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(env, "OPERATOR_NAME", "Max Mustermann")
-    monkeypatch.setattr(env, "OPERATOR_EMAIL", "")
+    monkeypatch.setattr(cfg, "OPERATOR_NAME", "Max Mustermann")
+    monkeypatch.setattr(cfg, "OPERATOR_EMAIL", "")
 
     response = client.get("/legal")
 
@@ -434,11 +434,11 @@ def test_get_legal_page_returns_404_when_only_name_configured(
 def test_get_legal_page_shows_push_section_when_feature_enabled(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(env, "OPERATOR_NAME", "Max Mustermann")
-    monkeypatch.setattr(env, "OPERATOR_EMAIL", "max@example.com")
-    monkeypatch.setattr(env, "is_push_enabled", lambda: True)
-    monkeypatch.setattr(env, "is_presence_enabled", lambda: False)
-    monkeypatch.setattr(env, "is_weather_enabled", lambda: False)
+    monkeypatch.setattr(cfg, "OPERATOR_NAME", "Max Mustermann")
+    monkeypatch.setattr(cfg, "OPERATOR_EMAIL", "max@example.com")
+    monkeypatch.setattr(cfg.features, "is_push_enabled", lambda: True)
+    monkeypatch.setattr(cfg.features, "is_presence_enabled", lambda: False)
+    monkeypatch.setattr(cfg.features, "is_weather_enabled", lambda: False)
 
     response = client.get("/legal")
 
@@ -466,11 +466,11 @@ def test_get_legal_page_feature_sections(  # noqa: PLR0913
     expected_in: list[str],
     expected_not_in: list[str],
 ) -> None:
-    monkeypatch.setattr(env, "OPERATOR_NAME", "Max Mustermann")
-    monkeypatch.setattr(env, "OPERATOR_EMAIL", "max@example.com")
-    monkeypatch.setattr(env, "is_push_enabled", lambda: push)
-    monkeypatch.setattr(env, "is_presence_enabled", lambda: presence)
-    monkeypatch.setattr(env, "is_weather_enabled", lambda: weather)
+    monkeypatch.setattr(cfg, "OPERATOR_NAME", "Max Mustermann")
+    monkeypatch.setattr(cfg, "OPERATOR_EMAIL", "max@example.com")
+    monkeypatch.setattr(cfg.features, "is_push_enabled", lambda: push)
+    monkeypatch.setattr(cfg.features, "is_presence_enabled", lambda: presence)
+    monkeypatch.setattr(cfg.features, "is_weather_enabled", lambda: weather)
 
     response = client.get("/legal")
 
@@ -482,8 +482,8 @@ def test_get_legal_page_feature_sections(  # noqa: PLR0913
 
 
 def test_index_shows_legal_link_when_operator_configured(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(env, "OPERATOR_NAME", "Max Mustermann")
-    monkeypatch.setattr(env, "OPERATOR_EMAIL", "max@example.com")
+    monkeypatch.setattr(cfg, "OPERATOR_NAME", "Max Mustermann")
+    monkeypatch.setattr(cfg, "OPERATOR_EMAIL", "max@example.com")
 
     response = client.get("/")
 
@@ -494,8 +494,8 @@ def test_index_shows_legal_link_when_operator_configured(client: TestClient, mon
 def test_index_hides_legal_link_when_operator_not_configured(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(env, "OPERATOR_NAME", "")
-    monkeypatch.setattr(env, "OPERATOR_EMAIL", "")
+    monkeypatch.setattr(cfg, "OPERATOR_NAME", "")
+    monkeypatch.setattr(cfg, "OPERATOR_EMAIL", "")
 
     response = client.get("/")
 
@@ -507,7 +507,7 @@ def test_get_auth_page_includes_csrf_cookie_when_signed_in(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
 
     response = client.get("/auth")
@@ -520,7 +520,7 @@ def test_signout_rejects_missing_csrf_for_session_auth(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
 
     response = client.post("/signout")
@@ -532,7 +532,7 @@ def test_signout_accepts_valid_csrf_for_session_auth(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
 
     response = client.post("/signout", headers=_get_csrf_headers(client), follow_redirects=False)
@@ -546,7 +546,7 @@ def test_signout_accepts_valid_csrf_form_field(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """FormFieldCSRFMiddleware must also accept the token from a hidden form field."""
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
     csrf_token = client.cookies.get("csrftoken")
     assert csrf_token is not None
@@ -566,7 +566,7 @@ def test_signout_clears_session_and_csrf_cookies(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
 
     response = client.post("/signout", headers=_get_csrf_headers(client), follow_redirects=False)
@@ -855,7 +855,7 @@ def test_internal_details_returns_200_with_admin_auth(
     test_app: FastAPI,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     test_app.dependency_overrides[get_internal_service] = mock_internal_svc
 
     response = client.get("/api/internal/details", headers={"api_key": TEST_ADMIN_TOKEN})
@@ -872,7 +872,7 @@ def test_internal_details_surfaces_active_device_count(
     test_app: FastAPI,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     svc = mock_internal_svc()
     svc.get_active_devices_ct.return_value = 5
     warden = MagicMock()
@@ -892,7 +892,7 @@ def test_admin_session_invalidated_after_token_rotation(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """After ADMIN_TOKEN is rotated, an existing admin session must be rejected."""
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     test_app.dependency_overrides[get_internal_service] = mock_internal_svc
 
     # Establish an admin session with the original token
@@ -900,7 +900,7 @@ def test_admin_session_invalidated_after_token_rotation(
     assert response.status_code == 200
 
     # Rotate the token - subsequent session-only requests must now be rejected
-    monkeypatch.setattr(env, "ADMIN_TOKEN", "rotated-" + TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", "rotated-" + TEST_ADMIN_TOKEN)
 
     response = client.get("/api/internal/details")
     assert response.status_code == 401
@@ -912,7 +912,7 @@ def test_header_auth_regenerates_session_id(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Session ID must change when transitioning unauthenticated → authenticated via API key header."""
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     test_app.dependency_overrides[get_internal_service] = mock_internal_svc
 
     # Sign in and immediately sign out to get an existing session cookie in unauthenticated state
@@ -946,7 +946,7 @@ def test_notifications_list_returns_empty_list_with_auth(
     test_app: FastAPI,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     svc = _mock_notification_svc()
     svc.list_all.return_value = []
     test_app.dependency_overrides[get_notification_service] = lambda: svc
@@ -1032,7 +1032,7 @@ def test_notifications_post_rejects_missing_csrf_for_session_auth(
     test_app: FastAPI,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     svc = _mock_notification_svc()
     test_app.dependency_overrides[get_notification_service] = lambda: svc
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
@@ -1048,7 +1048,7 @@ def test_notifications_post_accepts_valid_csrf_for_session_auth(
     test_app: FastAPI,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     svc = _mock_notification_svc()
     svc.add.return_value = "nid-session123"
     test_app.dependency_overrides[get_notification_service] = lambda: svc
@@ -1069,7 +1069,7 @@ def test_notifications_post_returns_notification_id(
     test_app: FastAPI,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     svc = _mock_notification_svc()
     svc.add.return_value = "nid-new123"
     test_app.dependency_overrides[get_notification_service] = lambda: svc
@@ -1089,7 +1089,7 @@ def test_notifications_delete_returns_404_when_not_found(
     test_app: FastAPI,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     svc = _mock_notification_svc()
     svc.delete.return_value = False
     test_app.dependency_overrides[get_notification_service] = lambda: svc
@@ -1104,7 +1104,7 @@ def test_notifications_delete_returns_200_when_found(
     test_app: FastAPI,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     svc = _mock_notification_svc()
     svc.delete.return_value = True
     test_app.dependency_overrides[get_notification_service] = lambda: svc
@@ -1119,7 +1119,7 @@ def test_notifications_put_returns_404_when_not_found(
     test_app: FastAPI,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     svc = _mock_notification_svc()
     svc.update.return_value = False
     test_app.dependency_overrides[get_notification_service] = lambda: svc
@@ -1153,7 +1153,7 @@ def test_api_keys_page_returns_403_for_reader_role(
 ) -> None:
     """READER role is below ADMIN — /api-keys must return 403."""
     keys_path = tmp_path / "api_keys.json"
-    monkeypatch.setattr(env, "API_KEYS_PATH", str(keys_path))
+    monkeypatch.setattr(cfg, "API_KEYS_PATH", str(keys_path))
     api_key = ApiKey.generate_new(
         comment="test-reader",
         valid_until=datetime(2030, 12, 31, tzinfo=_UTC),
@@ -1174,7 +1174,7 @@ def test_api_keys_page_returns_403_for_operator_role(
 ) -> None:
     """NOTIFICATION_OPERATOR role is below ADMIN — /api-keys must return 403."""
     keys_path = tmp_path / "api_keys.json"
-    monkeypatch.setattr(env, "API_KEYS_PATH", str(keys_path))
+    monkeypatch.setattr(cfg, "API_KEYS_PATH", str(keys_path))
     api_key = ApiKey.generate_new(
         comment="test-operator",
         valid_until=datetime(2030, 12, 31, tzinfo=_UTC),
@@ -1193,7 +1193,7 @@ def test_api_keys_page_renders_for_admin(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """ADMIN role must be able to access /api-keys."""
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
 
     response = client.get("/api-keys")
@@ -1211,8 +1211,8 @@ def test_index_shows_api_keys_btn_for_admin(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Admin users should see the API keys floating button on the index page."""
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
-    monkeypatch.setattr(env, "is_login_button_enabled", lambda: True)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg.features, "is_login_button_enabled", lambda: True)
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
 
     response = client.get("/")
@@ -1228,7 +1228,7 @@ def test_index_hides_api_keys_btn_for_operator(
 ) -> None:
     """Operator-role users should not see the API keys button."""
     keys_path = tmp_path / "api_keys.json"
-    monkeypatch.setattr(env, "API_KEYS_PATH", str(keys_path))
+    monkeypatch.setattr(cfg, "API_KEYS_PATH", str(keys_path))
     api_key = ApiKey.generate_new(
         comment="test-operator",
         valid_until=datetime(2030, 12, 31, tzinfo=_UTC),
@@ -1256,7 +1256,7 @@ def test_api_keys_page_has_back_button(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The /api-keys page is a sub-page and should show a back button."""
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
 
     response = client.get("/api-keys")
@@ -1277,7 +1277,7 @@ def test_delete_own_api_key_returns_403(
 ) -> None:
     """An admin API key must not be allowed to delete itself."""
     keys_path = tmp_path / "api_keys.json"
-    monkeypatch.setattr(env, "API_KEYS_PATH", str(keys_path))
+    monkeypatch.setattr(cfg, "API_KEYS_PATH", str(keys_path))
     api_key = ApiKey.generate_new(
         comment="self-key",
         valid_until=datetime(2030, 12, 31, tzinfo=_UTC),
@@ -1304,8 +1304,8 @@ def test_admin_token_can_delete_any_api_key(
 ) -> None:
     """ADMIN_TOKEN users are not API keys themselves and can delete any key."""
     keys_path = tmp_path / "api_keys.json"
-    monkeypatch.setattr(env, "API_KEYS_PATH", str(keys_path))
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "API_KEYS_PATH", str(keys_path))
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     api_key = ApiKey.generate_new(
         comment="deletable",
         valid_until=datetime(2030, 12, 31, tzinfo=_UTC),
@@ -1331,7 +1331,7 @@ def test_list_api_keys_includes_self_key_prefix(
 ) -> None:
     """The list endpoint must include self_key_prefix when authenticated with an API key."""
     keys_path = tmp_path / "api_keys.json"
-    monkeypatch.setattr(env, "API_KEYS_PATH", str(keys_path))
+    monkeypatch.setattr(cfg, "API_KEYS_PATH", str(keys_path))
     api_key = ApiKey.generate_new(
         comment="self-key",
         valid_until=datetime(2030, 12, 31, tzinfo=_UTC),
@@ -1355,8 +1355,8 @@ def test_list_api_keys_has_null_self_key_prefix_for_admin_token(
 ) -> None:
     """ADMIN_TOKEN sessions should have null self_key_prefix."""
     keys_path = tmp_path / "api_keys.json"
-    monkeypatch.setattr(env, "API_KEYS_PATH", str(keys_path))
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "API_KEYS_PATH", str(keys_path))
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     api_key = ApiKey.generate_new(
         comment="other-key",
         valid_until=datetime(2030, 12, 31, tzinfo=_UTC),
@@ -1384,8 +1384,8 @@ def test_create_api_key_rejects_empty_comment(
 ) -> None:
     """Creating a key without a comment must fail with 422."""
     keys_path = tmp_path / "api_keys.json"
-    monkeypatch.setattr(env, "API_KEYS_PATH", str(keys_path))
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "API_KEYS_PATH", str(keys_path))
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
 
     response = client.post(
@@ -1404,8 +1404,8 @@ def test_create_api_key_rejects_oversized_comment(
 ) -> None:
     """Creating a key with a comment exceeding 200 characters must fail with 422."""
     keys_path = tmp_path / "api_keys.json"
-    monkeypatch.setattr(env, "API_KEYS_PATH", str(keys_path))
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "API_KEYS_PATH", str(keys_path))
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
 
     response = client.post(
@@ -1423,7 +1423,7 @@ def test_create_api_key_rejects_oversized_comment(
 
 
 def test_version_returns_build_version(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(env, "BUILD_VERSION", "1.2.3")
+    monkeypatch.setattr(cfg, "BUILD_VERSION", "1.2.3")
 
     response = client.get("/api/version")
 
@@ -1432,7 +1432,7 @@ def test_version_returns_build_version(client: TestClient, monkeypatch: pytest.M
 
 
 def test_version_content_hash_returns_hash(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(env, "CONTENT_HASH_VERSION", "abc123")
+    monkeypatch.setattr(cfg, "CONTENT_HASH_VERSION", "abc123")
 
     response = client.get("/api/version/content-hash")
 
@@ -1462,7 +1462,7 @@ def test_service_worker_returns_js(client: TestClient) -> None:
 
 
 def test_robots_txt_contains_disallows(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(env, "APP_URL", "https://example.com")
+    monkeypatch.setattr(cfg, "APP_URL", "https://example.com")
 
     response = client.get("/robots.txt")
 
@@ -1472,7 +1472,7 @@ def test_robots_txt_contains_disallows(client: TestClient, monkeypatch: pytest.M
 
 
 def test_sitemap_xml_returns_valid_xml(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(env, "APP_URL", "https://example.com")
+    monkeypatch.setattr(cfg, "APP_URL", "https://example.com")
 
     response = client.get("/sitemap.xml")
 
@@ -1491,8 +1491,8 @@ def test_wardens_list_returns_200_with_auth(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
-    monkeypatch.setattr(env, "LOCAL_DATA_PATH", str(tmp_path))
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "LOCAL_DATA_PATH", str(tmp_path))
     WardenStore._instance = None
 
     response = client.get("/api/internal/wardens", headers={"api_key": TEST_ADMIN_TOKEN})
@@ -1506,8 +1506,8 @@ def test_wardens_crud_lifecycle(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
-    monkeypatch.setattr(env, "LOCAL_DATA_PATH", str(tmp_path))
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "LOCAL_DATA_PATH", str(tmp_path))
     WardenStore._instance = None
     auth = {"api_key": TEST_ADMIN_TOKEN}
 
@@ -1550,8 +1550,8 @@ def test_wardens_create_duplicate_returns_409(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
-    monkeypatch.setattr(env, "LOCAL_DATA_PATH", str(tmp_path))
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "LOCAL_DATA_PATH", str(tmp_path))
     WardenStore._instance = None
     auth = {"api_key": TEST_ADMIN_TOKEN}
 
@@ -1575,8 +1575,8 @@ def test_wardens_update_not_found_returns_404(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
-    monkeypatch.setattr(env, "LOCAL_DATA_PATH", str(tmp_path))
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "LOCAL_DATA_PATH", str(tmp_path))
     WardenStore._instance = None
 
     response = client.put(
@@ -1593,8 +1593,8 @@ def test_wardens_delete_not_found_returns_404(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
-    monkeypatch.setattr(env, "LOCAL_DATA_PATH", str(tmp_path))
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "LOCAL_DATA_PATH", str(tmp_path))
     WardenStore._instance = None
 
     response = client.request(
@@ -1615,7 +1615,7 @@ def test_config_returns_204_when_no_thresholds_sent(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
 
     response = client.patch("/api/internal/config", json={}, headers={"api_key": TEST_ADMIN_TOKEN})
 
@@ -1627,8 +1627,8 @@ def test_config_updates_min_non_empty_ct(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
-    monkeypatch.setattr(env, "LOCAL_DATA_PATH", str(tmp_path))
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "LOCAL_DATA_PATH", str(tmp_path))
 
     response = client.patch(
         "/api/internal/config",
@@ -1644,8 +1644,8 @@ def test_config_updates_min_many_ct(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
-    monkeypatch.setattr(env, "LOCAL_DATA_PATH", str(tmp_path))
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "LOCAL_DATA_PATH", str(tmp_path))
 
     response = client.patch(
         "/api/internal/config",
@@ -1726,7 +1726,7 @@ def test_post_notification_create_redirects_to_preview(
     test_app: FastAPI,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
     svc = _mock_notification_svc()
     svc.add.return_value = "nid-test-123"
@@ -1750,7 +1750,7 @@ def test_post_notification_create_empty_message_redirects_back(
     test_app: FastAPI,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
     svc = _mock_notification_svc()
     test_app.dependency_overrides[get_notification_service] = lambda: svc
@@ -1773,7 +1773,7 @@ def test_post_notification_create_invalid_date_redirects_back(
     test_app: FastAPI,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
     svc = _mock_notification_svc()
     test_app.dependency_overrides[get_notification_service] = lambda: svc
@@ -1814,7 +1814,7 @@ def test_get_notification_preview_renders_page(
     test_app: FastAPI,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
     svc = _mock_notification_svc()
     notification = MagicMock()
@@ -1839,7 +1839,7 @@ def test_enable_notification_redirects_to_preview(
     test_app: FastAPI,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
     svc = _mock_notification_svc()
     svc.update.return_value = True
@@ -1863,7 +1863,7 @@ def test_enable_notification_returns_404_when_not_found(
     test_app: FastAPI,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
     svc = _mock_notification_svc()
     svc.update.return_value = False
@@ -1889,7 +1889,7 @@ def test_disable_notification_redirects_to_preview(
     test_app: FastAPI,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
     svc = _mock_notification_svc()
     svc.update.return_value = True
@@ -1913,7 +1913,7 @@ def test_disable_notification_returns_404_when_not_found(
     test_app: FastAPI,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
     svc = _mock_notification_svc()
     svc.update.return_value = False
@@ -1939,7 +1939,7 @@ def test_delete_notification_action_redirects_to_preview(
     test_app: FastAPI,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
     svc = _mock_notification_svc()
     svc.delete.return_value = True
@@ -1963,7 +1963,7 @@ def test_delete_notification_action_returns_404_when_not_found(
     test_app: FastAPI,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
     svc = _mock_notification_svc()
     svc.delete.return_value = False
@@ -1989,7 +1989,7 @@ def test_get_notification_preview_content_returns_html(
     test_app: FastAPI,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
     svc = _mock_notification_svc()
     n1 = MagicMock()
@@ -2012,7 +2012,7 @@ def test_get_notification_preview_content_returns_empty_when_no_notifications(
     test_app: FastAPI,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
     svc = _mock_notification_svc()
     svc.get.return_value = []

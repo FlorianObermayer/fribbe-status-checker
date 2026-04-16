@@ -4,14 +4,14 @@ from pathlib import Path
 
 import pytest
 
-from app import env
+from app.config import cfg
 from app.services.presence_level import PresenceLevel
 from app.services.presence_thresholds import PresenceThresholds
 
 
 @pytest.fixture
 def thresholds(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> PresenceThresholds:
-    monkeypatch.setattr(env, "LOCAL_DATA_PATH", str(tmp_path))
+    monkeypatch.setattr(cfg, "LOCAL_DATA_PATH", str(tmp_path))
     return PresenceThresholds()
 
 

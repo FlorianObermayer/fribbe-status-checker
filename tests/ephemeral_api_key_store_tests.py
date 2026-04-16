@@ -4,10 +4,10 @@ from zoneinfo import ZoneInfo
 import pytest
 from pydantic import ValidationError
 
-from app import env
 from app.api.access_role import AccessRole
 from app.api.ephemeral_api_key_store import EphemeralAPIKeyStore, RemoveResult
 from app.api.responses import ApiKey
+from app.config import cfg
 
 
 def test_is_key_valid() -> None:
@@ -88,7 +88,7 @@ def test_generate_new_returns_valid_api_key() -> None:
     valid_until = datetime.now(tz=ZoneInfo("Europe/Berlin")) + timedelta(days=30)
     api_key = ApiKey.generate_new(comment="test", valid_until=valid_until)
 
-    assert len(api_key.key) >= env.MIN_TOKEN_LENGTH
+    assert len(api_key.key) >= cfg.MIN_TOKEN_LENGTH
     assert api_key.comment == "test"
     assert api_key.valid_until == valid_until
 
@@ -152,8 +152,8 @@ def test_remove_returns_ambiguous_when_multiple_matches() -> None:
     # Ensure both share a common prefix by constructing keys manually
 
     shared_prefix = "sharedprefix-"
-    suffix_a = "a" * (env.MIN_TOKEN_LENGTH - len(shared_prefix))
-    suffix_b = "b" * (env.MIN_TOKEN_LENGTH - len(shared_prefix))
+    suffix_a = "a" * (cfg.MIN_TOKEN_LENGTH - len(shared_prefix))
+    suffix_b = "b" * (cfg.MIN_TOKEN_LENGTH - len(shared_prefix))
     key_a = ApiKey(key=shared_prefix + suffix_a, comment="a", valid_until=key_a.valid_until)
     key_b = ApiKey(key=shared_prefix + suffix_b, comment="b", valid_until=key_b.valid_until)
     EphemeralAPIKeyStore.save([key_a, key_b])

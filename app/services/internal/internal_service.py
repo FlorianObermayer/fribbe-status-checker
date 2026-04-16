@@ -8,7 +8,7 @@ from huawei_lte_api.Client import Client
 from huawei_lte_api.Connection import Connection
 from readerwriterlock import rwlock
 
-from app import env
+from app.config import cfg
 from app.services.internal.model import Warden
 from app.services.internal.warden_store import WardenStore
 from app.services.mac_address_helper import should_ignore_device
@@ -33,7 +33,7 @@ class InternalPersistentData(PersistentPathProvider):
 
     def get_path(self) -> str:
         """Return the base path for internal persistent data."""
-        return str(Path(env.LOCAL_DATA_PATH) / "internal")
+        return str(Path(cfg.LOCAL_DATA_PATH) / "internal")
 
 
 class InternalService(PollingService):
@@ -41,7 +41,7 @@ class InternalService(PollingService):
 
     def __init__(self) -> None:
         super().__init__()
-        self._last_service_started: datetime = datetime.now(tz=ZoneInfo(env.TZ))
+        self._last_service_started: datetime = datetime.now(tz=ZoneInfo(cfg.TZ))
 
         self._internal_data = InternalPersistentData()
         self._last_updated: datetime | None = None
@@ -98,7 +98,7 @@ class InternalService(PollingService):
         - First device: Set when we see devices > 0 for the first time after reset
         - Last device: Set when the last devices leave (count goes from > 0 to 0)
         """
-        now = datetime.now(tz=ZoneInfo(env.TZ))
+        now = datetime.now(tz=ZoneInfo(cfg.TZ))
 
         # Reset timestamps at 5am if we crossed the virtual day boundary
         if crossed_virtual_day(self._last_updated, now):
@@ -142,7 +142,7 @@ class InternalService(PollingService):
                     self._internal_data.wardens_on_site = wardens_on_site
                     self._update_device_statistics(self._internal_data.active_devices_ct, active_member_devices_ct)
                     self._internal_data.active_devices_ct = active_member_devices_ct
-                    self._last_updated = datetime.now(tz=ZoneInfo(env.TZ))
+                    self._last_updated = datetime.now(tz=ZoneInfo(cfg.TZ))
                     self._last_error = None
             logger.info("Refresh Internal... DONE)")
         except Exception as e:

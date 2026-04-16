@@ -4,13 +4,13 @@ from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app import env
 from app.api.access_role import AccessRole
 from app.api.ephemeral_api_key_store import EphemeralAPIKeyStore, RemoveResult
 from app.api.hybrid_auth import HybridAuth
 from app.api.requests import CreateApiKeyRequest, DeleteApiKeyRequest
 from app.api.responses import ApiKey, ApiKeys, MaskedApiKey
 from app.api.schema import requires_auth_extra
+from app.config import cfg
 
 router = APIRouter(prefix="/api/internal", tags=["API Keys"])
 
@@ -30,10 +30,10 @@ def create_api_key(
     Requires ADMIN role authentication.
 
     - comment: Required comment for the key. Length constraints are validated by `CreateApiKeyRequest`.
-    - valid_until: Optional datetime. Defaults to now plus `env.DEFAULT_API_KEY_VALIDITY_DAYS`.
+    - valid_until: Optional datetime. Defaults to now plus `cfg.DEFAULT_API_KEY_VALIDITY_DAYS`.
     """
     valid_until = (
-        request.valid_until or datetime.now(tz=ZoneInfo(env.TZ)) + timedelta(days=env.DEFAULT_API_KEY_VALIDITY_DAYS)
+        request.valid_until or datetime.now(tz=ZoneInfo(cfg.TZ)) + timedelta(days=cfg.DEFAULT_API_KEY_VALIDITY_DAYS)
     ).replace(
         microsecond=0,
     )
@@ -71,7 +71,7 @@ def list_api_keys(auth_subject: Annotated[str | None, Depends(HybridAuth(min_rol
     """Return all API keys as a masked list. Full key values are only shown at creation time."""
     keys = EphemeralAPIKeyStore.load()
     self_prefix = _resolve_self_prefix(auth_subject, keys) if auth_subject else None
-    admin_prefix = MaskedApiKey.get_masked_prefix(env.ADMIN_TOKEN) if env.ADMIN_TOKEN else None
+    admin_prefix = MaskedApiKey.get_masked_prefix(cfg.ADMIN_TOKEN) if cfg.ADMIN_TOKEN else None
     return ApiKeys(
         api_keys=[MaskedApiKey.from_api_key(k) for k in keys],
         self_key_prefix=self_prefix,

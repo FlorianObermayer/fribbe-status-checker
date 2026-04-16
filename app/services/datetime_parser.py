@@ -3,7 +3,7 @@ from zoneinfo import ZoneInfo
 
 import dateparser
 
-from app import env
+from app.config import cfg
 
 # German month names for deterministic locale-independent output
 _GERMAN_MONTHS = [
@@ -74,16 +74,16 @@ def _parse_with_dateparser(time_str: str, event_date: date | str) -> tuple[str, 
         time_str.strip(),
         languages=["de"],
         settings={
-            "TIMEZONE": env.TZ,
+            "TIMEZONE": cfg.TZ,
             "RELATIVE_BASE": datetime.strptime(f"{event_date} 00:00", "%Y-%m-%d %H:%M").replace(
-                tzinfo=ZoneInfo(env.TZ)
+                tzinfo=ZoneInfo(cfg.TZ)
             ),
         },
     )
     try:
         start_str = parsed.strftime("%H:%M") if parsed else time_str.replace(" Uhr", "").strip()
         end_str = (
-            datetime.strptime(start_str, "%H:%M").replace(tzinfo=ZoneInfo(env.TZ)) + timedelta(hours=2)
+            datetime.strptime(start_str, "%H:%M").replace(tzinfo=ZoneInfo(cfg.TZ)) + timedelta(hours=2)
         ).strftime(
             "%H:%M",
         )
@@ -99,8 +99,8 @@ def parse_event_times(date: date | str, time_str: str) -> tuple[datetime, dateti
     start_str, end_str, date = _parse_time_range(time_str, date)
 
     try:
-        start_time = datetime.strptime(f"{date} {start_str}", "%Y-%m-%d %H:%M").replace(tzinfo=ZoneInfo(env.TZ))
-        end_time = datetime.strptime(f"{date} {end_str}", "%Y-%m-%d %H:%M").replace(tzinfo=ZoneInfo(env.TZ))
+        start_time = datetime.strptime(f"{date} {start_str}", "%Y-%m-%d %H:%M").replace(tzinfo=ZoneInfo(cfg.TZ))
+        end_time = datetime.strptime(f"{date} {end_str}", "%Y-%m-%d %H:%M").replace(tzinfo=ZoneInfo(cfg.TZ))
 
         if start_time > end_time:
             end_time += timedelta(days=1)
@@ -108,6 +108,6 @@ def parse_event_times(date: date | str, time_str: str) -> tuple[datetime, dateti
         return (start_time, end_time)
     except ValueError:
         # fallback to all-day
-        fallback_start = datetime.strptime(f"{date} 00:00", "%Y-%m-%d %H:%M").replace(tzinfo=ZoneInfo(env.TZ))
-        fallback_end = datetime.strptime(f"{date} 23:59", "%Y-%m-%d %H:%M").replace(tzinfo=ZoneInfo(env.TZ))
+        fallback_start = datetime.strptime(f"{date} 00:00", "%Y-%m-%d %H:%M").replace(tzinfo=ZoneInfo(cfg.TZ))
+        fallback_end = datetime.strptime(f"{date} 23:59", "%Y-%m-%d %H:%M").replace(tzinfo=ZoneInfo(cfg.TZ))
         return (fallback_start, fallback_end)

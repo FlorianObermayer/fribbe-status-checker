@@ -7,7 +7,7 @@ from typing import Never
 
 import pytest
 
-from app import env
+from app.config import cfg
 from app.services.weather_service import (
     Temperature,
     Weather,
@@ -84,7 +84,7 @@ def test_get_condition_uses_positive_cache(monkeypatch: pytest.MonkeyPatch) -> N
 
 def test_get_condition_negative_cache_prevents_api_hammering(monkeypatch: pytest.MonkeyPatch) -> None:
     service = WeatherService("OPENWEATHERMAP_API_KEY", 10.0, 20.0)
-    monkeypatch.setattr(env, "WEATHER_CACHE_TTL_SECONDS", 300)
+    monkeypatch.setattr(cfg, "WEATHER_CACHE_TTL_SECONDS", 300)
     calls = 0
 
     def fake_fetch() -> None:
@@ -103,7 +103,7 @@ def test_get_condition_negative_cache_prevents_api_hammering(monkeypatch: pytest
 
 def test_get_condition_refetches_after_ttl_expired(monkeypatch: pytest.MonkeyPatch) -> None:
     service = WeatherService("OPENWEATHERMAP_API_KEY", 10.0, 20.0)
-    monkeypatch.setattr(env, "WEATHER_CACHE_TTL_SECONDS", 30)
+    monkeypatch.setattr(cfg, "WEATHER_CACHE_TTL_SECONDS", 30)
 
     first_weather = Weather(
         temperature=Temperature.COLD,
@@ -154,7 +154,7 @@ def test_invalidate_cache_forces_refetch(monkeypatch: pytest.MonkeyPatch) -> Non
 
 def test_get_condition_deduplicates_concurrent_refresh(monkeypatch: pytest.MonkeyPatch) -> None:
     service = WeatherService("OPENWEATHERMAP_API_KEY", 10.0, 20.0)
-    monkeypatch.setattr(env, "WEATHER_CACHE_TTL_SECONDS", 300)
+    monkeypatch.setattr(cfg, "WEATHER_CACHE_TTL_SECONDS", 300)
 
     expected = Weather(temperature=Temperature.WARM, state=WeatherState.CLEAR, at_time=datetime(2026, 1, 1, tzinfo=UTC))
     calls = 0

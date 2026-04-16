@@ -6,16 +6,16 @@ from typing import Literal
 from fastapi import Request, Response
 from fastapi.templating import Jinja2Templates
 
-from app import env
 from app.api.requests import NotificationFilterId
+from app.config import cfg
 from app.routers.nav_context import Route
 
 
 def _base_context(request: Request) -> dict[str, object]:
     flash_message, flash_type = _read_toast_from_request(request)
     return {
-        "version": env.BUILD_VERSION,
-        "content_hash_version": env.CONTENT_HASH_VERSION,
+        "version": cfg.BUILD_VERSION,
+        "content_hash_version": cfg.CONTENT_HASH_VERSION,
         # Page URLs (used in navigation, forms, links)
         "url_index": Route.URL_INDEX,
         "url_legal": Route.URL_LEGAL,
@@ -45,7 +45,7 @@ def _base_context(request: Request) -> dict[str, object]:
         # Flash message set by POST-redirect routes; auto-expires via max_age.
         "flash_message": flash_message,
         "flash_type": flash_type or "success",
-        "toast_display_ms": env.TOAST_DISPLAY_SECONDS * 1000,
+        "toast_display_ms": cfg.TOAST_DISPLAY_SECONDS * 1000,
     }
 
 
@@ -58,9 +58,9 @@ def show_toast(response: Response, message: str, status: Literal["success", "err
     response.set_cookie(
         "flash",
         flash_data,
-        max_age=env.TOAST_DISPLAY_SECONDS,
+        max_age=cfg.TOAST_DISPLAY_SECONDS,
         httponly=True,
-        secure=env.HTTPS_ONLY,
+        secure=cfg.HTTPS_ONLY,
         samesite="strict",
     )
 

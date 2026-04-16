@@ -67,7 +67,7 @@ def test_validate_auth_only_invalid_chars() -> None:
 
 
 def _make_service(tmpdir: str) -> PushSubscriptionService:
-    with patch("app.env.LOCAL_DATA_PATH", tmpdir):
+    with patch("app.config.cfg.LOCAL_DATA_PATH", tmpdir):
         return PushSubscriptionService("fake-private", "fake-public", "mailto:test@example.com")
 
 

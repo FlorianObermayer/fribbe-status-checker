@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from app import env
+from app.config import cfg
 from app.services.persistent_collections import PersistentPathProvider, persistent
 from app.services.presence_level import PresenceLevel
 
@@ -14,7 +14,7 @@ class PresenceThresholds(PersistentPathProvider):
 
     def get_path(self) -> str:
         """Return the base path for threshold persistence."""
-        return str(Path(env.LOCAL_DATA_PATH) / "presence_thresholds")
+        return str(Path(cfg.LOCAL_DATA_PATH) / "presence_thresholds")
 
     @property
     def min_non_empty_ct(self) -> int:

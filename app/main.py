@@ -12,11 +12,11 @@ from fastapi.staticfiles import StaticFiles
 from secure import ContentSecurityPolicy, Secure
 from starsessions import SessionAutoloadMiddleware, SessionMiddleware
 
-from app import env
 from app.api.hybrid_auth import AuthRedirectError
 from app.api.redact import redact_key
 from app.api.requests import AuthRedirectQuery
 from app.api.schema import update_openapi_schema
+from app.config import cfg
 from app.csrf import FormFieldCSRFMiddleware
 from app.dependencies import shutdown, startup
 from app.routers import api_keys, auth, internal, misc, notification_ui, notifications, pages, push, status, wardens
@@ -25,7 +25,7 @@ from app.stores.file_session_store import FileSessionStore
 _logger = logging.getLogger("uvicorn.error")
 
 
-_csp_domain_src: list[str] = [env.CSP_DOMAIN] if env.CSP_DOMAIN else []
+_csp_domain_src: list[str] = [cfg.CSP_DOMAIN] if cfg.CSP_DOMAIN else []
 _csp = (
     ContentSecurityPolicy()
     .default_src("'self'", *_csp_domain_src)
@@ -61,16 +61,16 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None]:
 async def _session_cleanup_loop() -> None:
     """Periodically remove expired session files."""
     while True:
-        await asyncio.sleep(env.SESSION_CLEANUP_INTERVAL_SECONDS)
+        await asyncio.sleep(cfg.SESSION_CLEANUP_INTERVAL_SECONDS)
         try:
-            await _session_store.cleanup(env.SESSION_MAX_AGE_SECONDS)
+            await _session_store.cleanup(cfg.SESSION_MAX_AGE_SECONDS)
         except Exception:
             _logger.exception("Session cleanup failed")
 
 
 app = FastAPI(
     title="Fribbe Status Checker",
-    version=env.BUILD_VERSION,
+    version=cfg.BUILD_VERSION,
     lifespan=lifespan,
     license_info={
         "name": "MIT",
@@ -81,23 +81,23 @@ app = FastAPI(
 
 app.add_middleware(
     FormFieldCSRFMiddleware,
-    secret=env.SESSION_SECRET_KEY,
+    secret=cfg.SESSION_SECRET_KEY,
     sensitive_cookies={"session_cookie"},
     header_name="x-csrf-token",
-    cookie_secure=env.HTTPS_ONLY,
+    cookie_secure=cfg.HTTPS_ONLY,
     cookie_samesite="lax",
 )
 
 app.add_middleware(SessionAutoloadMiddleware)
 
-_session_store = FileSessionStore(str(Path(env.LOCAL_DATA_PATH) / "sessions"))
+_session_store = FileSessionStore(str(Path(cfg.LOCAL_DATA_PATH) / "sessions"))
 
 app.add_middleware(
     SessionMiddleware,
     store=_session_store,
     cookie_name="session_cookie",
-    lifetime=env.SESSION_MAX_AGE_SECONDS,
-    cookie_https_only=env.HTTPS_ONLY,
+    lifetime=cfg.SESSION_MAX_AGE_SECONDS,
+    cookie_https_only=cfg.HTTPS_ONLY,
     cookie_same_site="lax",
     rolling=True,
 )

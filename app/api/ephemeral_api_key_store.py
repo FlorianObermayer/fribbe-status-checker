@@ -5,17 +5,17 @@ from datetime import datetime
 from enum import Enum
 from zoneinfo import ZoneInfo
 
-from app import env
 from app.api.access_role import AccessRole
 from app.api.redact import redact_key
 from app.api.responses import ApiKey
+from app.config import cfg
 from app.services.persistent_collections import PersistentList
 
 _write_lock = threading.Lock()
 
 
 def _local_tz() -> ZoneInfo:
-    return ZoneInfo(env.TZ)
+    return ZoneInfo(cfg.TZ)
 
 
 logger = logging.getLogger("uvicorn.error")
@@ -34,7 +34,7 @@ class EphemeralAPIKeyStore:
 
     @staticmethod
     def _get_path() -> str:
-        return env.API_KEYS_PATH
+        return cfg.API_KEYS_PATH
 
     @staticmethod
     def load() -> list[ApiKey]:
@@ -85,7 +85,10 @@ class EphemeralAPIKeyStore:
 
     @staticmethod
     def _is_not_expired(valid_until: datetime) -> bool:
-        """Return True if valid_until is in the future. Naive datetimes are assumed to be in the configured local timezone (env.TZ)."""
+        """Return True if valid_until is in the future.
+
+        Naive datetimes are assumed to be in the configured local timezone (cfg.TZ).
+        """
         if valid_until.tzinfo is None:
             valid_until = valid_until.replace(tzinfo=_local_tz())
         return valid_until >= datetime.now(tz=_local_tz())

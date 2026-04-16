@@ -1,5 +1,7 @@
 """Tests for app/api/schema.py — OpenAPI schema customisation."""
 
+from typing import Any
+
 from fastapi import FastAPI
 
 from app.api.schema import update_openapi_schema
@@ -10,7 +12,8 @@ def test_update_openapi_schema_registers_security_schemes() -> None:
 
     update_openapi_schema(app)
 
-    schemes = app.openapi_schema["components"]["securitySchemes"]
+    assert app.openapi_schema is not None
+    schemes: dict[str, Any] = app.openapi_schema["components"]["securitySchemes"]
     assert "APIKeyHeader" in schemes
     assert schemes["APIKeyHeader"]["in"] == "header"
     assert "SessionCookie" in schemes
@@ -23,7 +26,8 @@ def test_update_openapi_schema_is_idempotent() -> None:
     update_openapi_schema(app)
     update_openapi_schema(app)
 
-    schemes = app.openapi_schema["components"]["securitySchemes"]
+    assert app.openapi_schema is not None
+    schemes: dict[str, Any] = app.openapi_schema["components"]["securitySchemes"]
     assert list(schemes.keys()).count("APIKeyHeader") == 1
     assert list(schemes.keys()).count("SessionCookie") == 1
 

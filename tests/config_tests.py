@@ -1,11 +1,11 @@
-"""Tests for app.env load() / validate()."""
+"""Tests for app.config reload() / validate()."""
 
 from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 
-from app import env
+from app.config import cfg
 
 
 @pytest.fixture
@@ -19,71 +19,71 @@ def env_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Path, Pa
     return data_dir, keys_file
 
 
-def test_validate_raises_when_required_vars_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_load_raises_when_required_vars_missing(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("SESSION_SECRET_KEY", raising=False)
     monkeypatch.delenv("LOCAL_DATA_PATH", raising=False)
     monkeypatch.delenv("API_KEYS_PATH", raising=False)
 
     with pytest.raises(RuntimeError, match="SESSION_SECRET_KEY"):
-        env.validate()
+        cfg.reload()
 
 
-def test_validate_passes_when_all_required_vars_set(
+def test_load_passes_when_all_required_vars_set(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("SESSION_SECRET_KEY", "a" * env.MIN_TOKEN_LENGTH)
+    monkeypatch.setenv("SESSION_SECRET_KEY", "a" * cfg.MIN_TOKEN_LENGTH)
     monkeypatch.setenv("APP_URL", "https://status.example.com")
 
-    env.validate()  # should not raise
+    cfg.reload()  # should not raise
 
 
-def test_load_refreshes_module_globals(monkeypatch: pytest.MonkeyPatch, env_paths: tuple[Path, Path]) -> None:
+def test_load_refreshes_cfg(monkeypatch: pytest.MonkeyPatch, env_paths: tuple[Path, Path]) -> None:
     data_dir, keys_file = env_paths
-    monkeypatch.setenv("SESSION_SECRET_KEY", "refreshed-secret")
+    monkeypatch.setenv("SESSION_SECRET_KEY", "r" * cfg.MIN_TOKEN_LENGTH)
 
-    env.load()
+    cfg.reload()
 
-    assert env.SESSION_SECRET_KEY == "refreshed-secret"  # noqa: S105
-    assert str(data_dir) == env.LOCAL_DATA_PATH
-    assert str(keys_file) == env.API_KEYS_PATH
+    assert cfg.SESSION_SECRET_KEY == "r" * cfg.MIN_TOKEN_LENGTH
+    assert str(data_dir) == cfg.LOCAL_DATA_PATH
+    assert str(keys_file) == cfg.API_KEYS_PATH
 
 
 def test_load_optional_int_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("PRESENCE_POLLING_INTERVAL_SECONDS", raising=False)
     monkeypatch.delenv("INTERNAL_POLLING_INTERVAL_SECONDS", raising=False)
 
-    env.load()
+    cfg.reload()
 
-    assert env.PRESENCE_POLLING_INTERVAL_SECONDS == 60
-    assert env.INTERNAL_POLLING_INTERVAL_SECONDS == 60
+    assert cfg.PRESENCE_POLLING_INTERVAL_SECONDS == 60
+    assert cfg.INTERNAL_POLLING_INTERVAL_SECONDS == 60
 
 
 def test_load_optional_int_override(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("PRESENCE_POLLING_INTERVAL_SECONDS", "120")
 
-    env.load()
+    cfg.reload()
 
-    assert env.PRESENCE_POLLING_INTERVAL_SECONDS == 120
+    assert cfg.PRESENCE_POLLING_INTERVAL_SECONDS == 120
 
 
 def test_load_https_only_true(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("HTTPS_ONLY", "true")
-    env.load()
-    assert env.HTTPS_ONLY is True
+    cfg.reload()
+    assert cfg.HTTPS_ONLY is True
 
 
 def test_load_https_only_false(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("HTTPS_ONLY", "false")
-    env.load()
-    assert env.HTTPS_ONLY is False
+    cfg.reload()
+    assert cfg.HTTPS_ONLY is False
 
 
 def test_load_router_creds_empty_string_becomes_none(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ROUTER_IP", "")
     monkeypatch.setenv("ROUTER_USERNAME", "")
-    env.load()
-    assert env.ROUTER_IP is None
-    assert env.ROUTER_USERNAME is None
+    cfg.reload()
+    assert cfg.ROUTER_IP is None
+    assert cfg.ROUTER_USERNAME is None
 
 
 def test_load_vapid_keys(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -91,60 +91,61 @@ def test_load_vapid_keys(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("VAPID_PUBLIC_KEY", "public")
     monkeypatch.setenv("VAPID_CLAIM_SUBJECT", "https://example.com")
 
-    env.load()
+    cfg.reload()
 
-    assert env.VAPID_PRIVATE_KEY == "private"
-    assert env.VAPID_PUBLIC_KEY == "public"
-    assert env.VAPID_CLAIM_SUBJECT == "https://example.com"
+    assert cfg.VAPID_PRIVATE_KEY == "private"
+    assert cfg.VAPID_PUBLIC_KEY == "public"
+    assert cfg.VAPID_CLAIM_SUBJECT == "https://example.com"
 
 
 def test_load_show_auth_button_default_is_false(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("SHOW_AUTH_BUTTON", raising=False)
-    env.load()
-    assert env.SHOW_AUTH_BUTTON is False
+    cfg.reload()
+    assert cfg.SHOW_AUTH_BUTTON is False
 
 
 def test_load_show_auth_button_true(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SHOW_AUTH_BUTTON", "true")
-    env.load()
-    assert env.SHOW_AUTH_BUTTON is True
+    cfg.reload()
+    assert cfg.SHOW_AUTH_BUTTON is True
 
 
 def test_load_admin_token_default_is_none(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("ADMIN_TOKEN", raising=False)
-    env.load()
-    assert env.ADMIN_TOKEN is None
+    cfg.reload()
+    assert cfg.ADMIN_TOKEN is None
 
 
 def test_load_admin_token_override(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("ADMIN_TOKEN", "some-token-value")
-    env.load()
-    assert env.ADMIN_TOKEN == "some-token-value"  # noqa: S105
+    token = "a" * cfg.MIN_TOKEN_LENGTH
+    monkeypatch.setenv("ADMIN_TOKEN", token)
+    cfg.reload()
+    assert token == cfg.ADMIN_TOKEN
 
 
-def test_validate_raises_when_admin_token_too_short(
+def test_load_raises_when_admin_token_too_short(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("SESSION_SECRET_KEY", "a" * env.MIN_TOKEN_LENGTH)
+    monkeypatch.setenv("SESSION_SECRET_KEY", "a" * cfg.MIN_TOKEN_LENGTH)
     monkeypatch.setenv("ADMIN_TOKEN", "short")
     with pytest.raises(RuntimeError, match="ADMIN_TOKEN"):
-        env.validate()
+        cfg.reload()
 
 
-def test_validate_passes_when_admin_token_meets_minimum_length(
+def test_load_passes_when_admin_token_meets_minimum_length(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("SESSION_SECRET_KEY", "a" * env.MIN_TOKEN_LENGTH)
-    monkeypatch.setenv("ADMIN_TOKEN", "a" * env.MIN_TOKEN_LENGTH)
-    env.validate()  # should not raise
+    monkeypatch.setenv("SESSION_SECRET_KEY", "a" * cfg.MIN_TOKEN_LENGTH)
+    monkeypatch.setenv("ADMIN_TOKEN", "a" * cfg.MIN_TOKEN_LENGTH)
+    cfg.reload()  # should not raise
 
 
-def test_validate_raises_when_session_secret_key_too_short(
+def test_load_raises_when_session_secret_key_too_short(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("SESSION_SECRET_KEY", "short")
     with pytest.raises(RuntimeError, match="SESSION_SECRET_KEY"):
-        env.validate()
+        cfg.reload()
 
 
 # ---------------------------------------------------------------------------
@@ -159,13 +160,13 @@ def test_validate_raises_when_session_secret_key_too_short(
         (
             {"ROUTER_IP": "192.168.1.1", "ROUTER_USERNAME": "admin", "ROUTER_PASSWORD": "secret"},
             [],
-            env.is_presence_enabled,
+            cfg.features.is_presence_enabled,
             True,
         ),
         (
             {"ROUTER_IP": "192.168.1.1"},
             ["ROUTER_USERNAME", "ROUTER_PASSWORD"],
-            env.is_presence_enabled,
+            cfg.features.is_presence_enabled,
             False,
         ),
         # push
@@ -176,66 +177,54 @@ def test_validate_raises_when_session_secret_key_too_short(
                 "VAPID_CLAIM_SUBJECT": "https://example.com",
             },
             [],
-            env.is_push_enabled,
+            cfg.features.is_push_enabled,
             True,
         ),
         (
             {"VAPID_PRIVATE_KEY": "private"},
             ["VAPID_PUBLIC_KEY", "VAPID_CLAIM_SUBJECT"],
-            env.is_push_enabled,
+            cfg.features.is_push_enabled,
             False,
         ),
         # weather
         (
             {"OPENWEATHERMAP_API_KEY": "apikey", "WEATHER_LAT": "48.3", "WEATHER_LON": "10.9"},
             [],
-            env.is_weather_enabled,
+            cfg.features.is_weather_enabled,
             True,
         ),
         (
             {"OPENWEATHERMAP_API_KEY": "apikey"},
             ["WEATHER_LAT", "WEATHER_LON"],
-            env.is_weather_enabled,
+            cfg.features.is_weather_enabled,
             False,
         ),
         # legal page
         (
             {"OPERATOR_NAME": "Max Mustermann", "OPERATOR_EMAIL": "max@example.com"},
             [],
-            env.is_legal_page_enabled,
+            cfg.features.is_legal_page_enabled,
             True,
         ),
         (
             {"OPERATOR_NAME": "Max Mustermann"},
             ["OPERATOR_EMAIL"],
-            env.is_legal_page_enabled,
+            cfg.features.is_legal_page_enabled,
             False,
         ),
         # login button
         (
             {"SHOW_AUTH_BUTTON": "true"},
             [],
-            env.is_login_button_enabled,
+            cfg.features.is_login_button_enabled,
             True,
         ),
         (
             {},
             ["SHOW_AUTH_BUTTON"],
-            env.is_login_button_enabled,
+            cfg.features.is_login_button_enabled,
             False,
         ),
-    ],
-    ids=[
-        "presence-enabled",
-        "presence-disabled",
-        "push-enabled",
-        "push-disabled",
-        "weather-enabled",
-        "weather-disabled",
-        "legal-enabled",
-        "legal-disabled",
-        "login-button-enabled",
-        "login-button-disabled",
     ],
 )
 def test_feature_flags(
@@ -249,5 +238,11 @@ def test_feature_flags(
         monkeypatch.setenv(k, v)
     for k in del_vars:
         monkeypatch.delenv(k, raising=False)
-    env.load()
+    cfg.reload()
     assert feature_fn() is expected
+
+
+def test_validate_raises_when_tz_is_invalid(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cfg, "TZ", "Not/A_Timezone")
+    with pytest.raises(RuntimeError, match="Invalid timezone"):
+        cfg._validate()

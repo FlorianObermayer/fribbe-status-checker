@@ -1,10 +1,10 @@
 """Helpers for safely including sensitive tokens in log messages."""
 
-from app import env
+from app.config import cfg
 
 # Number of characters to reveal at the start of a token in log output.
 # Enough to correlate across log lines; negligible exposure on MIN_TOKEN_LENGTH+ tokens.
-_VISIBLE_PREFIX = max(8, env.MIN_TOKEN_LENGTH // 6)
+_VISIBLE_PREFIX = max(8, cfg.MIN_TOKEN_LENGTH // 6)
 
 
 def redact_key(key: str | None) -> str:

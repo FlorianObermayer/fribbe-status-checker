@@ -17,9 +17,9 @@ from fastapi.responses import RedirectResponse
 from fastapi.testclient import TestClient
 from starsessions import InMemoryStore, SessionAutoloadMiddleware, SessionMiddleware
 
-from app import env
 from app.api.hybrid_auth import AuthRedirectError
 from app.api.requests import AuthRedirectQuery
+from app.config import cfg
 from app.csrf import FormFieldCSRFMiddleware
 from app.routers import api_keys, auth, internal, misc, notification_ui, notifications, pages, push, status, wardens
 
@@ -49,7 +49,7 @@ def test_app() -> FastAPI:
     session_store = InMemoryStore()
     test_app.add_middleware(
         FormFieldCSRFMiddleware,
-        secret=env.SESSION_SECRET_KEY,
+        secret=cfg.SESSION_SECRET_KEY,
         sensitive_cookies={"session_cookie"},
         header_name="x-csrf-token",
         cookie_secure=False,
@@ -60,7 +60,7 @@ def test_app() -> FastAPI:
         SessionMiddleware,
         store=session_store,
         cookie_name="session_cookie",
-        lifetime=env.SESSION_MAX_AGE_SECONDS,
+        lifetime=cfg.SESSION_MAX_AGE_SECONDS,
         cookie_https_only=False,
         cookie_same_site="lax",
     )
