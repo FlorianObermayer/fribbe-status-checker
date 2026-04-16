@@ -30,6 +30,11 @@
     "url": "UNKNOWN"
   },
   {
+    "name": "python-multipart",
+    "license": "Apache-2.0",
+    "url": "https://github.com/Kludex/python-multipart"
+  },
+  {
     "name": "pywebpush",
     "license": "MPL-2.0",
     "url": "https://github.com/web-push-libs/pywebpush"
