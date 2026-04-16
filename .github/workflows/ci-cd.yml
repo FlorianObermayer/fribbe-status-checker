@@ -60,7 +60,6 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-      gists: write
     steps:
       - uses: actions/checkout@v6
         with:
