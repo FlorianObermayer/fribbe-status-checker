@@ -89,7 +89,7 @@ jobs:
           hide-comment: true
       - name: Coverage PR comment
         if: github.event_name == 'pull_request' && !cancelled()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         env:
           SUMMARY_REPORT: ${{ steps.coverage.outputs.summaryReport }}
           GLOBAL_PCT: ${{ steps.coverage.outputs.coverage }}
