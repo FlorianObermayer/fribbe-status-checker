@@ -12,7 +12,7 @@ from zoneinfo import ZoneInfo
 
 from pywebpush import WebPushException, webpush  # type: ignore[import-untyped]
 
-from app import env
+from app.config import cfg
 from app.services.persistent_collections import PersistentDict
 
 logger = logging.getLogger("uvicorn.error")
@@ -74,7 +74,7 @@ class PushSubscriptionService:
         self._vapid_public_key = vapid_public_key
         self._vapid_claims: dict[str, str | int] = {"sub": vapid_claim_subject}
         self._store: PersistentDict[PushSubscription] = PersistentDict(
-            str(Path(env.LOCAL_DATA_PATH) / "push_subscriptions.json"),
+            str(Path(cfg.LOCAL_DATA_PATH) / "push_subscriptions.json"),
             value_type=PushSubscription,
         )
 
@@ -107,7 +107,7 @@ class PushSubscriptionService:
             endpoint=endpoint,
             p256dh=p256dh,
             auth=auth,
-            created=datetime.now(tz=ZoneInfo(env.TZ)),
+            created=datetime.now(tz=ZoneInfo(cfg.TZ)),
             topics=list(topics) if topics is not None else list(PushTopic),
         )
         self._store[auth] = sub

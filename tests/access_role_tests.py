@@ -14,10 +14,10 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app import env
 from app.api.access_role import AccessRole
 from app.api.ephemeral_api_key_store import EphemeralAPIKeyStore
 from app.api.responses import ApiKey, MaskedApiKey
+from app.config import cfg
 from app.dependencies import get_internal_service, get_notification_service
 from tests.conftest import TEST_ADMIN_TOKEN, mock_internal_svc
 
@@ -28,7 +28,7 @@ _NOW = datetime(2026, 4, 13, 12, 0, 0, tzinfo=_UTC)
 def _make_key(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, role: AccessRole) -> ApiKey:
     """Create and persist an API key with the given role."""
     keys_path = tmp_path / "api_keys.json"
-    monkeypatch.setattr(env, "API_KEYS_PATH", str(keys_path))
+    monkeypatch.setattr(cfg, "API_KEYS_PATH", str(keys_path))
     api_key = ApiKey.generate_new(
         comment=f"test-{role.name}",
         valid_until=datetime(2030, 12, 31, tzinfo=_UTC),
@@ -61,7 +61,7 @@ def test_access_role_ordering() -> None:
 
 def test_api_key_role_defaults_to_reader() -> None:
     key = ApiKey(
-        key="A" * env.MIN_TOKEN_LENGTH,
+        key="A" * cfg.MIN_TOKEN_LENGTH,
         comment="test",
         valid_until=datetime(2030, 1, 1, tzinfo=_UTC),
     )
@@ -70,7 +70,7 @@ def test_api_key_role_defaults_to_reader() -> None:
 
 def test_api_key_to_dict_includes_role() -> None:
     key = ApiKey(
-        key="A" * env.MIN_TOKEN_LENGTH,
+        key="A" * cfg.MIN_TOKEN_LENGTH,
         comment="t",
         valid_until=datetime(2030, 1, 1, tzinfo=_UTC),
         role=AccessRole.NOTIFICATION_OPERATOR,
@@ -81,7 +81,7 @@ def test_api_key_to_dict_includes_role() -> None:
 
 def test_api_key_from_dict_parses_role() -> None:
     d = {
-        "key": "A" * env.MIN_TOKEN_LENGTH,
+        "key": "A" * cfg.MIN_TOKEN_LENGTH,
         "comment": "",
         "valid_until": "2030-01-01T00:00:00+00:00",
         "role": "100",
@@ -93,7 +93,7 @@ def test_api_key_from_dict_parses_role() -> None:
 def test_api_key_from_dict_parses_legacy_role_name() -> None:
     """Keys stored with the old name-based format must still deserialize correctly."""
     d = {
-        "key": "A" * env.MIN_TOKEN_LENGTH,
+        "key": "A" * cfg.MIN_TOKEN_LENGTH,
         "comment": "",
         "valid_until": "2030-01-01T00:00:00+00:00",
         "role": "notification_operator",
@@ -104,7 +104,7 @@ def test_api_key_from_dict_parses_legacy_role_name() -> None:
 
 def test_api_key_from_dict_missing_role_defaults_to_reader() -> None:
     d = {
-        "key": "A" * env.MIN_TOKEN_LENGTH,
+        "key": "A" * cfg.MIN_TOKEN_LENGTH,
         "comment": "",
         "valid_until": "2030-01-01T00:00:00+00:00",
     }
@@ -147,7 +147,7 @@ def test_get_valid_key_role_returns_none_for_expired_key(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     keys_path = tmp_path / "api_keys.json"
-    monkeypatch.setattr(env, "API_KEYS_PATH", str(keys_path))
+    monkeypatch.setattr(cfg, "API_KEYS_PATH", str(keys_path))
     api_key = ApiKey.generate_new(
         comment="expired",
         valid_until=datetime(2020, 1, 1, tzinfo=_UTC),
@@ -162,7 +162,7 @@ def test_get_valid_key_role_returns_none_for_unknown_key(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     keys_path = tmp_path / "api_keys.json"
-    monkeypatch.setattr(env, "API_KEYS_PATH", str(keys_path))
+    monkeypatch.setattr(cfg, "API_KEYS_PATH", str(keys_path))
     EphemeralAPIKeyStore.save([])
     assert EphemeralAPIKeyStore.get_valid_key_role("nonexistent") is None
 
@@ -339,7 +339,7 @@ def test_admin_token_accesses_reader_endpoint(
     test_app: FastAPI,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     test_app.dependency_overrides[get_internal_service] = mock_internal_svc
 
     response = client.get("/api/internal/details", headers={"api_key": TEST_ADMIN_TOKEN})
@@ -351,7 +351,7 @@ def test_admin_token_accesses_notification_operator_endpoint(
     test_app: FastAPI,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     test_app.dependency_overrides[get_notification_service] = _mock_notification_svc
 
     response = client.post(
@@ -366,7 +366,7 @@ def test_admin_token_accesses_admin_endpoint(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
 
     response = client.patch(
         "/api/internal/config",
@@ -425,7 +425,7 @@ def test_admin_session_via_form_login(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Logging in with ADMIN_TOKEN via /auth should grant full ADMIN role."""
-    monkeypatch.setattr(env, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     test_app.dependency_overrides[get_notification_service] = _mock_notification_svc
 
     client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
@@ -449,7 +449,7 @@ def test_admin_session_via_form_login(
 
 def test_masked_api_key_includes_role() -> None:
     key = ApiKey(
-        key="A" * env.MIN_TOKEN_LENGTH,
+        key="A" * cfg.MIN_TOKEN_LENGTH,
         comment="test",
         valid_until=datetime(2030, 1, 1, tzinfo=_UTC),
         role=AccessRole.NOTIFICATION_OPERATOR,
@@ -468,7 +468,7 @@ def test_role_persists_through_store_save_load(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     keys_path = tmp_path / "api_keys.json"
-    monkeypatch.setattr(env, "API_KEYS_PATH", str(keys_path))
+    monkeypatch.setattr(cfg, "API_KEYS_PATH", str(keys_path))
 
     key = ApiKey.generate_new(
         comment="persist-test",

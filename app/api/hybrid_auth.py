@@ -4,10 +4,10 @@ import secrets
 from fastapi import HTTPException, Request
 from starsessions import regenerate_session_id
 
-from app import env
 from app.api.access_role import AccessRole
 from app.api.ephemeral_api_key_header import EphemeralAPIKeyHeader
 from app.api.ephemeral_api_key_store import EphemeralAPIKeyStore
+from app.config import cfg
 
 
 class AuthRedirectError(Exception):
@@ -26,7 +26,7 @@ def resolve_session_subject(request: Request) -> tuple[str, AccessRole] | None:
     kind = request.session.get("kind")
 
     if kind == "admin":
-        admin_token = env.ADMIN_TOKEN
+        admin_token = cfg.ADMIN_TOKEN
         if admin_token:
             subject_hash = request.session.get("subject_hash")
             if subject_hash and secrets.compare_digest(hashlib.sha256(admin_token.encode()).hexdigest(), subject_hash):
@@ -51,7 +51,7 @@ def resolve_session_subject(request: Request) -> tuple[str, AccessRole] | None:
 
 def create_session(request: Request, token: str) -> bool:
     """Populate *request.session* for *token*.  Returns True on success."""
-    admin_token = env.ADMIN_TOKEN
+    admin_token = cfg.ADMIN_TOKEN
     if admin_token and secrets.compare_digest(token, admin_token):
         request.session.clear()
         request.session["kind"] = "admin"
@@ -69,7 +69,7 @@ def create_session(request: Request, token: str) -> bool:
 
 def _resolve_header_role(api_key: str) -> AccessRole:
     """Determine the role for a credential supplied via the API key header."""
-    admin_token = env.ADMIN_TOKEN
+    admin_token = cfg.ADMIN_TOKEN
     if admin_token and secrets.compare_digest(api_key, admin_token):
         return AccessRole.ADMIN
     return EphemeralAPIKeyStore.get_valid_key_role(api_key) or AccessRole.READER

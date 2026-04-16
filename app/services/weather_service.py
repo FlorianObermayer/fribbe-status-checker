@@ -4,7 +4,7 @@ Usage:
     service = WeatherService()
     weather = service.get_condition()   # Weather | None
 
-Results are cached for env.WEATHER_CACHE_TTL_SECONDS to avoid hammering the API.
+Results are cached for cfg.WEATHER_CACHE_TTL_SECONDS to avoid hammering the API.
 Returns None when no API key / coordinates are configured or the request fails.
 """
 
@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta, timezone
 from enum import Enum
 
-from app import env
+from app.config import cfg
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -125,7 +125,7 @@ class WeatherService:
         if self._cache_timestamp is None:
             return False
         age = (datetime.now(UTC) - self._cache_timestamp).total_seconds()
-        return age < env.WEATHER_CACHE_TTL_SECONDS
+        return age < cfg.WEATHER_CACHE_TTL_SECONDS
 
     def _fetch(self) -> Weather | None:
         url = f"{CURRENT_WEATHER_URL}?lat={self._lat}&lon={self._lon}&appid={self._api_key}&units=metric"

@@ -16,7 +16,7 @@ from typing import Annotated, cast
 
 from fastapi import Depends, HTTPException
 
-from app import env
+from app.config import cfg
 from app.services.internal.internal_service import InternalService
 from app.services.message_service import MessageService
 from app.services.notification_service import NotificationService
@@ -57,21 +57,19 @@ def startup() -> None:
 
     Must be called exactly once during FastAPI lifespan startup.
     """
-    env.validate()
-
     # -- Occupancy -----------------------------------------------------------
     _svc.occupancy = OccupancyService()
-    _svc.occupancy.start_polling(env.OCCUPANCY_POLLING_INTERVAL_SECONDS)
+    _svc.occupancy.start_polling(cfg.OCCUPANCY_POLLING_INTERVAL_SECONDS)
 
     # -- Internal (router device tracking) -----------------------------------
     _svc.internal = InternalService()
-    if env.is_presence_enabled():
+    if cfg.features.is_presence_enabled():
         _svc.internal.start_polling(
-            env.ROUTER_IP,
-            env.ROUTER_USERNAME,
-            env.ROUTER_PASSWORD,
-            env.INTERNAL_POLLING_INTERVAL_SECONDS,
-            env.INTERNAL_POLLING_DELAY_SECONDS,
+            cfg.ROUTER_IP,
+            cfg.ROUTER_USERNAME,
+            cfg.ROUTER_PASSWORD,
+            cfg.INTERNAL_POLLING_INTERVAL_SECONDS,
+            cfg.INTERNAL_POLLING_DELAY_SECONDS,
         )
     else:
         _logger.warning("Router credentials not configured; internal polling disabled")
@@ -80,11 +78,11 @@ def startup() -> None:
     _svc.message = MessageService()
 
     # -- Push notifications (optional) ---------------------------------------
-    if env.is_push_enabled():
+    if cfg.features.is_push_enabled():
         _svc.push_subscription = PushSubscriptionService(
-            cast("str", env.VAPID_PRIVATE_KEY),
-            cast("str", env.VAPID_PUBLIC_KEY),
-            cast("str", env.VAPID_CLAIM_SUBJECT),
+            cast("str", cfg.VAPID_PRIVATE_KEY),
+            cast("str", cfg.VAPID_PUBLIC_KEY),
+            cast("str", cfg.VAPID_CLAIM_SUBJECT),
         )
     else:
         _logger.warning("VAPID keys not configured; push notifications disabled")
@@ -93,11 +91,11 @@ def startup() -> None:
     _svc.notification.start_cleanup_job()
 
     # -- Weather (optional) --------------------------------------------------
-    if env.is_weather_enabled():
+    if cfg.features.is_weather_enabled():
         _svc.weather = WeatherService(
-            cast("str", env.OPENWEATHERMAP_API_KEY),
-            cast("float", env.WEATHER_LAT),
-            cast("float", env.WEATHER_LON),
+            cast("str", cfg.OPENWEATHERMAP_API_KEY),
+            cast("float", cfg.WEATHER_LAT),
+            cast("float", cfg.WEATHER_LON),
         )
     else:
         _logger.warning("OpenWeatherMap not configured; weather-aware messages disabled")
@@ -109,13 +107,13 @@ def startup() -> None:
         _svc.push_subscription,
         _svc.occupancy,
     )
-    if env.is_presence_enabled():
+    if cfg.features.is_presence_enabled():
         _svc.presence.start_polling(
-            env.ROUTER_IP,
-            env.ROUTER_USERNAME,
-            env.ROUTER_PASSWORD,
-            env.PRESENCE_POLLING_INTERVAL_SECONDS,
-            env.PRESENCE_POLLING_DELAY_SECONDS,
+            cfg.ROUTER_IP,
+            cfg.ROUTER_USERNAME,
+            cfg.ROUTER_PASSWORD,
+            cfg.PRESENCE_POLLING_INTERVAL_SECONDS,
+            cfg.PRESENCE_POLLING_DELAY_SECONDS,
         )
     else:
         _logger.warning("Router credentials not configured; presence polling disabled")

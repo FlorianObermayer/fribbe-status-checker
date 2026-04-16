@@ -24,36 +24,29 @@ def reset_singletons() -> None:
 @patch("app.dependencies.MessageService", autospec=True)
 @patch("app.dependencies.NotificationService", autospec=True)
 @patch("app.dependencies.PresenceLevelService", autospec=True)
-@patch("app.dependencies.env")
+@patch("app.dependencies.cfg")
 def test_startup_creates_services_and_starts_pollers(  # noqa: PLR0913
-    mock_env: MagicMock,
+    mock_cfg: MagicMock,
     mock_presence_cls: MagicMock,
     mock_notification_cls: MagicMock,
     mock_message_cls: MagicMock,
     mock_internal_cls: MagicMock,
     mock_occupancy_cls: MagicMock,
 ) -> None:
-    mock_env.OPENWEATHERMAP_API_KEY = None
-    mock_env.WEATHER_LAT = None
-    mock_env.WEATHER_LON = None
-    mock_env.VAPID_PRIVATE_KEY = None
-    mock_env.VAPID_PUBLIC_KEY = None
-    mock_env.VAPID_CLAIM_SUBJECT = None
-    mock_env.OCCUPANCY_POLLING_INTERVAL_SECONDS = 360
-    mock_env.ROUTER_IP = "192.168.1.1"
-    mock_env.ROUTER_USERNAME = "admin"
-    mock_env.ROUTER_PASSWORD = "secret"  # noqa: S105
-    mock_env.INTERNAL_POLLING_INTERVAL_SECONDS = 60
-    mock_env.INTERNAL_POLLING_DELAY_SECONDS = 30
-    mock_env.PRESENCE_POLLING_INTERVAL_SECONDS = 60
-    mock_env.PRESENCE_POLLING_DELAY_SECONDS = 0
-    mock_env.is_presence_enabled.return_value = True
-    mock_env.is_push_enabled.return_value = False
-    mock_env.is_weather_enabled.return_value = False
+    mock_cfg.OCCUPANCY_POLLING_INTERVAL_SECONDS = 360
+    mock_cfg.ROUTER_IP = "192.168.1.1"
+    mock_cfg.ROUTER_USERNAME = "admin"
+    mock_cfg.ROUTER_PASSWORD = "secret"  # noqa: S105
+    mock_cfg.INTERNAL_POLLING_INTERVAL_SECONDS = 60
+    mock_cfg.INTERNAL_POLLING_DELAY_SECONDS = 30
+    mock_cfg.PRESENCE_POLLING_INTERVAL_SECONDS = 60
+    mock_cfg.PRESENCE_POLLING_DELAY_SECONDS = 0
+    mock_cfg.features.is_presence_enabled.return_value = True
+    mock_cfg.features.is_push_enabled.return_value = False
+    mock_cfg.features.is_weather_enabled.return_value = False
 
     deps.startup()
 
-    mock_env.validate.assert_called_once()
     mock_occupancy_cls.return_value.start_polling.assert_called_once_with(360)
     mock_internal_cls.return_value.start_polling.assert_called_once()
     mock_message_cls.assert_called_once()
@@ -77,31 +70,25 @@ def test_startup_creates_services_and_starts_pollers(  # noqa: PLR0913
 @patch("app.dependencies.InternalService", autospec=True)
 @patch("app.dependencies.NotificationService", autospec=True)
 @patch("app.dependencies.PresenceLevelService", autospec=True)
-@patch("app.dependencies.env")
+@patch("app.dependencies.cfg")
 def test_shutdown_stops_all_pollers(
-    mock_env: MagicMock,
+    mock_cfg: MagicMock,
     mock_presence_cls: MagicMock,
     mock_notification_cls: MagicMock,
     mock_internal_cls: MagicMock,
     mock_occupancy_cls: MagicMock,
 ) -> None:
-    mock_env.OPENWEATHERMAP_API_KEY = None
-    mock_env.WEATHER_LAT = None
-    mock_env.WEATHER_LON = None
-    mock_env.VAPID_PRIVATE_KEY = None
-    mock_env.VAPID_PUBLIC_KEY = None
-    mock_env.VAPID_CLAIM_SUBJECT = None
-    mock_env.OCCUPANCY_POLLING_INTERVAL_SECONDS = 360
-    mock_env.ROUTER_IP = "192.168.1.1"
-    mock_env.ROUTER_USERNAME = "admin"
-    mock_env.ROUTER_PASSWORD = "secret"  # noqa: S105
-    mock_env.INTERNAL_POLLING_INTERVAL_SECONDS = 60
-    mock_env.INTERNAL_POLLING_DELAY_SECONDS = 30
-    mock_env.PRESENCE_POLLING_INTERVAL_SECONDS = 60
-    mock_env.PRESENCE_POLLING_DELAY_SECONDS = 0
-    mock_env.is_presence_enabled.return_value = True
-    mock_env.is_push_enabled.return_value = False
-    mock_env.is_weather_enabled.return_value = False
+    mock_cfg.OCCUPANCY_POLLING_INTERVAL_SECONDS = 360
+    mock_cfg.ROUTER_IP = "192.168.1.1"
+    mock_cfg.ROUTER_USERNAME = "admin"
+    mock_cfg.ROUTER_PASSWORD = "secret"  # noqa: S105
+    mock_cfg.INTERNAL_POLLING_INTERVAL_SECONDS = 60
+    mock_cfg.INTERNAL_POLLING_DELAY_SECONDS = 30
+    mock_cfg.PRESENCE_POLLING_INTERVAL_SECONDS = 60
+    mock_cfg.PRESENCE_POLLING_DELAY_SECONDS = 0
+    mock_cfg.features.is_presence_enabled.return_value = True
+    mock_cfg.features.is_push_enabled.return_value = False
+    mock_cfg.features.is_weather_enabled.return_value = False
 
     deps.startup()
     deps.shutdown()

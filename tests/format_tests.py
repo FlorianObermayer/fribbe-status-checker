@@ -1,6 +1,6 @@
 import pytest
 
-from app import env
+from app.config import cfg
 from app.format import seconds_to_human
 
 
@@ -45,7 +45,7 @@ def test_complex_duration() -> None:
 
 
 def test_default_session_max_age() -> None:
-    assert seconds_to_human(env.SESSION_MAX_AGE_SECONDS) == "7 Tage"
+    assert seconds_to_human(cfg.SESSION_MAX_AGE_SECONDS) == "7 Tage"
 
 
 def test_negative_raises() -> None:

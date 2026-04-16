@@ -10,8 +10,8 @@ from zoneinfo import ZoneInfo
 import markdown
 import nh3
 
-from app import env
 from app.api.requests import NotificationFilterId
+from app.config import cfg
 from app.services.persistent_collections import PersistentDict
 from app.services.polling_service import PollingService
 from app.services.push_sender import PushSender
@@ -101,7 +101,7 @@ class NotificationService(PollingService):
         self._push_sender = push_sender
         self._known_active_nids: set[str] | None = None  # None until first poll; avoids re-pushing on startup
         self._store: PersistentDict[Notification] = PersistentDict(
-            str(Path(env.LOCAL_DATA_PATH) / "notifications.json"),
+            str(Path(cfg.LOCAL_DATA_PATH) / "notifications.json"),
             value_type=Notification,
         )
 
@@ -109,7 +109,7 @@ class NotificationService(PollingService):
         """Create a notification, send a push if active, and return its ID."""
         nid = str(f"nid-{uuid.uuid4()}")
         notification = Notification(
-            created=datetime.now(tz=ZoneInfo(env.TZ)),
+            created=datetime.now(tz=ZoneInfo(cfg.TZ)),
             id=nid,
             message=message,
             valid_from=valid_from,

@@ -4,8 +4,8 @@ from enum import StrEnum
 from fastapi import Query
 from pydantic import BaseModel, Field, field_validator
 
-from app import env
 from app.api.access_role import AccessRole
+from app.config import cfg
 from app.services.push_subscription_service import PushTopic
 
 
@@ -141,7 +141,7 @@ class PatchPushTopicsRequest(BaseModel):
 class CreateApiKeyRequest(BaseModel):
     """Request body for creating a new API key."""
 
-    comment: str = Field(..., min_length=env.API_KEY_COMMENT_MIN_LENGTH, max_length=env.API_KEY_COMMENT_MAX_LENGTH)
+    comment: str = Field(..., min_length=cfg.API_KEY_COMMENT_MIN_LENGTH, max_length=cfg.API_KEY_COMMENT_MAX_LENGTH)
     valid_until: datetime | None = None
     role: AccessRole = AccessRole.READER
 
@@ -151,8 +151,8 @@ class DeleteApiKeyRequest(BaseModel):
 
     key: str = Field(
         ...,
-        min_length=env.MIN_KEY_PREFIX_LENGTH,
-        description=f"Full API key or unique prefix (at least {env.MIN_KEY_PREFIX_LENGTH} characters)",
+        min_length=cfg.MIN_KEY_PREFIX_LENGTH,
+        description=f"Full API key or unique prefix (at least {cfg.MIN_KEY_PREFIX_LENGTH} characters)",
     )
 
 

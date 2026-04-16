@@ -4,8 +4,8 @@ import secrets
 from fastapi import Request
 from fastapi.security import APIKeyHeader
 
-from app import env
 from app.api.ephemeral_api_key_store import EphemeralAPIKeyStore
+from app.config import cfg
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -24,7 +24,7 @@ class EphemeralAPIKeyHeader(APIKeyHeader):
     async def __call__(self, request: Request) -> str | None:
         """Validate the API key from the request header."""
         api_key = await super().__call__(request)
-        if api_key and env.ADMIN_TOKEN and secrets.compare_digest(api_key, env.ADMIN_TOKEN):
+        if api_key and cfg.ADMIN_TOKEN and secrets.compare_digest(api_key, cfg.ADMIN_TOKEN):
             return api_key
         if not api_key or not EphemeralAPIKeyStore.is_key_valid(api_key):
             api_key = None

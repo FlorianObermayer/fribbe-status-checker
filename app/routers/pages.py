@@ -5,11 +5,11 @@ from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
 
-from app import env
 from app.api.access_role import AccessRole
 from app.api.ephemeral_api_key_store import EphemeralAPIKeyStore
 from app.api.hybrid_auth import PageAuth
 from app.api.requests import AuthRedirectQuery
+from app.config import cfg
 from app.dependencies import (
     MessageServiceDep,
     OccupancyServiceDep,
@@ -30,15 +30,15 @@ router = APIRouter()
 @router.get(Route.URL_INDEX, response_class=HTMLResponse, tags=["HTML"])
 def get_html(request: Request, for_date: str | None = None) -> HTMLResponse:
     """Serve the main index page with injected runtime config."""
-    setup_banner = not env.ADMIN_TOKEN and not EphemeralAPIKeyStore.has_valid_admin_key()
+    setup_banner = not cfg.ADMIN_TOKEN and not EphemeralAPIKeyStore.has_valid_admin_key()
     nav_ctx = NavContext(
         request,
-        show_auth_button=env.is_login_button_enabled(),
+        show_auth_button=cfg.features.is_login_button_enabled(),
         show_notification_create_btn=operator_or_above,
         show_api_keys_btn=admin,
         show_preview_btn=operator_or_above,
     )
-    _today = datetime.now(tz=ZoneInfo(env.TZ)).date()
+    _today = datetime.now(tz=ZoneInfo(cfg.TZ)).date()
     today_str = _today.isoformat()
     max_date_str = (_today + timedelta(days=365)).isoformat()
     return templates.TemplateResponse(
@@ -47,8 +47,8 @@ def get_html(request: Request, for_date: str | None = None) -> HTMLResponse:
         context={
             **nav_ctx,
             "setup_banner": setup_banner,
-            "app_url": env.APP_URL,
-            "show_legal": env.is_legal_page_enabled(),
+            "app_url": cfg.APP_URL,
+            "show_legal": cfg.features.is_legal_page_enabled(),
             "for_date_value": for_date or today_str,
             "today_str": today_str,
             "max_date_str": max_date_str,
@@ -101,7 +101,7 @@ def _build_status_context(
     ).message
 
     thresholds = PresenceThresholds().get_thresholds()
-    _today = datetime.now(tz=ZoneInfo(env.TZ)).date()
+    _today = datetime.now(tz=ZoneInfo(cfg.TZ)).date()
 
     return {
         "presence": {
@@ -159,7 +159,7 @@ def get_legal_page(
 
     Returns 404 when the legal page is not configured.
     """
-    if not env.is_legal_page_enabled():
+    if not cfg.features.is_legal_page_enabled():
         raise HTTPException(status_code=404, detail="Legal page not configured")
     nav_ctx = NavContext(
         request,
@@ -170,12 +170,12 @@ def get_legal_page(
         "legal.html",
         context={
             **nav_ctx,
-            "operator_name": env.OPERATOR_NAME,
-            "operator_email": env.OPERATOR_EMAIL,
-            "session_max_age": seconds_to_human(env.SESSION_MAX_AGE_SECONDS),
-            "feature_presence": env.is_presence_enabled(),
-            "feature_push": env.is_push_enabled(),
-            "feature_weather": env.is_weather_enabled(),
+            "operator_name": cfg.OPERATOR_NAME,
+            "operator_email": cfg.OPERATOR_EMAIL,
+            "session_max_age": seconds_to_human(cfg.SESSION_MAX_AGE_SECONDS),
+            "feature_presence": cfg.features.is_presence_enabled(),
+            "feature_push": cfg.features.is_push_enabled(),
+            "feature_weather": cfg.features.is_weather_enabled(),
         },
     )
 
@@ -215,8 +215,8 @@ def get_api_keys_page(
             "roles": roles,
             "role_labels": role_labels,
             "admin_role_label": AccessRole.ADMIN.display_name(),
-            "default_validity_days": env.DEFAULT_API_KEY_VALIDITY_DAYS,
-            "comment_min_length": env.API_KEY_COMMENT_MIN_LENGTH,
-            "comment_max_length": env.API_KEY_COMMENT_MAX_LENGTH,
+            "default_validity_days": cfg.DEFAULT_API_KEY_VALIDITY_DAYS,
+            "comment_min_length": cfg.API_KEY_COMMENT_MIN_LENGTH,
+            "comment_max_length": cfg.API_KEY_COMMENT_MAX_LENGTH,
         },
     )

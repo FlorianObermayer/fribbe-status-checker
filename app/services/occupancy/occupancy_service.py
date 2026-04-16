@@ -9,7 +9,7 @@ import dateparser
 from bs4 import BeautifulSoup, Tag
 from readerwriterlock import rwlock
 
-from app import env
+from app.config import cfg
 from app.services.occupancy.model import DailyOccupancy, Occupancy, OccupancySource, OccupancyType
 from app.services.occupancy.occupancy_parser import (
     parse_event_calendar,
@@ -31,7 +31,7 @@ class OccupancyService(PollingService):
         self.event_calendar_url = "https://fribbebeach.de/fribbe/veranstaltungskalender.html"
         self._week_occupancy: list[Occupancy] = []
         self._event_occupancy: list[Occupancy] = []
-        self._last_updated = datetime.now(tz=ZoneInfo(env.TZ))
+        self._last_updated = datetime.now(tz=ZoneInfo(cfg.TZ))
         self._last_error: Exception | None = None
         self._rwlock = rwlock.RWLockFair()
 
@@ -55,9 +55,9 @@ class OccupancyService(PollingService):
                 dateparser.parse(
                     for_date_str,
                     languages=["de", "en"],
-                    settings={"TIMEZONE": env.TZ},
+                    settings={"TIMEZONE": cfg.TZ},
                 )
-                or datetime.now(tz=ZoneInfo(env.TZ))
+                or datetime.now(tz=ZoneInfo(cfg.TZ))
             ).date()
             filtered_occupancies = [
                 occ for occ in self._week_occupancy + self._event_occupancy if occ.begin.date() == for_date
@@ -164,7 +164,7 @@ class OccupancyService(PollingService):
             with self._rwlock.gen_wlock():
                 self._week_occupancy = self._extend_to(parse_weekly_plan(weekly_table), 365)
                 self._event_occupancy = parse_event_calendar(event_table)
-                self._last_updated = datetime.now(tz=ZoneInfo(env.TZ))
+                self._last_updated = datetime.now(tz=ZoneInfo(cfg.TZ))
                 self._last_error = None
             logger.info("Refresh occupancy... DONE")
         except Exception as e:

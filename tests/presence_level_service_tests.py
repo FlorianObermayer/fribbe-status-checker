@@ -147,7 +147,7 @@ def test_no_push_without_service() -> None:
 def test_start_polling_does_not_start_when_router_ip_missing() -> None:
     svc = _make_service()
 
-    svc.start_polling(router_ip=None, username="admin", password="pass")
+    svc.start_polling(router_ip=None, username="admin", password="pass")  # noqa: S106
 
     assert not svc.is_polling
 
@@ -155,7 +155,7 @@ def test_start_polling_does_not_start_when_router_ip_missing() -> None:
 def test_start_polling_does_not_start_when_username_missing() -> None:
     svc = _make_service()
 
-    svc.start_polling(router_ip="192.168.1.1", username=None, password="pass")
+    svc.start_polling(router_ip="192.168.1.1", username=None, password="pass")  # noqa: S106
 
     assert not svc.is_polling
 

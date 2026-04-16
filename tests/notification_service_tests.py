@@ -7,7 +7,8 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from app import env
+from app.api.requests import NotificationFilterId
+from app.config import cfg
 from app.services.notification_service import _PUSH_TITLE, NotificationService, _push_message
 from tests.test_utils import FakePushSender
 
@@ -21,7 +22,7 @@ def _make_service(
     monkeypatch: pytest.MonkeyPatch,
     push: FakePushSender | None = None,
 ) -> NotificationService:
-    monkeypatch.setattr(env, "LOCAL_DATA_PATH", str(tmp_path))
+    monkeypatch.setattr(cfg, "LOCAL_DATA_PATH", str(tmp_path))
     return NotificationService(push_sender=push)
 
 
@@ -191,12 +192,11 @@ async def test_poll_skips_when_no_push_sender(tmp_path: Path, monkeypatch: pytes
 
 
 # ---------------------------------------------------------------------------
-# delete_many()
+# delete_many
 # ---------------------------------------------------------------------------
 
 
 def test_delete_many_all_clears_store(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    from app.api.requests import NotificationFilterId
 
     svc = _make_service(tmp_path, monkeypatch)
     svc.add("first", None, None, enabled=True)
@@ -209,7 +209,6 @@ def test_delete_many_all_clears_store(tmp_path: Path, monkeypatch: pytest.Monkey
 
 
 def test_delete_many_all_active_deletes_only_active(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    from app.api.requests import NotificationFilterId
 
     svc = _make_service(tmp_path, monkeypatch)
     svc.add("active msg", None, None, enabled=True)
@@ -243,7 +242,7 @@ def test_delete_many_nonexistent_nid_returns_zero(tmp_path: Path, monkeypatch: p
 
 
 # ---------------------------------------------------------------------------
-# _run_clean_old_notifications()
+# _run_clean_old_notifications
 # ---------------------------------------------------------------------------
 
 

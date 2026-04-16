@@ -59,7 +59,7 @@ uv run lint --fix      # backend and frontend lint + auto-fix
 
 ## Configuration
 
-All environment variables are declared in [`app/env.py`](app/env.py). See [`.env.template`](.env.template) for the full list with defaults.
+All environment variables are declared in [`app/config.py`](app/config.py). See [`.env.template`](.env.template) for the full list with defaults.
 
 **Required:** `APP_URL`, `SESSION_SECRET_KEY`, `LOCAL_DATA_PATH`, `API_KEYS_PATH`.
 

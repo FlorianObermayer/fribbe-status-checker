@@ -2,9 +2,9 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from starsessions import regenerate_session_id
 
-from app import env
 from app.api.hybrid_auth import create_session
 from app.api.requests import AuthBody
+from app.config import cfg
 from app.routers.nav_context import Route
 
 router = APIRouter()
@@ -30,5 +30,5 @@ async def signout(request: Request) -> RedirectResponse:
     response = RedirectResponse(url=Route.URL_INDEX, status_code=303)
     # Explicitly expire the CSRF token cookie; the CSRF middleware only sets it
     # when absent, so it would otherwise linger in the browser after sign-out.
-    response.delete_cookie("csrftoken", path="/", samesite="lax", secure=env.HTTPS_ONLY)
+    response.delete_cookie("csrftoken", path="/", samesite="lax", secure=cfg.HTTPS_ONLY)
     return response

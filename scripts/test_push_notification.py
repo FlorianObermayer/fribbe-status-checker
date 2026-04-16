@@ -22,7 +22,7 @@ from pathlib import Path
 
 from pywebpush import Response, WebPushException, webpush  # type: ignore[import-untyped]
 
-from app import env
+from app.config import cfg
 
 
 def load_subscriptions(subscription_path: Path) -> list[dict[str, str]]:
@@ -35,10 +35,10 @@ def load_subscriptions(subscription_path: Path) -> list[dict[str, str]]:
 
 def main() -> None:
 
-    env.load()
-    vapid_private_key = env.VAPID_PRIVATE_KEY
-    vapid_claim_subject = env.VAPID_CLAIM_SUBJECT
-    data_path = env.LOCAL_DATA_PATH
+    cfg.reload()
+    vapid_private_key = cfg.VAPID_PRIVATE_KEY
+    vapid_claim_subject = cfg.VAPID_CLAIM_SUBJECT
+    data_path = cfg.LOCAL_DATA_PATH
 
     if not vapid_private_key or not vapid_claim_subject:
         sys.exit(1)

@@ -9,7 +9,7 @@ from huawei_lte_api.Client import Client
 from huawei_lte_api.Connection import Connection
 from readerwriterlock import rwlock
 
-from app import env
+from app.config import cfg
 from app.services.mac_address_helper import should_ignore_device
 from app.services.occupancy.model import OccupancyType
 from app.services.polling_service import PollingService
@@ -93,7 +93,7 @@ class PresenceLevelService(PollingService):
                 with self._rwlock.gen_wlock():
                     prev_level = self._presence_level
                     self._presence_level = new_level
-                    self._last_updated = datetime.now(tz=ZoneInfo(env.TZ))
+                    self._last_updated = datetime.now(tz=ZoneInfo(cfg.TZ))
                     self._last_error = None
             logger.info("Refresh Presence Level... DONE (%s)", self._presence_level)
             try:
@@ -121,7 +121,7 @@ class PresenceLevelService(PollingService):
         if prev_level != PresenceLevel.EMPTY:
             return False
 
-        now = datetime.now(tz=ZoneInfo(env.TZ))
+        now = datetime.now(tz=ZoneInfo(cfg.TZ))
 
         virtual_today = get_virtual_date(now)
 

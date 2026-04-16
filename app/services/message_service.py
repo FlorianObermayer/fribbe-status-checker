@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from app import env
+from app.config import cfg
 from app.services.occupancy.model import OccupancyType
 from app.services.presence_level import PresenceLevel
 from app.services.weather_service import Temperature, Weather, WeatherState
@@ -440,7 +440,7 @@ class MessageService:
         if random.random() < _COMBO_MSG_CHANCE:  # noqa: S311
             return random.choice(self.combo_messages)  # noqa: S311
 
-        for_datetime = datetime.now(tz=ZoneInfo(env.TZ))
+        for_datetime = datetime.now(tz=ZoneInfo(cfg.TZ))
 
         # 40% chance for seasonal or daytime-dependent messages
         if random.random() < _SEASONAL_MSG_CHANCE:  # noqa: S311

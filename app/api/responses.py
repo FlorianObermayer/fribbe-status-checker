@@ -4,8 +4,8 @@ from typing import Self
 
 from pydantic import BaseModel, Field
 
-from app import env
 from app.api.access_role import AccessRole
+from app.config import cfg
 from app.services.internal.model import Warden
 from app.services.notification_service import Notification
 from app.services.occupancy.model import (
@@ -76,18 +76,18 @@ class DetailsResponse(BaseResponse):
 class ApiKey(BaseModel):
     """An API key with metadata."""
 
-    key: str = Field(..., min_length=env.MIN_TOKEN_LENGTH)
-    comment: str = Field(..., max_length=env.API_KEY_COMMENT_MAX_LENGTH)
+    key: str = Field(..., min_length=cfg.MIN_TOKEN_LENGTH)
+    comment: str = Field(..., max_length=cfg.API_KEY_COMMENT_MAX_LENGTH)
     valid_until: datetime
     role: AccessRole = AccessRole.READER
 
     @staticmethod
     def generate_new(comment: str, valid_until: datetime, role: AccessRole = AccessRole.READER) -> "ApiKey":
         """Generate a new cryptographically random API key."""
-        n_bytes = env.MIN_TOKEN_LENGTH // 4 * 3  # convert from base64-url string length to raw byte length
+        n_bytes = cfg.MIN_TOKEN_LENGTH // 4 * 3  # convert from base64-url string length to raw byte length
         new_key = secrets.token_urlsafe(n_bytes)
-        if len(new_key) < env.MIN_TOKEN_LENGTH:
-            msg = f"Generated key is too short: {len(new_key)} characters (expected at least {env.MIN_TOKEN_LENGTH})"
+        if len(new_key) < cfg.MIN_TOKEN_LENGTH:
+            msg = f"Generated key is too short: {len(new_key)} characters (expected at least {cfg.MIN_TOKEN_LENGTH})"
             raise ValueError(
                 msg,
             )
@@ -125,7 +125,7 @@ class MaskedApiKey(BaseModel):
     """API key with the raw value replaced by a short prefix."""
 
     key_prefix: str
-    comment: str = Field(..., max_length=env.API_KEY_COMMENT_MAX_LENGTH)
+    comment: str = Field(..., max_length=cfg.API_KEY_COMMENT_MAX_LENGTH)
     valid_until: datetime
     role: AccessRole
 
@@ -142,7 +142,7 @@ class MaskedApiKey(BaseModel):
     @staticmethod
     def get_masked_prefix(key: str) -> str:
         """Get the masked prefix for a given API key value."""
-        return key[: env.MIN_KEY_PREFIX_LENGTH] + "..."
+        return key[: cfg.MIN_KEY_PREFIX_LENGTH] + "..."
 
 
 class ApiKeys(BaseModel):
