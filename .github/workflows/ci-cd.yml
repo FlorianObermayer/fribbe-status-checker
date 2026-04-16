@@ -60,6 +60,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+      gists: write
     steps:
       - uses: actions/checkout@v6
         with:
@@ -80,7 +81,7 @@ jobs:
         if: github.event_name == 'pull_request'
         run: uv run diff-cover coverage.xml --compare-branch=origin/${{ github.base_ref }} --fail-under=80 --json-report diff-coverage.json
       - name: Global coverage data
-        if: github.event_name == 'pull_request' && !cancelled()
+        if: (github.event_name == 'pull_request' || github.ref == 'refs/heads/main') && !cancelled()
         id: coverage
         uses: MishaKav/pytest-coverage-comment@v1
         with:
@@ -98,6 +99,16 @@ jobs:
           script: |
             const script = require('./.github/scripts/coverage-comment.js')
             await script({github, context})
+      - name: Update coverage badge
+        if: github.ref == 'refs/heads/main' && !cancelled()
+        uses: Schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: ${{ secrets.COVERAGE_GIST_ID }}
+          filename: fribbe-coverage.json
+          label: Coverage
+          message: ${{ steps.coverage.outputs.coverage }}%
+          color: ${{ steps.coverage.outputs.color }}
 
   build-and-push:
     needs: [lint, test]
