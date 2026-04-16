@@ -78,13 +78,26 @@ jobs:
         run: uv run pytest tests/ --junitxml=junit/test-results.xml --cov=app --cov-report=xml --cov-report=html --cov-fail-under=80
       - name: Diff-cover
         if: github.event_name == 'pull_request'
-        run: uv run diff-cover coverage.xml --compare-branch=origin/${{ github.base_ref }} --fail-under=80
-      - name: Coverage report
+        run: uv run diff-cover coverage.xml --compare-branch=origin/${{ github.base_ref }} --fail-under=80 --json-report diff-coverage.json
+      - name: Global coverage data
         if: github.event_name == 'pull_request' && !cancelled()
+        id: coverage
         uses: MishaKav/pytest-coverage-comment@v1
         with:
           pytest-xml-coverage-path: coverage.xml
           junitxml-path: junit/test-results.xml
+          hide-comment: true
+      - name: Coverage PR comment
+        if: github.event_name == 'pull_request' && !cancelled()
+        uses: actions/github-script@v7
+        env:
+          SUMMARY_REPORT: ${{ steps.coverage.outputs.summaryReport }}
+          GLOBAL_PCT: ${{ steps.coverage.outputs.coverage }}
+          GLOBAL_COLOR: ${{ steps.coverage.outputs.color }}
+        with:
+          script: |
+            const script = require('./.github/scripts/coverage-comment.js')
+            await script({github, context})
 
   build-and-push:
     needs: [lint, test]
