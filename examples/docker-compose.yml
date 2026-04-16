@@ -1,0 +1,74 @@
+# Example Docker Compose deployment for fribbe-status-checker.
+# Copy this file to your deployment host and run: docker compose up -d
+#
+# Variable reference: see .env.template at the repository root.
+# Copy it to .env alongside this file and fill in your values;
+# Docker Compose will pick it up automatically.
+
+services:
+  server:
+    image: ghcr.io/florianobermayer/fribbe-status-checker:latest
+    ports:
+      - 8007:80
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    volumes:
+      - secrets-data:/code/secrets
+      - app-data:/code/app-data
+    # All variables are documented in .env.template at the repository root.
+    # Copy .env.template to .env alongside this file and fill in your values;
+    # Docker Compose will pick it up automatically.
+    environment:
+      # ── Required ──────────────────────────────────────────────────────────
+      - APP_URL=${APP_URL}
+      - SESSION_SECRET_KEY=${SESSION_SECRET_KEY}
+      - LOCAL_DATA_PATH=${LOCAL_DATA_PATH:-/code/app-data/}
+      - API_KEYS_PATH=${API_KEYS_PATH:-/code/secrets/apikeys.json}
+
+      # ── Auth ──────────────────────────────────────────────────────────────
+      - ADMIN_TOKEN=${ADMIN_TOKEN:-}
+      - SHOW_AUTH_BUTTON=${SHOW_AUTH_BUTTON:-false}
+      - HTTPS_ONLY=${HTTPS_ONLY:-true}
+
+      # ── Presence detection (WLAN) — all three required to enable ──────────
+      - ROUTER_IP=${ROUTER_IP:-}
+      - ROUTER_USERNAME=${ROUTER_USERNAME:-}
+      - ROUTER_PASSWORD=${ROUTER_PASSWORD:-}
+      - PRESENCE_POLLING_INTERVAL_SECONDS=${PRESENCE_POLLING_INTERVAL_SECONDS:-}
+      - PRESENCE_POLLING_DELAY_SECONDS=${PRESENCE_POLLING_DELAY_SECONDS:-}
+      - INTERNAL_POLLING_INTERVAL_SECONDS=${INTERNAL_POLLING_INTERVAL_SECONDS:-}
+      - INTERNAL_POLLING_DELAY_SECONDS=${INTERNAL_POLLING_DELAY_SECONDS:-}
+
+      # ── Occupancy scraping ────────────────────────────────────────────────
+      - OCCUPANCY_POLLING_INTERVAL_SECONDS=${OCCUPANCY_POLLING_INTERVAL_SECONDS:-}
+
+      # ── Web Push / VAPID — all three required to enable ───────────────────
+      # Generate keys with: uv run generate-vapid-keys
+      - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY:-}
+      - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
+      - VAPID_CLAIM_SUBJECT=${VAPID_CLAIM_SUBJECT:-}
+
+      # ── Weather (OpenWeatherMap) — all three required to enable ───────────
+      - OPENWEATHERMAP_API_KEY=${OPENWEATHERMAP_API_KEY:-}
+      - WEATHER_LAT=${WEATHER_LAT:-}
+      - WEATHER_LON=${WEATHER_LON:-}
+      - WEATHER_CACHE_TTL_SECONDS=${WEATHER_CACHE_TTL_SECONDS:-}
+
+      # ── Miscellaneous ─────────────────────────────────────────────────────
+      - TZ=${TZ:-Europe/Berlin}
+      - CSP_DOMAIN=${CSP_DOMAIN:-}
+      - OPERATOR_NAME=${OPERATOR_NAME:-}
+      - OPERATOR_EMAIL=${OPERATOR_EMAIL:-}
+
+    restart: unless-stopped
+
+volumes:
+  secrets-data:
+  app-data:

@@ -122,12 +122,6 @@ Available image tags:
 | `<version>` (e.g. `0.5.0`) | Immutable tag, created once when the version in `pyproject.toml` is bumped. |
 | `<version>-<run>` (e.g. `0.5.0-42`) | Unique per-build tag for traceability. |
 
-### Local build
-
-```sh
-docker compose up --build   # builds image locally, runs on port 8007
-```
-
 ### Releases
 
 The CI/CD pipeline ([`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml)) automates releases:
@@ -137,4 +131,4 @@ The CI/CD pipeline ([`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml)
 
 The pipeline can also be triggered manually via `workflow_dispatch`.
 
-See [`Dockerfile`](Dockerfile) and [`docker-compose.yml`](docker-compose.yml) for container details.
+See [`Dockerfile`](Dockerfile) and [`examples/docker-compose.yml`](examples/docker-compose.yml) for container and setup details.
