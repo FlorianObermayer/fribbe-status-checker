@@ -3,7 +3,7 @@
 [![Build](https://github.com/FlorianObermayer/fribbe-status-checker/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/FlorianObermayer/fribbe-status-checker/actions/workflows/ci-cd.yml)
 [![CodeQL](https://github.com/FlorianObermayer/fribbe-status-checker/actions/workflows/codeql.yml/badge.svg)](https://github.com/FlorianObermayer/fribbe-status-checker/actions/workflows/codeql.yml)
 [![Coverity Scan Build Status](https://img.shields.io/coverity/scan/33029.svg)](https://scan.coverity.com/projects/florianobermayer-fribbe-status-checker)
-[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/FlorianObermayer/COVERAGE_GIST_ID/raw/fribbe-coverage.json)](https://github.com/FlorianObermayer/fribbe-status-checker/actions/workflows/ci-cd.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/FlorianObermayer/b2ba5d0b8ce8a8826506ff50f4af68ee/raw/fribbe-coverage.json)](https://github.com/FlorianObermayer/fribbe-status-checker/actions/workflows/ci-cd.yml)
 
 A FastAPI-based status checker for [Fribbe Beach](https://fribbebeach.de), running at [status.fribbe-beach.de](https://status.fribbe-beach.de). It combines real-time presence detection with occupancy data scraped from the Fribbe Beach website to give a live status overview.
 
