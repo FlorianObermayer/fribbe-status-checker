@@ -37,15 +37,20 @@ _REPO = "FlorianObermayer/fribbe-status-checker"
 # ---------------------------------------------------------------------------
 
 
+# Subprocess environment with NODE_OPTIONS cleared to prevent devcontainer
+# Node.js flags (e.g. --openssl-legacy-provider) from interfering with git.
+_ENV = {**os.environ, "NODE_OPTIONS": ""}
+
+
 def _run(*args: str, check: bool = True, dry_run: bool = False) -> subprocess.CompletedProcess[str]:
     if dry_run:
         print(f"[dry-run] {' '.join(args)}")
         return subprocess.CompletedProcess(args, 0)
-    return subprocess.run(list(args), check=check, text=True, cwd=ROOT)
+    return subprocess.run(list(args), check=check, text=True, cwd=ROOT, env=_ENV)
 
 
 def _capture(*args: str, check: bool = True) -> str:
-    result = subprocess.run(list(args), check=check, text=True, capture_output=True, cwd=ROOT)
+    result = subprocess.run(list(args), check=check, text=True, capture_output=True, cwd=ROOT, env=_ENV)
     return result.stdout.strip()
 
 
@@ -167,8 +172,8 @@ def main() -> None:
     load_dotenv(ROOT / "scripts" / ".env")
 
     # 1. Abort if working tree has uncommitted changes
-    unstaged = subprocess.run(["git", "diff", "--quiet"], check=False, cwd=ROOT)
-    staged = subprocess.run(["git", "diff", "--cached", "--quiet"], check=False, cwd=ROOT)
+    unstaged = subprocess.run(["git", "diff", "--quiet"], check=False, cwd=ROOT, env=_ENV)
+    staged = subprocess.run(["git", "diff", "--cached", "--quiet"], check=False, cwd=ROOT, env=_ENV)
     if not dry_run and (unstaged.returncode != 0 or staged.returncode != 0):
         sys.exit("error: working tree has uncommitted changes — commit or stash them first")
 
