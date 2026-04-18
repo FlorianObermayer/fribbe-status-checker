@@ -100,7 +100,7 @@ jobs:
             await script({github, context})
       - name: Update coverage badge
         if: github.ref == 'refs/heads/main' && !cancelled()
-        uses: Schneegans/dynamic-badges-action@v1.7.0
+        uses: Schneegans/dynamic-badges-action@v1.8.0
         with:
           auth: ${{ secrets.GIST_TOKEN }}
           gistID: ${{ secrets.COVERAGE_GIST_ID }}
