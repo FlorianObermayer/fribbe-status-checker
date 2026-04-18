@@ -20,7 +20,7 @@ from pathlib import Path
 
 from starsessions import SessionStore
 
-_logger = logging.getLogger("uvicorn.error")
+_logger = logging.getLogger(__name__)
 
 
 class FileSessionStore(SessionStore):

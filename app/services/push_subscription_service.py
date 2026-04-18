@@ -15,7 +15,7 @@ from pywebpush import WebPushException, webpush  # type: ignore[import-untyped]
 from app.config import cfg
 from app.services.persistent_collections import PersistentDict
 
-logger = logging.getLogger("uvicorn.error")
+logger = logging.getLogger(__name__)
 
 _B64URL_RE = re.compile(r"^[A-Za-z0-9\-_]+=*$")
 

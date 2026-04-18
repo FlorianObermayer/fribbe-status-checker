@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 
 from app.config import cfg
 
-logger = logging.getLogger("uvicorn.error")
+logger = logging.getLogger(__name__)
 
 
 class PollingService(ABC):

@@ -1,5 +1,6 @@
 """Tests for app.config reload() / validate()."""
 
+import logging
 from collections.abc import Callable
 from pathlib import Path
 
@@ -246,3 +247,53 @@ def test_validate_raises_when_tz_is_invalid(monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.setattr(cfg, "TZ", "Not/A_Timezone")
     with pytest.raises(RuntimeError, match="Invalid timezone"):
         cfg._validate()
+
+
+def test_reload_raises_when_log_level_is_invalid(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LOG_LEVEL", "TRACE")
+    with pytest.raises(RuntimeError, match="Invalid LOG_LEVEL"):
+        cfg.reload()
+
+
+@pytest.mark.parametrize("log_level", ["debug", "DEBUG", "DeBuG"])
+def test_reload_applies_log_level_to_app_logger(
+    monkeypatch: pytest.MonkeyPatch,
+    request: pytest.FixtureRequest,
+    log_level: str,
+) -> None:
+    app_logger = logging.getLogger("app")
+    original_level = app_logger.level
+    request.addfinalizer(lambda: app_logger.setLevel(original_level))
+    monkeypatch.setenv("LOG_LEVEL", log_level)
+    cfg.reload()
+    assert app_logger.level == logging.DEBUG
+
+
+@pytest.mark.parametrize(
+    ("log_level", "expected_noisy_level"),
+    [
+        ("DEBUG", logging.WARNING),
+        ("INFO", logging.WARNING),
+        ("WARNING", logging.WARNING),
+        ("ERROR", logging.ERROR),
+        ("CRITICAL", logging.CRITICAL),
+    ],
+)
+def test_reload_applies_noisy_logger_level_bound(
+    monkeypatch: pytest.MonkeyPatch,
+    request: pytest.FixtureRequest,
+    log_level: str,
+    expected_noisy_level: int,
+) -> None:
+    urllib3_logger = logging.getLogger("urllib3")
+    dateparser_logger = logging.getLogger("dateparser")
+    original_urllib3_level = urllib3_logger.level
+    original_dateparser_level = dateparser_logger.level
+    request.addfinalizer(lambda: urllib3_logger.setLevel(original_urllib3_level))
+    request.addfinalizer(lambda: dateparser_logger.setLevel(original_dateparser_level))
+
+    monkeypatch.setenv("LOG_LEVEL", log_level)
+    cfg.reload()
+
+    assert urllib3_logger.level == expected_noisy_level
+    assert dateparser_logger.level == expected_noisy_level

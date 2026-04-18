@@ -19,7 +19,7 @@ from enum import Enum
 
 from app.config import cfg
 
-logger = logging.getLogger("uvicorn.error")
+logger = logging.getLogger(__name__)
 
 CURRENT_WEATHER_URL = "https://api.openweathermap.org/data/2.5/weather"
 

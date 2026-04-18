@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from starsessions import regenerate_session_id
@@ -7,6 +9,7 @@ from app.api.requests import AuthBody
 from app.config import cfg
 from app.routers.nav_context import Route
 
+_logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -26,6 +29,7 @@ async def post_auth(
 async def signout(request: Request) -> RedirectResponse:
     """Clear the session and redirect to the home page."""
     # CSRF enforcement is handled by FormFieldCSRFMiddleware (header or hidden form field).
+    _logger.info("Sign-out (client %s)", request.client and request.client.host)
     request.session.clear()
     response = RedirectResponse(url=Route.URL_INDEX, status_code=303)
     # Explicitly expire the CSRF token cookie; the CSRF middleware only sets it
