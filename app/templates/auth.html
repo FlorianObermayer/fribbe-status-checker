@@ -18,8 +18,7 @@
             {% include "_theme_toggle.html" %}
             <p class="eyebrow">Geschützter Bereich</p>
             <h1>Anmelden</h1>
-            <p class="copy">Melde dich mit API-Schlüssel oder Admin-Token an. Der Browser speichert danach nur eine
-                opaque Sitzungs-ID, nicht den Schlüssel selbst.</p>
+            <p class="copy">Melde dich mit API-Schlüssel oder Admin-Token an.</p>
 
             <form id="auth-form" novalidate class="{% if signed_in %}hidden{% endif %}">
                 <label for="token-input">Schlüssel</label>
