@@ -13,7 +13,7 @@ from secure import ContentSecurityPolicy, Secure
 from starsessions import SessionAutoloadMiddleware, SessionMiddleware
 
 from app.api.hybrid_auth import AuthRedirectError
-from app.api.redact import redact_key
+from app.api.redact import redact
 from app.api.requests import AuthRedirectQuery
 from app.api.schema import update_openapi_schema
 from app.config import cfg
@@ -125,7 +125,7 @@ async def log_requests(request: Request, call_next: Callable[[Request], Awaitabl
     """Log incoming requests that carry an API key header."""
     api_key = request.headers.get("api_key")
     if api_key:
-        _logger.info("-H api_key=%s", redact_key(api_key))
+        _logger.info("-H api_key=%s", redact(api_key))
     return await call_next(request)
 
 

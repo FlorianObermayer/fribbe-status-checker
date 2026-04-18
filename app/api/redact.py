@@ -1,27 +1,32 @@
 """Helpers for safely including sensitive tokens in log messages."""
 
-from app.config import cfg
+import hashlib
+import hmac
+import secrets
 
-# Number of characters to reveal at the start of a token in log output.
-# Enough to correlate across log lines; negligible exposure on MIN_TOKEN_LENGTH+ tokens.
-_VISIBLE_PREFIX = max(8, cfg.MIN_TOKEN_LENGTH // 6)
+# Random salt generated once per process. Prevents reverse-lookup of hashes
+# across restarts and makes log hashes unverifiable without the running instance.
+_SALT: bytes = secrets.token_bytes(32)
 
 
-def redact_key(key: str | None) -> str:
-    """Return a redacted representation of *key* safe for use in log messages.
+def redact(value: str | None) -> str:
+    """Return a redacted representation of *value* safe for use in log messages.
 
-    Shows a short prefix followed by '…' so tokens can be correlated across
-    log lines without exposing the full value.  Always returns a plain string
-    so it can be passed directly as a ``%s`` log argument.
+    Returns a short hex digest of an HMAC-SHA-256 keyed with a per-run random
+    salt, so sensitive values can be correlated across log lines within one
+    application run without exposing any sensitive data or allowing offline
+    reversal.  Always returns a plain string so it can be passed directly as a
+    ``%s`` log argument.
 
     Examples::
 
-        redact_key(None)  # -> "<none>"
-        redact_key("")  # -> "<empty>"
-        redact_key("abcdef1234")  # -> "abcdef1…"
+        redact(None)  # -> "<none>"
+        redact("")  # -> "<empty>"
+        redact("abc")  # -> "[hash:a3f1c2d4]"
     """
-    if key is None:
+    if value is None:
         return "<none>"
-    if not key:
+    if not value:
         return "<empty>"
-    return key[:_VISIBLE_PREFIX] + "…"
+    digest = hmac.new(_SALT, value.encode(), hashlib.sha256).hexdigest()[:8]
+    return f"[hash:{digest}]"
