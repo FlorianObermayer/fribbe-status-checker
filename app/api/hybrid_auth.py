@@ -8,7 +8,7 @@ from starsessions import regenerate_session_id
 from app.api.access_role import AccessRole
 from app.api.ephemeral_api_key_header import EphemeralAPIKeyHeader
 from app.api.ephemeral_api_key_store import EphemeralAPIKeyStore
-from app.api.redact import redact_key
+from app.api.redact import redact
 from app.config import cfg
 
 _logger = logging.getLogger(__name__)
@@ -68,16 +68,14 @@ def create_session(request: Request, token: str) -> bool:
 
     if not EphemeralAPIKeyStore.is_key_valid(token):
         _logger.warning(
-            "Login failed — invalid token %s (client %s)", redact_key(token), request.client and request.client.host
+            "Login failed — invalid token %s (client %s)", redact(token), request.client and request.client.host
         )
         return False
 
     request.session.clear()
     request.session["kind"] = "api_key"
     request.session["subject"] = token
-    _logger.info(
-        "API key session created for %s (client %s)", redact_key(token), request.client and request.client.host
-    )
+    _logger.info("API key session created for %s (client %s)", redact(token), request.client and request.client.host)
     return True
 
 
