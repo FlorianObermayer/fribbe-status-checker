@@ -12,7 +12,10 @@
         "ghcr.io/devcontainers-extra/features/uv:1": {},
         "ghcr.io/devcontainers/features/node:1": {}
     },
-    "postCreateCommand": "uv sync --all-groups",
+    "postCreateCommand": {
+        "uv-sync": "uv sync --all-groups",
+        "npm-ci": "npm ci"
+    },
     "customizations": {
         "vscode": {
             "extensions": [
