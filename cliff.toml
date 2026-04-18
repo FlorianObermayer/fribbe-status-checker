@@ -20,9 +20,11 @@ body = """
       {%- if commit.remote.username %} by @{{ commit.remote.username }}{%- endif %}
   {%- endfor %}
 {% endfor %}
-{%- set effective_version = version if version else env.RELEASE_VERSION -%}
-{%- if previous.version and effective_version %}\n
-**Full Changelog**: [{{ previous.version }}...{{ effective_version }}]({{ self::remote_url() }}/compare/{{ previous.version }}...{{ effective_version }})\n
+{%- set release_version = get_env(name="RELEASE_VERSION", default="") -%}
+{%- if previous.version and version %}\n
+**Full Changelog**: [{{ previous.version }}...{{ version }}]({{ self::remote_url() }}/compare/{{ previous.version }}...{{ version }})\n
+{%- elif previous.version and release_version %}\n
+**Full Changelog**: [{{ previous.version }}...{{ release_version }}]({{ self::remote_url() }}/compare/{{ previous.version }}...{{ release_version }})\n
 {%- endif %}\n
 """
 footer = ""
