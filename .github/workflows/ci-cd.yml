@@ -210,6 +210,7 @@ jobs:
           args: --unreleased --strip header
         env:
           GITHUB_REPO: ${{ github.repository }}
+          RELEASE_VERSION: v${{ needs.build-and-push.outputs.version }}
 
       - name: Generate changelog (nightly — since last tag)
         if: needs.build-and-push.outputs.is_new_version == 'false'
@@ -220,6 +221,7 @@ jobs:
           args: --unreleased --strip header
         env:
           GITHUB_REPO: ${{ github.repository }}
+          RELEASE_VERSION: nightly
 
       # First push with a new version: create a stable release
       - name: Create release
