@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from app.services.push_sender import PushSender
     from app.services.weather_service import WeatherService
 
-logger = logging.getLogger("uvicorn.error")
+logger = logging.getLogger(__name__)
 
 
 class PresenceLevelService(PollingService):

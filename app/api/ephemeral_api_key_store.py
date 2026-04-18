@@ -18,7 +18,7 @@ def _local_tz() -> ZoneInfo:
     return ZoneInfo(cfg.TZ)
 
 
-logger = logging.getLogger("uvicorn.error")
+logger = logging.getLogger(__name__)
 
 
 class RemoveResult(Enum):

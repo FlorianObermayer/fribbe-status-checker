@@ -17,7 +17,7 @@ from app.services.polling_service import PollingService
 from app.services.push_sender import PushSender
 from app.services.push_subscription_service import PushTopic
 
-logger = logging.getLogger("uvicorn.error")
+logger = logging.getLogger(__name__)
 
 _PUSH_TITLE = "Neues aus'm Fribbe"
 _MAX_PUSH_LENGTH = 200

@@ -22,7 +22,7 @@ from app.dependencies import shutdown, startup
 from app.routers import api_keys, auth, internal, misc, notification_ui, notifications, pages, push, status, wardens
 from app.stores.file_session_store import FileSessionStore
 
-_logger = logging.getLogger("uvicorn.error")
+_logger = logging.getLogger(__name__)
 
 
 _csp_domain_src: list[str] = [cfg.CSP_DOMAIN] if cfg.CSP_DOMAIN else []
@@ -123,9 +123,9 @@ async def add_security_headers(request: Request, call_next: Callable[[Request], 
 @app.middleware("http")
 async def log_requests(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
     """Log incoming requests that carry an API key header."""
-    logger = logging.getLogger("uvicorn.error")
     api_key = request.headers.get("api_key")
-    logger.info("-H api_key=%s", redact_key(api_key))
+    if api_key:
+        _logger.info("-H api_key=%s", redact_key(api_key))
     return await call_next(request)
 
 

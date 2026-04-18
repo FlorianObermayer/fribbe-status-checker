@@ -20,6 +20,7 @@ skip required-var checks when only a value refresh is needed.
 
 import logging
 import os
+import sys
 from dataclasses import MISSING, dataclass, field
 from dataclasses import fields as dataclass_fields
 from typing import ClassVar
@@ -192,6 +193,10 @@ class Config:
     OPERATOR_EMAIL: str = field(
         default_factory=lambda: os.environ.get("OPERATOR_EMAIL") or "",
     )
+    # Log level for app.* loggers (DEBUG / INFO / WARNING / ERROR / CRITICAL).
+    LOG_LEVEL: str = field(
+        default_factory=lambda: os.environ.get("LOG_LEVEL") or "INFO",
+    )
 
     # Derived feature flags — not env-sourced, set in __post_init__.
     features: "Features" = field(init=False, repr=False)
@@ -206,6 +211,7 @@ class Config:
             f.name for f in dataclass_fields(Config) if f.metadata.get("sensitive")
         )
         self._validate()
+        self._configure_logging()
         self._log(reloaded=False)
 
     # Derived metadata sets — no manual lists to maintain.
@@ -235,6 +241,10 @@ class Config:
         except Exception as e:
             msg = f"Invalid timezone in TZ: {self.TZ} ({e})"
             raise RuntimeError(msg) from e
+        _valid_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+        if self.LOG_LEVEL.upper() not in _valid_levels:
+            msg = f"Invalid LOG_LEVEL: {self.LOG_LEVEL!r}. Must be one of {', '.join(sorted(_valid_levels))}"
+            raise RuntimeError(msg)
 
     def reload(self) -> None:
         """Mutate ``cfg`` in-place from ``os.environ``.
@@ -245,11 +255,31 @@ class Config:
             if f.init and f.default_factory is not MISSING:  # skip non-env fields such as `features`
                 setattr(self, f.name, f.default_factory())
         self._validate()
+        self._configure_logging()
         self._log(reloaded=True)
+
+    def _configure_logging(self) -> None:
+        """Configure the ``app`` logger hierarchy level and attach a stdout handler if needed."""
+        level = self.LOG_LEVEL.upper()
+        app_logger = logging.getLogger("app")
+        app_logger.setLevel(level)
+        # Prevent double-logging: uvicorn installs a root handler, so without this
+        # every app.* record would be emitted once by our handler and again by uvicorn's.
+        app_logger.propagate = False
+        if not app_logger.handlers:
+            handler = logging.StreamHandler(sys.stdout)
+            handler.setFormatter(logging.Formatter("%(levelname)-8s %(name)s  %(message)s"))
+            app_logger.addHandler(handler)
+        # Cap noisy third-party loggers so they don't flood output at LOG_LEVEL=DEBUG,
+        # while still honoring stricter app log levels like ERROR/CRITICAL.
+        noisy_level = max(app_logger.level, logging.WARNING)
+        # urllib3 is used by huawei-lte-api; dateparser is verbose during locale loading.
+        for noisy in ("urllib3", "dateparser"):
+            logging.getLogger(noisy).setLevel(noisy_level)
 
     def _log(self, *, reloaded: bool) -> None:
         """Log all loaded env vars, masking sensitive ones, then derived feature flags."""
-        logger = logging.getLogger("uvicorn.error")
+        logger = logging.getLogger(__name__)
         title = "Reloaded" if reloaded else "Loaded"
         logger.info("┌─ %s environment variables %s", title, "─" * (52 - len(title)))
 

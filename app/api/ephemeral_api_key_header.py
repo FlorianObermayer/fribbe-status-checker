@@ -7,7 +7,7 @@ from fastapi.security import APIKeyHeader
 from app.api.ephemeral_api_key_store import EphemeralAPIKeyStore
 from app.config import cfg
 
-logger = logging.getLogger("uvicorn.error")
+logger = logging.getLogger(__name__)
 
 
 class EphemeralAPIKeyHeader(APIKeyHeader):
@@ -27,6 +27,8 @@ class EphemeralAPIKeyHeader(APIKeyHeader):
         if api_key and cfg.ADMIN_TOKEN and secrets.compare_digest(api_key, cfg.ADMIN_TOKEN):
             return api_key
         if not api_key or not EphemeralAPIKeyStore.is_key_valid(api_key):
+            if api_key:
+                logger.debug("Rejected invalid API key header (client %s)", request.client and request.client.host)
             api_key = None
             return self.check_api_key(api_key)
         return api_key

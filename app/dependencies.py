@@ -25,7 +25,7 @@ from app.services.presence_level_service import PresenceLevelService
 from app.services.push_subscription_service import PushSubscriptionService
 from app.services.weather_service import WeatherService
 
-_logger = logging.getLogger("uvicorn.error")
+_logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Service singletons — populated by startup(), accessed via getters below.

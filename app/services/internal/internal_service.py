@@ -16,7 +16,7 @@ from app.services.persistent_collections import PersistentPathProvider, persiste
 from app.services.polling_service import PollingService
 from app.services.virtual_day import crossed_virtual_day
 
-logger = logging.getLogger("uvicorn.error")
+logger = logging.getLogger(__name__)
 
 
 @dataclass

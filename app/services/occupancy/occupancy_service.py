@@ -17,7 +17,7 @@ from app.services.occupancy.occupancy_parser import (
 )
 from app.services.polling_service import PollingService
 
-logger = logging.getLogger("uvicorn.error")
+logger = logging.getLogger(__name__)
 
 _MIN_WEEKLY_EVENTS = 7
 
