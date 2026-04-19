@@ -247,6 +247,12 @@ jobs:
           generate_release_notes: false
 
       # Subsequent pushes under the same version: update rolling nightly pre-release
+      - name: Move nightly tag to current commit
+        if: needs.build-and-push.outputs.is_new_version == 'false'
+        run: |
+          git tag -f nightly
+          git push origin -f nightly
+
       - name: Update nightly release
         if: needs.build-and-push.outputs.is_new_version == 'false'
         uses: softprops/action-gh-release@v3

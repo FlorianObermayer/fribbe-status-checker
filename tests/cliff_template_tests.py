@@ -76,4 +76,3 @@ def test_compare_link_is_valid_github_url() -> None:
     output = _run_git_cliff("--unreleased", env={"RELEASE_VERSION": "v9.9.9"})
     assert "https://github.com/FlorianObermayer/fribbe-status-checker/compare/" in output
     assert "...v9.9.9" in output
-
