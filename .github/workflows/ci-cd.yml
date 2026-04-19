@@ -209,7 +209,7 @@ jobs:
         uses: orhun/git-cliff-action@v4
         with:
           config: cliff.toml
-          args: --unreleased --strip header
+          args: --unreleased --tag v${{ needs.build-and-push.outputs.version }} --strip header
         env:
           GITHUB_REPO: ${{ github.repository }}
           RELEASE_VERSION: v${{ needs.build-and-push.outputs.version }}
