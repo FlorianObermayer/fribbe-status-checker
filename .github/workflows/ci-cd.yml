@@ -246,6 +246,13 @@ jobs:
             ${{ steps.changelog-stable.outputs.content }}
           generate_release_notes: false
 
+      - name: Delete nightly release after stable release
+        if: needs.build-and-push.outputs.is_new_version == 'true'
+        run: |
+          gh release delete nightly --cleanup-tag --yes || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       # Subsequent pushes under the same version: update rolling nightly pre-release
       - name: Move nightly tag to current commit
         if: needs.build-and-push.outputs.is_new_version == 'false'
@@ -253,7 +260,13 @@ jobs:
           git tag -f nightly
           git push origin -f nightly
 
-      - name: Update nightly release
+      - name: Delete existing nightly release
+        if: needs.build-and-push.outputs.is_new_version == 'false'
+        run: gh release delete nightly --yes || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create nightly release
         if: needs.build-and-push.outputs.is_new_version == 'false'
         uses: softprops/action-gh-release@v3
         with:
