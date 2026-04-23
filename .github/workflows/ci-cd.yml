@@ -84,7 +84,7 @@ jobs:
       - name: Global coverage data
         if: (github.event_name == 'pull_request' || github.ref == 'refs/heads/main') && !cancelled()
         id: coverage
-        uses: MishaKav/pytest-coverage-comment@v1
+        uses: MishaKav/pytest-coverage-comment@v1.7.1
         with:
           pytest-xml-coverage-path: coverage.xml
           junitxml-path: junit/test-results.xml
