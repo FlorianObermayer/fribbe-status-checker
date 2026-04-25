@@ -1,3 +1,7 @@
+// Globals from classic scripts loaded before this module (csrf.js, toast.js,
+// clipboard.js — see base.html). ES modules don't see the classic-script scope.
+const { showToast, withCsrfHeaders, copyTextToClipboard } = /** @type {any} */ (window);
+
 function getForDateFromUrl() {
     const params = new URLSearchParams(window.location.search);
     return params.get('for_date');
@@ -140,15 +144,32 @@ function setupLegendToggle() {
 
 let notificationDismissed = false;
 
-function hashString(str) {
+export const NOTIFICATION_DISMISSED_KEY = 'notificationDismissedHash';
+
+export function hashString(str) {
     let hash = 0, i, chr;
-    if (str.length === 0) return hash + "";
+    if (str.length === 0) return hash + '';
     for (i = 0; i < str.length; i++) {
         chr = str.charCodeAt(i);
         hash = ((hash << 5) - hash) + chr;
         hash |= 0;
     }
-    return hash + "";
+    return hash + '';
+}
+
+// Decide whether to show the notification based on the latest poll response
+// and the previously stored "dismissed" hash. Exported for unit tests.
+export function computeNotificationState(html, textContent, storedHash) {
+    if (!html || !html.trim()) {
+        // Empty response — keep the stored hash so a re-appearing notification
+        // that was already dismissed stays hidden.
+        return { dismissed: true, clearHash: false };
+    }
+    const hash = hashString(textContent);
+    if (hash !== storedHash) {
+        return { dismissed: false, clearHash: true };
+    }
+    return { dismissed: true, clearHash: false };
 }
 
 // Poll and display notifications
@@ -162,7 +183,7 @@ async function pollNotifications() {
 
         // HACK: If specific notification is requested, show always
         if (notification_ids.length === 1 && notification_ids[0] !== "all_active") {
-            localStorage.removeItem('notificationDismissedHash');
+            localStorage.removeItem(NOTIFICATION_DISMISSED_KEY);
         }
         const query = notification_ids.join("&n_ids=")
         const url = `${NOTIFICATIONS_URL}?n_ids=${query}`;
@@ -174,24 +195,13 @@ async function pollNotifications() {
         const box = document.getElementById('notification-box');
         const htmlDiv = document.getElementById('notification-html');
         htmlDiv.innerHTML = html;
-        const hash = hashString(htmlDiv.textContent);
-        const lastNotificationHash = localStorage.getItem('notificationDismissedHash');
-        if (html && html.trim()) {
-            if (hash !== lastNotificationHash) {
-                notificationDismissed = false;
-                localStorage.removeItem('notificationDismissedHash');
-            } else {
-                notificationDismissed = true;
-            }
-
-            if (!notificationDismissed) {
-                box.classList.remove('hidden');
-            } else {
-                box.classList.add('hidden');
-            }
-        } else {
-            box.classList.add('hidden');
+        const { dismissed, clearHash } = computeNotificationState(
+            html, htmlDiv.textContent, localStorage.getItem(NOTIFICATION_DISMISSED_KEY));
+        if (clearHash) {
+            localStorage.removeItem(NOTIFICATION_DISMISSED_KEY);
         }
+        notificationDismissed = dismissed;
+        box.classList.toggle('hidden', notificationDismissed);
     } catch (e) {
         // ignore box on error
         document.getElementById('notification-box').classList.add('hidden');
@@ -247,7 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('notification-box').classList.add('hidden');
             notificationDismissed = true;
             if (hash !== null) {
-                localStorage.setItem('notificationDismissedHash', hash);
+                localStorage.setItem(NOTIFICATION_DISMISSED_KEY, hash);
             }
         });
     }
