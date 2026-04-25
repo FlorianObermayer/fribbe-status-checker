@@ -142,7 +142,7 @@ let notificationDismissed = false;
 
 function hashString(str) {
     let hash = 0, i, chr;
-    if (str.length === 0) return hash;
+    if (str.length === 0) return hash + "";
     for (i = 0; i < str.length; i++) {
         chr = str.charCodeAt(i);
         hash = ((hash << 5) - hash) + chr;
@@ -191,12 +191,10 @@ async function pollNotifications() {
             }
         } else {
             box.classList.add('hidden');
-            localStorage.removeItem('notificationDismissedHash');
         }
     } catch (e) {
         // ignore box on error
         document.getElementById('notification-box').classList.add('hidden');
-        localStorage.removeItem('notificationDismissedHash');
         console.error(e)
     }
 }
