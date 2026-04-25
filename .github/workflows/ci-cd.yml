@@ -3,6 +3,7 @@ name: CI/CD Pipeline
 # Define environment variables available to all jobs
 env:
   PYTHON_VERSION: '3.12'
+  NODE_VERSION: '22'
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 on:
   push:
@@ -40,6 +41,11 @@ jobs:
         uses: astral-sh/setup-uv@v8.1.0
         with:
           enable-cache: true
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
       - name: Install dependencies
         run: uv sync --frozen --all-groups
       - name: Install Node dependencies
@@ -72,6 +78,11 @@ jobs:
         uses: astral-sh/setup-uv@v8.1.0
         with:
           enable-cache: true
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
       - name: Install dependencies
         run: uv sync --frozen --all-groups
       - name: Install Node dependencies
@@ -115,6 +126,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
       - name: Install Node dependencies
         run: npm ci
       - name: Test JavaScript
