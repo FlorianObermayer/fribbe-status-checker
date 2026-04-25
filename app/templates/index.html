@@ -205,7 +205,7 @@ data-push-topics-url="{{ url_api_push_topics }}"{% endblock %}
 
 {% block scripts %}
 
-    <script src="/static/js/app.js?v={{ content_hash_version }}"></script>
+    <script type="module" src="/static/js/app.js?v={{ content_hash_version }}"></script>
     <!-- GitHub badge-->
     <a href="https://github.com/FlorianObermayer/fribbe-status-checker" target="_blank" rel="noopener noreferrer"
         aria-label="Open GitHub repository" title="GitHub: fribbe-status-checker" class="github-badge">
