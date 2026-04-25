@@ -256,9 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             document.getElementById('notification-box').classList.add('hidden');
             notificationDismissed = true;
-            if (hash !== null) {
-                localStorage.setItem(NOTIFICATION_DISMISSED_KEY, hash);
-            }
+            localStorage.setItem(NOTIFICATION_DISMISSED_KEY, hash);
         });
     }
     pollNotifications();
