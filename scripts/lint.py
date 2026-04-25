@@ -11,11 +11,13 @@ import sys
 from pathlib import Path
 
 PROJECT_ROOT = str(Path(__file__).resolve().parent.parent)
-JS_FILES = sorted(str(p) for p in Path(PROJECT_ROOT, "app/static/js").rglob("*.js"))
+JS_PROD_FILES = sorted(str(p) for p in Path(PROJECT_ROOT, "app/static/js").rglob("*.js"))
+JS_TEST_FILES = sorted(str(p) for p in Path(PROJECT_ROOT, "tests").rglob("*.js"))
 _ALL_HTML = sorted(Path(PROJECT_ROOT, "app/templates").rglob("*.html"))
 # base.html is a complete HTML document; everything else is a Jinja2 fragment
 HTML_FULL = [str(p) for p in _ALL_HTML if p.name == "base.html"]
 HTML_FRAGMENTS = [str(p) for p in _ALL_HTML if p.name != "base.html"]
+HTML_TEST_FILES = sorted(str(p) for p in Path(PROJECT_ROOT, "tests").rglob("*.html"))
 CSS_FILES = sorted(str(p) for p in Path(PROJECT_ROOT, "app/static/css").rglob("*.css"))
 NODE_BIN = Path(PROJECT_ROOT) / "node_modules" / ".bin"
 
@@ -34,12 +36,17 @@ def main() -> None:
     _run(["ruff", "format", "."] if fix else ["ruff", "format", "--check", "."], "ruff format")
     _run(["ruff", "check", ".", "--fix", "--unsafe-fixes"] if fix else ["ruff", "check", "."], "ruff check")
     _run(["pyright"], "pyright", env=node_env)
-    for js_file in JS_FILES:
+    for js_file in JS_PROD_FILES + JS_TEST_FILES:
         _run(["node", "--check", js_file], f"node --check {Path(js_file).name}", env=node_env)
     _run([str(NODE_BIN / "htmlhint"), *HTML_FULL], "htmlhint (full documents)", env=node_env)
     _run(
         [str(NODE_BIN / "htmlhint"), "--config", ".htmlhintrc-fragment", *HTML_FRAGMENTS],
         "htmlhint (template fragments)",
+        env=node_env,
+    )
+    _run(
+        [str(NODE_BIN / "htmlhint"), "--config", ".htmlhintrc-test", *HTML_TEST_FILES],
+        "htmlhint (test templates)",
         env=node_env,
     )
     md_cmd = [str(NODE_BIN / "markdownlint-cli2")]
