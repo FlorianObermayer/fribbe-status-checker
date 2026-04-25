@@ -27,7 +27,8 @@
                 "streetsidesoftware.code-spell-checker-german",
                 "GitHub.vscode-github-actions",
                 "DavidAnson.vscode-markdownlint",
-                "GitHub.vscode-pull-request-github"
+                "GitHub.vscode-pull-request-github",
+                "vitest.explorer"
             ]
         }
     }
