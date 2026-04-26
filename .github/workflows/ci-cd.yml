@@ -93,7 +93,7 @@ jobs:
         run: npm run test:js -- --coverage
       - name: Diff-cover
         if: github.event_name == 'pull_request'
-        run: uv run diff-cover coverage.xml --compare-branch=origin/${{ github.base_ref }} --fail-under=80 --json-report diff-coverage.json
+        run: uv run diff-cover coverage.xml coverage/js/cobertura-coverage.xml --compare-branch=origin/${{ github.base_ref }} --fail-under=80 --json-report diff-coverage.json
       - name: Read coverage pct
         if: github.ref == 'refs/heads/main' && !cancelled()
         id: coverage

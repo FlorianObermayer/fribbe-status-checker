@@ -1,9 +1,10 @@
 // Called by actions/github-script via require().
-// Files:    coverage.xml                       (pytest-cov)
-//           coverage/js/coverage-summary.json  (vitest --coverage)
-//           junit/test-results.xml             (pytest --junitxml)
-//           junit/js-test-results.xml          (vitest junit reporter)
-//           diff-coverage.json                 (diff-cover --json-report)
+// Files:    coverage.xml                         (pytest-cov)
+//           coverage/js/coverage-summary.json    (vitest --coverage, json-summary)
+//           coverage/js/cobertura-coverage.xml   (vitest --coverage, cobertura — fed to diff-cover)
+//           junit/test-results.xml               (pytest --junitxml)
+//           junit/js-test-results.xml            (vitest junit reporter)
+//           diff-coverage.json                   (diff-cover --json-report, covers py + js)
 
 const fs = require("fs");
 
