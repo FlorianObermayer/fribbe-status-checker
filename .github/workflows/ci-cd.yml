@@ -89,24 +89,31 @@ jobs:
         run: npm ci
       - name: Test with pytest
         run: uv run pytest tests/ --ignore=tests/js --junitxml=junit/test-results.xml --cov=app --cov-report=xml --cov-report=html --cov-fail-under=80
+      - name: Test JavaScript
+        run: npm run test:js -- --coverage
       - name: Diff-cover
         if: github.event_name == 'pull_request'
         run: uv run diff-cover coverage.xml --compare-branch=origin/${{ github.base_ref }} --fail-under=80 --json-report diff-coverage.json
-      - name: Global coverage data
-        if: (github.event_name == 'pull_request' || github.ref == 'refs/heads/main') && !cancelled()
+      - name: Read coverage pct
+        if: github.ref == 'refs/heads/main' && !cancelled()
         id: coverage
-        uses: MishaKav/pytest-coverage-comment@v1.7.1
-        with:
-          pytest-xml-coverage-path: coverage.xml
-          junitxml-path: junit/test-results.xml
-          hide-comment: true
+        run: |
+          PCT=$(python3 -c "
+          import re, json
+          py_xml = open('coverage.xml').read()
+          py_valid = int(re.search(r'lines-valid=\"([0-9]+)\"', py_xml).group(1))
+          py_covered = int(re.search(r'lines-covered=\"([0-9]+)\"', py_xml).group(1))
+          js = json.load(open('coverage/js/coverage-summary.json'))['total']['lines']
+          total = py_valid + js['total']
+          covered = py_covered + js['covered']
+          print(str(round(covered/total*100))+'%')
+          ")
+          COLOR=$(python3 -c "p=int('$PCT'.rstrip('%')); print('brightgreen' if p>=90 else 'green' if p>=80 else 'yellow' if p>=70 else 'orange' if p>=60 else 'red')")
+          echo "coverage=$PCT" >> "$GITHUB_OUTPUT"
+          echo "color=$COLOR" >> "$GITHUB_OUTPUT"
       - name: Coverage PR comment
         if: github.event_name == 'pull_request' && !cancelled()
         uses: actions/github-script@v9
-        env:
-          SUMMARY_REPORT: ${{ steps.coverage.outputs.summaryReport }}
-          GLOBAL_PCT: ${{ steps.coverage.outputs.coverage }}
-          GLOBAL_COLOR: ${{ steps.coverage.outputs.color }}
         with:
           script: |
             const script = require('./.github/scripts/coverage-comment.js')
@@ -122,22 +129,8 @@ jobs:
           message: ${{ steps.coverage.outputs.coverage }}
           color: ${{ steps.coverage.outputs.color }}
 
-  test-js:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-      - name: Install Node dependencies
-        run: npm ci
-      - name: Test JavaScript
-        run: npm run test:js
-
   build-and-push:
-    needs: [lint, test, test-js]
+    needs: [lint, test]
     runs-on: ubuntu-latest
     if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     permissions:
