@@ -2,7 +2,7 @@ import json
 import os
 import tempfile
 import threading
-from collections.abc import Callable, Iterator, MutableMapping
+from collections.abc import Callable, Generator, Iterator, MutableMapping
 from contextlib import contextmanager, suppress
 from datetime import datetime
 from inspect import isclass
@@ -312,7 +312,7 @@ class PersistentDict[V](MutableMapping[str, V]):
             self._load()
 
     @contextmanager
-    def batch_write(self) -> Iterator["PersistentDict[V]"]:
+    def batch_write(self) -> Generator["PersistentDict[V]"]:
         """Hold the write lock across multiple mutations, saving once when the block exits.
 
         Inside the block, direct dict-style access (``d[k] = v``, ``del d[k]``)
