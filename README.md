@@ -54,7 +54,7 @@ uv run dev             # start app at http://localhost:8007
 ### Test, lint, format
 
 ```sh
-uv run pytest          # run tests (reads .env.test automatically)
+uv run test          # run tests (--cov for coverage)
 uv run lint --fix      # backend and frontend lint + auto-fix
 ```
 
