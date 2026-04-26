@@ -40,6 +40,8 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
+coverage*.json
+*test-results.xml
 
 # PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
 __pypackages__/
@@ -62,4 +64,3 @@ node_modules/
 # Test files
 dev-data/
 test-data/
-coverage.json
