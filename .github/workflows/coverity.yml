@@ -4,7 +4,7 @@ on:
   push:
     branches: [ "main" ]
   schedule:
-    - cron: '0 10 * * *'  # Daily 10:00 UTC
+    - cron: '0 10 * * 1'  # Weekly Monday 10:00 UTC
   workflow_dispatch:
 
 jobs:
