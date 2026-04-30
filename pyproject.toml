@@ -8,7 +8,7 @@ version = "0.5.5"
 requires-python = ">=3.12"
 dependencies = [
     "huawei-lte-api>=1.11.0",
-    "fastapi[standard]>=0.136.0",
+    "fastapi[standard]>=0.136.1",
     "beautifulsoup4>=4.14.3",
     "dateparser>=1.4.0",
     "readerwriterlock>=1.0.9",
