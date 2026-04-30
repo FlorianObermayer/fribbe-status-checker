@@ -224,7 +224,7 @@ jobs:
       - name: Generate changelog (stable — unreleased commits)
         if: needs.build-and-push.outputs.is_new_version == 'true'
         id: changelog-stable
-        uses: orhun/git-cliff-action@v4
+        uses: orhun/git-cliff-action@v4.7.1
         with:
           config: cliff.toml
           args: --unreleased --tag v${{ needs.build-and-push.outputs.version }} --strip header
@@ -235,7 +235,7 @@ jobs:
       - name: Generate changelog (nightly — since last tag)
         if: needs.build-and-push.outputs.is_new_version == 'false'
         id: changelog-nightly
-        uses: orhun/git-cliff-action@v4
+        uses: orhun/git-cliff-action@v4.7.1
         with:
           config: cliff.toml
           args: --unreleased --strip header
