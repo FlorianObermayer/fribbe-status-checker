@@ -169,7 +169,7 @@ jobs:
           covered = py_covered + js['covered']
           print(str(round(covered/total*100))+'%')
           ")
-          COLOR=$(node -e "const {coverageColor}=require('./.github/scripts/coverage-utils.js');console.log(coverageColor($(echo $PCT | tr -d '%'),$THRESHOLD))")
+          COLOR=$(node -e "const {coverageColor}=require('./.github/scripts/coverage-utils.js'); console.log(coverageColor(Number(process.argv[1]), Number(process.argv[2])));" "$(echo \"$PCT\" | tr -d '%')" "$THRESHOLD")
           echo "coverage=$PCT" >> "$GITHUB_OUTPUT"
           echo "color=$COLOR" >> "$GITHUB_OUTPUT"
       - name: Coverage summary
