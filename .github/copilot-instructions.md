@@ -67,7 +67,7 @@ README.md                  # Project overview, setup, conventions, instructions
 - **Linting**: Line length 120. Ruff rules: `ALL`. Tests rules differ. See `pyproject.toml` for details.
 - **Markdown linting**: `markdownlint-cli2` enforced in CI (warnings as errors). Config in `.markdownlint-cli2.yaml`. Run locally with `npx markdownlint-cli2`.
 - **Licenses**: After adding or removing any dependency in `pyproject.toml`, run `uv run generate-licenses` and commit the updated `app/licenses.json`. The CI lint job fails if this file is out of date.
-- **Coverage**: Coverage limits are defined centrally in `pyproject.toml`: `[tool.coverage.report] fail_under` (global, extracted by CI and passed to pytest-cov via `--cov-fail-under`) and `[tool.diff-cover] fail_under` (PR diff, extracted by CI and passed to `diff-cover`). Both are currently set to 80%.
+- **Coverage**: Coverage limits are defined centrally in `pyproject.toml`: `[tool.coverage.report] fail_under` (global) and `[tool.diff-cover] fail_under` (PR diff). CI reads these values to enforce the global and diff coverage gates (currently both are 80%).
 
 ## Copilot Instructions
 
