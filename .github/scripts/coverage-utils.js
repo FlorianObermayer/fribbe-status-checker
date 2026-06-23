@@ -5,8 +5,7 @@
 
 const fs = require("fs");
 
-// Reads fail_under from a [tool.*] section in pyproject.toml. Falls back to 80.
-function readThreshold(section) {
+// Reads fail_under from a [tool.*] section in pyproject.toml. Defaults to 80 if `fail_under` is missing; throws if the section cannot be read/found.
     try {
         const toml = fs.readFileSync("pyproject.toml", "utf8");
         const escaped = section.replace(/\./g, "\\.");
