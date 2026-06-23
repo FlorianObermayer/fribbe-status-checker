@@ -8,12 +8,30 @@
 
 const fs = require("fs");
 
-function coverageColor(pct) {
-    if (pct >= 90) return "brightgreen";
-    if (pct >= 80) return "green";
-    if (pct >= 70) return "yellow";
-    if (pct >= 60) return "orange";
-    return "red";
+// Reads fail_under from a [tool.*] section in pyproject.toml. Falls back to 80.
+function readThreshold(section) {
+    try {
+        const toml = fs.readFileSync("pyproject.toml", "utf8");
+        const escaped = section.replace(/\./g, "\\.");
+        const m = toml.match(new RegExp(`\\[${escaped}\\]([\\s\\S]*?)(?=\\n\\[|$)`));
+        if (!m) return 80;
+        const v = m[1].match(/^fail_under\s*=\s*(\d+)/m);
+        return v ? parseInt(v[1], 10) : 80;
+    } catch {
+        return 80;
+    }
+}
+
+// Colors relative to the enforcement threshold:
+//   red         = below threshold (failing)
+//   orange/yellow/green/brightgreen = linearly spaced across [threshold, 100]
+function coverageColor(pct, threshold) {
+    if (pct < threshold) return "red";
+    const step = (100 - threshold) / 4;
+    if (pct >= threshold + 3 * step) return "brightgreen";
+    if (pct >= threshold + 2 * step) return "green";
+    if (pct >= threshold + step) return "yellow";
+    return "orange";
 }
 
 function pyCoverageLines() {
@@ -49,10 +67,10 @@ function totalCoveragePct() {
     return total > 0 ? Math.round((covered / total) * 100) : null;
 }
 
-function coverageBadge(label, pct) {
+function coverageBadge(label, pct, threshold) {
     if (pct == null) return "";
     const slug = label.replace(/ /g, "%20");
-    return `![${label}](https://img.shields.io/badge/${slug}-${pct}%25-${coverageColor(pct)})`;
+    return `![${label}](https://img.shields.io/badge/${slug}-${pct}%25-${coverageColor(pct, threshold)})`;
 }
 
 // Sums stats across all <testsuite> elements — works for both pytest and vitest JUnit XML.
@@ -94,11 +112,17 @@ function buildSummaryTable(pyPath, jsPath) {
 }
 
 module.exports = async ({ github, context }) => {
+    const globalThreshold = readThreshold("tool.coverage.report");
+    const diffThreshold = readThreshold("tool.diff-cover");
+
     const py = pyCoveragePct();
     const js = jsCoveragePct();
     const total = totalCoveragePct();
-    const badges = [coverageBadge("Total Coverage", total), coverageBadge("Python Coverage", py), coverageBadge("JS Coverage", js)]
-        .filter(Boolean).join("  ");
+    const badges = [
+        coverageBadge("Total Coverage", total, globalThreshold),
+        coverageBadge("Python Coverage", py, globalThreshold),
+        coverageBadge("JS Coverage", js, globalThreshold),
+    ].filter(Boolean).join("  ");
 
     let diffBadge = "";
     let diffTable = "";
@@ -106,7 +130,7 @@ module.exports = async ({ github, context }) => {
         const diff = JSON.parse(fs.readFileSync("diff-coverage.json", "utf8"));
         const rawDiffPct = Number(diff.total_percent_covered ?? 0);
         const diffPct = Number.isFinite(rawDiffPct) ? rawDiffPct : 0;
-        diffBadge = `  ![Diff Coverage](https://img.shields.io/badge/Diff%20Coverage-${Math.round(diffPct)}%25-${coverageColor(diffPct)})`;
+        diffBadge = `  ![Diff Coverage](https://img.shields.io/badge/Diff%20Coverage-${Math.round(diffPct)}%25-${coverageColor(diffPct, diffThreshold)})`;
 
         const repoUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/blob/${context.sha}`;
         const rows = Object.entries(diff.src_stats)

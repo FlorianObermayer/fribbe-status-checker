@@ -88,16 +88,19 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
       - name: Test with pytest
-        run: uv run pytest tests/ --ignore=tests/js --junitxml=junit/test-results.xml --cov=app --cov-report=xml --cov-report=html --cov-fail-under=80
+        run: uv run pytest tests/ --ignore=tests/js --junitxml=junit/test-results.xml --cov=app --cov-report=xml --cov-report=html
       - name: Test JavaScript
         run: npm run test:js -- --coverage
       - name: Diff-cover
         if: github.event_name == 'pull_request'
-        run: uv run diff-cover coverage.xml coverage/js/cobertura-coverage.xml --compare-branch=origin/${{ github.base_ref }} --fail-under=80 --json-report diff-coverage.json
+        run: |
+          DIFF_FAIL_UNDER=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['tool']['diff-cover']['fail_under'])")
+          uv run diff-cover coverage.xml coverage/js/cobertura-coverage.xml --compare-branch=origin/${{ github.base_ref }} --fail-under=$DIFF_FAIL_UNDER --json-report diff-coverage.json
       - name: Read coverage pct
         if: github.ref == 'refs/heads/main' && !cancelled()
         id: coverage
         run: |
+          THRESHOLD=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['tool']['coverage']['report']['fail_under'])")
           PCT=$(python3 -c "
           import re, json
           py_xml = open('coverage.xml').read()
@@ -108,7 +111,10 @@ jobs:
           covered = py_covered + js['covered']
           print(str(round(covered/total*100))+'%')
           ")
-          COLOR=$(python3 -c "p=int('$PCT'.rstrip('%')); print('brightgreen' if p>=90 else 'green' if p>=80 else 'yellow' if p>=70 else 'orange' if p>=60 else 'red')")
+          COLOR=$(python3 -c "
+          t=$THRESHOLD; p=int('$PCT'.rstrip('%'))
+          print('brightgreen' if p>=t+10 else 'green' if p>=t else 'yellow' if p>=t-10 else 'orange' if p>=t-20 else 'red')
+          ")
           echo "coverage=$PCT" >> "$GITHUB_OUTPUT"
           echo "color=$COLOR" >> "$GITHUB_OUTPUT"
       - name: Coverage PR comment
