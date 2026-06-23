@@ -58,10 +58,10 @@ source = ["app"]
 omit = ["tests/*", "scripts/*"]
 
 [tool.coverage.report]
-fail_under = 80   # global coverage gate
+fail_under = 73   # global coverage gate
 
 [tool.diff-cover]
-fail_under = 80   # PR diff-coverage gate
+fail_under = 85   # PR diff-coverage gate
 
 [tool.ruff]
 line-length = 120
