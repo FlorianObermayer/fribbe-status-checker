@@ -13,7 +13,8 @@ function readThreshold(section) {
         const m = toml.match(new RegExp(`^\\[${escaped}\\]$([\\s\\S]*?)(?=^\\[|\\Z)`, "m"));
         if (!m) throw new Error(`Section [${section}] not found in pyproject.toml`);
         const v = m[1].match(/^fail_under\s*=\s*(\d+)/m);
-        return v ? parseInt(v[1], 10) : 80;
+        if (!v) throw new Error(`fail_under not found in [${section}]`);
+        return parseInt(v[1], 10);
     } catch (error) {
         throw new Error(`Failed to read [${section}] fail_under from pyproject.toml: ${error.message}`);
     }
