@@ -64,6 +64,34 @@ function parseJUnit(path) {
     return { tests, skipped, failures, errors, time };
 }
 
+function buildStatusHeader(total, globalThreshold, diffPct, diffThreshold) {
+    const pyJunit = parseJUnit("junit/test-results.xml");
+    const jsJunit = parseJUnit("junit/js-test-results.xml");
+
+    const checks = [];
+
+    if (pyJunit || jsJunit) {
+        const failed = [pyJunit, jsJunit].filter(Boolean).reduce((s, r) => s + r.failures + r.errors, 0);
+        checks.push({ name: "Tests", passed: failed === 0, detail: failed === 0 ? "passed" : `${failed} failure(s)` });
+    }
+    if (total != null) {
+        const passed = total >= globalThreshold;
+        checks.push({ name: "Coverage", passed, detail: `${total}% (threshold: ${globalThreshold}%)` });
+    }
+    if (diffPct != null) {
+        const passed = diffPct >= diffThreshold;
+        checks.push({ name: "Diff coverage", passed, detail: `${Math.round(diffPct)}% (threshold: ${diffThreshold}%)` });
+    }
+
+    if (checks.length === 0) return "";
+
+    const allPassed = checks.every((c) => c.passed);
+    const heading = allPassed ? "### ✅ All coverage checks passed" : "### ❌ Coverage checks failed";
+    const rows = checks.map((c) => `| ${c.passed ? "✅" : "❌"} ${c.name} | ${c.detail} |`);
+    const table = ["| Check | Result |", "|-------|--------|", ...rows].join("\n");
+    return `${heading}\n\n${table}`;
+}
+
 function buildSummaryTable(pyPath, jsPath) {
     const py = parseJUnit(pyPath);
     const js = parseJUnit(jsPath);
@@ -99,12 +127,13 @@ module.exports = async ({ github, context }) => {
         coverageBadge("JS Coverage", js, globalThreshold),
     ].filter(Boolean).join("  ");
 
+    let diffPct = null;
     let diffBadge = "";
     let diffTable = "";
     if (fs.existsSync("diff-coverage.json")) {
         const diff = JSON.parse(fs.readFileSync("diff-coverage.json", "utf8"));
         const rawDiffPct = Number(diff.total_percent_covered ?? 0);
-        const diffPct = Number.isFinite(rawDiffPct) ? rawDiffPct : 0;
+        diffPct = Number.isFinite(rawDiffPct) ? rawDiffPct : 0;
         diffBadge = `  ![Diff Coverage](https://img.shields.io/badge/Diff%20Coverage-${Math.round(diffPct)}%25-${coverageColor(diffPct, diffThreshold)})`;
 
         const repoUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/blob/${context.sha}`;
@@ -134,9 +163,12 @@ module.exports = async ({ github, context }) => {
     }
 
     const summaryTable = buildSummaryTable("junit/test-results.xml", "junit/js-test-results.xml");
+    const statusHeader = buildStatusHeader(total, globalThreshold, diffPct, diffThreshold);
 
     const body = [
         "<!-- coverage-report -->",
+        statusHeader,
+        "",
         `${badges}${diffBadge}`,
         "",
         summaryTable,
