@@ -9,7 +9,7 @@ const fs = require("fs");
     try {
         const toml = fs.readFileSync("pyproject.toml", "utf8");
         const escaped = section.replace(/\./g, "\\.");
-        const m = toml.match(new RegExp(`\\[${escaped}\\]([\\s\\S]*?)(?=\\n\\[|$)`));
+        const escaped = section.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         if (!m) throw new Error(`Section [${section}] not found in pyproject.toml`);
         const v = m[1].match(/^fail_under\s*=\s*(\d+)/m);
         return v ? parseInt(v[1], 10) : 80;
