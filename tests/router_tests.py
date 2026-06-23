@@ -1607,7 +1607,41 @@ def test_wardens_delete_not_found_returns_404(
 
 
 # ---------------------------------------------------------------------------
-# /api/internal/config — threshold updates
+# /api/internal/config — GET (read thresholds)
+# ---------------------------------------------------------------------------
+
+
+def test_get_config_returns_current_thresholds(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    monkeypatch.setattr(cfg, "LOCAL_DATA_PATH", str(tmp_path))
+
+    response = client.get("/api/internal/config", headers={"api_key": TEST_ADMIN_TOKEN})
+
+    assert response.status_code == 200
+    data = response.json()
+    assert "threshold_min_non_empty_ct" in data
+    assert "threshold_min_many_ct" in data
+    assert isinstance(data["threshold_min_non_empty_ct"], int)
+    assert isinstance(data["threshold_min_many_ct"], int)
+
+
+def test_get_config_requires_admin_role(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+
+    response = client.get("/api/internal/config")
+
+    assert response.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# /api/internal/config — PATCH (threshold updates)
 # ---------------------------------------------------------------------------
 
 

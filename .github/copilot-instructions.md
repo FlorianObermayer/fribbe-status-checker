@@ -72,5 +72,6 @@ README.md                  # Project overview, setup, conventions, instructions
 ## Copilot Instructions
 
 - Always write tests for new features and bug fixes; update existing tests if the change affects their behavior.
+- When generating code, always include corresponding tests in the same change.
 - Update `README.md` on every UI feature update.
 - Update `.github/copilot-instructions.md` if needed.
