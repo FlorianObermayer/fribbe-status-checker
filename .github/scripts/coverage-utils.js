@@ -1,7 +1,7 @@
 // Shared coverage utilities used by:
 //   coverage-comment.js  (require)
 //   vitest.config.js     (createRequire)
-//   ci-cd.yml            (node coverage-utils.js <pct> <threshold>  → prints color)
+//   ci-cd.yml            (node -e … require('./.github/scripts/coverage-utils.js'))
 
 const fs = require("fs");
 
