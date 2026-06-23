@@ -51,13 +51,47 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
       - name: Lint
-        run: uv run lint
+        id: lint
+        continue-on-error: true
+        run: uv run lint 2>&1 | tee /tmp/lint-output.txt
       - name: Check licenses.json is up-to-date
+        id: licenses
+        continue-on-error: true
         run: |
           uv run generate-licenses
           if ! git diff --quiet app/licenses.json; then
             echo "::error::app/licenses.json is out of date. Run 'uv run generate-licenses' locally and commit the result."
             git diff app/licenses.json
+            exit 1
+          fi
+      - name: Write lint summary
+        if: always()
+        run: |
+          {
+            echo "## Lint"
+            if [[ "${{ steps.lint.outcome }}" == "failure" ]]; then
+              echo "❌ **Lint failed.** Run \`uv run lint --fix\` locally to fix auto-fixable issues."
+              if [ -s /tmp/lint-output.txt ]; then
+                echo ""
+                echo "<details><summary>Output</summary>"
+                echo ""
+                echo '```'
+                tail -n 200 /tmp/lint-output.txt
+                echo '```'
+                echo "</details>"
+              fi
+            else
+              echo "✅ Lint passed."
+            fi
+            if [[ "${{ steps.licenses.outcome }}" == "failure" ]]; then
+              echo ""
+              echo "❌ **\`app/licenses.json\` is out of date.** Run \`uv run generate-licenses\` and commit."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Fail if lint errors
+        if: always()
+        run: |
+          if [[ "${{ steps.lint.outcome }}" == "failure" || "${{ steps.licenses.outcome }}" == "failure" ]]; then
             exit 1
           fi
 
@@ -88,19 +122,26 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
       - name: Test with pytest
+        id: pytest
+        continue-on-error: true
         run: |
           FAIL_UNDER=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['tool']['coverage']['report']['fail_under'])")
           uv run pytest tests/ --ignore=tests/js --junitxml=junit/test-results.xml --cov=app --cov-report=xml --cov-report=html --cov-fail-under=$FAIL_UNDER
       - name: Test JavaScript
+        id: js_test
+        continue-on-error: true
         run: npm run test:js -- --coverage
       - name: Diff-cover
+        id: diff_cover
         if: github.event_name == 'pull_request'
+        continue-on-error: true
         run: |
           DIFF_FAIL_UNDER=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['tool']['diff-cover']['fail_under'])")
           uv run diff-cover coverage.xml coverage/js/cobertura-coverage.xml --compare-branch=origin/${{ github.base_ref }} --fail-under=$DIFF_FAIL_UNDER --json-report diff-coverage.json
       - name: Read coverage pct
         if: github.ref == 'refs/heads/main' && !cancelled()
         id: coverage
+        continue-on-error: true
         run: |
           THRESHOLD=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['tool']['coverage']['report']['fail_under'])")
           PCT=$(python3 -c "
@@ -116,15 +157,15 @@ jobs:
           COLOR=$(node -e "const {coverageColor}=require('./.github/scripts/coverage-utils.js');console.log(coverageColor($(echo $PCT | tr -d '%'),$THRESHOLD))")
           echo "coverage=$PCT" >> "$GITHUB_OUTPUT"
           echo "color=$COLOR" >> "$GITHUB_OUTPUT"
-      - name: Coverage PR comment
-        if: github.event_name == 'pull_request' && !cancelled()
+      - name: Coverage summary
+        if: '!cancelled()'
         uses: actions/github-script@v9
         with:
           script: |
             const script = require('./.github/scripts/coverage-comment.js')
             await script({github, context})
       - name: Update coverage badge
-        if: github.ref == 'refs/heads/main' && !cancelled()
+        if: github.ref == 'refs/heads/main' && !cancelled() && steps.coverage.outcome == 'success'
         uses: Schneegans/dynamic-badges-action@v1.8.0
         with:
           auth: ${{ secrets.GIST_TOKEN }}
@@ -133,6 +174,14 @@ jobs:
           label: Coverage
           message: ${{ steps.coverage.outputs.coverage }}
           color: ${{ steps.coverage.outputs.color }}
+      - name: Fail if tests or coverage failed
+        if: always()
+        run: |
+          if [[ "${{ steps.pytest.outcome }}" == "failure" || \
+               "${{ steps.js_test.outcome }}" == "failure" || \
+               "${{ steps.diff_cover.outcome }}" == "failure" ]]; then
+            exit 1
+          fi
 
   build-and-push:
     needs: [lint, test]

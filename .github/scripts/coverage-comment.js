@@ -144,6 +144,14 @@ module.exports = async ({ github, context }) => {
         diffTable,
     ].join("\n");
 
+    // Always write to the job summary (visible for both PRs and pushes)
+    if (process.env.GITHUB_STEP_SUMMARY) {
+        fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, body + "\n");
+    }
+
+    // Post or update PR comment only on pull_request events
+    if (context.eventName !== "pull_request") return;
+
     const { data: comments } = await github.rest.issues.listComments({
         owner: context.repo.owner,
         repo: context.repo.repo,
