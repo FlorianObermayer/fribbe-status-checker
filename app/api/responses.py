@@ -73,6 +73,13 @@ class DetailsResponse(BaseResponse):
     last_service_start: datetime
 
 
+class ConfigResponse(BaseModel):
+    """Current presence detection threshold configuration."""
+
+    threshold_min_non_empty_ct: int
+    threshold_min_many_ct: int
+
+
 class ApiKey(BaseModel):
     """An API key with metadata."""
 

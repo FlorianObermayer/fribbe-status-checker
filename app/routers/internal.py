@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Response
 from app.api.access_role import AccessRole
 from app.api.hybrid_auth import HybridAuth
 from app.api.requests import ConfigRequest
-from app.api.responses import DetailsResponse
+from app.api.responses import ConfigResponse, DetailsResponse
 from app.api.schema import requires_auth_extra
 from app.dependencies import InternalServiceDep
 from app.services.presence_thresholds import PresenceThresholds
@@ -33,6 +33,20 @@ def details(
         first_device_on_site=svc.get_first_device_on_site(),
         last_device_on_site=svc.get_last_device_on_site(),
         last_service_start=svc.get_last_service_started(),
+    )
+
+
+@router.get(
+    "/api/internal/config",
+    tags=["Config"],
+    openapi_extra=requires_auth_extra(),
+)
+def get_config(_: Annotated[str, Depends(HybridAuth(min_role=AccessRole.ADMIN))]) -> ConfigResponse:
+    """Return current presence detection thresholds."""
+    thresholds = PresenceThresholds()
+    return ConfigResponse(
+        threshold_min_non_empty_ct=thresholds.min_non_empty_ct,
+        threshold_min_many_ct=thresholds.min_many_ct,
     )
 
 
