@@ -15,6 +15,11 @@
     "url": "https://github.com/fastapi/fastapi"
   },
   {
+    "name": "httpx2",
+    "license": "BSD-3-Clause",
+    "url": "https://github.com/pydantic/httpx2"
+  },
+  {
     "name": "huawei-lte-api",
     "license": "GNU Lesser General Public License v3 (LGPLv3)",
     "url": "https://github.com/Salamek/huawei-lte-api"

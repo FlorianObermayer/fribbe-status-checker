@@ -18,6 +18,7 @@ dependencies = [
     "starlette-csrf>=3.0.0",
     "secure>=2.0.1",
     "pywebpush>=2.3.0",
+    "httpx2>=2.4.0",
 ]
 
 [project.scripts]
@@ -139,5 +140,8 @@ venv = ".venv"
 root = "tests"
 reportPrivateUsage = "none"
 reportMissingTypeStubs = "none"
+reportUnknownMemberType = "none"
+reportUnknownVariableType = "none"
+reportUnknownArgumentType = "none"
 
 
