@@ -56,6 +56,12 @@ filterwarnings = [
 source = ["app"]
 omit = ["tests/*", "scripts/*"]
 
+[tool.coverage.report]
+fail_under = 80   # global coverage gate
+
+[tool.diff-cover]
+fail_under = 80   # PR diff-coverage gate
+
 [tool.ruff]
 line-length = 120
 exclude = [".venv", "node_modules"]
