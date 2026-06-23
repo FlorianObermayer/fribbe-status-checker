@@ -86,7 +86,7 @@ function buildStatusHeader(total, globalThreshold, diffPct, diffThreshold) {
     if (checks.length === 0) return "";
 
     const allPassed = checks.every((c) => c.passed);
-    const heading = allPassed ? "### ✅ All coverage checks passed" : "### ❌ Coverage checks failed";
+    const heading = allPassed ? "### ✅ All checks passed" : "### ❌ One or more checks failed";
     const rows = checks.map((c) => `| ${c.passed ? "✅" : "❌"} ${c.name} | ${c.detail} |`);
     const table = ["| Check | Result |", "|-------|--------|", ...rows].join("\n");
     return `${heading}\n\n${table}`;
