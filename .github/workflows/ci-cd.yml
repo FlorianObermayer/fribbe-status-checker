@@ -25,14 +25,14 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.3
       - name: Dependency Review
         uses: actions/dependency-review-action@v5
 
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.3
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
@@ -67,7 +67,7 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.3
         with:
           fetch-depth: 0
       - name: Set up Python
@@ -142,7 +142,7 @@ jobs:
       is_new_version: ${{ steps.check_tag.outputs.is_new_version }}
     
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.3
         with:
           fetch-depth: 0
 
@@ -214,7 +214,7 @@ jobs:
       contents: write
     
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.3
         with:
           fetch-depth: 0
 
