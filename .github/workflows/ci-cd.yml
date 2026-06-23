@@ -68,7 +68,7 @@ jobs:
       - name: Lint
         id: lint
         continue-on-error: true
-        run: uv run lint 2>&1 | tee /tmp/lint-output.txt
+        run: set -o pipefail; uv run lint 2>&1 | tee /tmp/lint-output.txt
       - name: Check licenses.json is up-to-date
         id: licenses
         continue-on-error: true
