@@ -16,7 +16,7 @@ dependencies = [
     "nh3>=0.3.5",
     "starsessions>=2.2.1",
     "starlette-csrf>=3.0.0",
-    "secure>=1.0.1",
+    "secure>=2.0.1",
     "pywebpush>=2.3.0",
 ]
 
