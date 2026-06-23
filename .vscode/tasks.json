@@ -26,6 +26,14 @@
             "problemMatcher": [
                 "$python"
             ]
+        },
+        {
+            "label": "generate licenses",
+            "type": "shell",
+            "command": "uv run generate-licenses",
+            "problemMatcher": [
+                "$python"
+            ]
         }
     ]
 }
