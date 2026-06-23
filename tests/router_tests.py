@@ -1629,7 +1629,7 @@ def test_get_config_returns_current_thresholds(
     assert isinstance(data["threshold_min_many_ct"], int)
 
 
-def test_get_config_requires_admin_role(
+def test_get_config_returns_401_when_unauthenticated(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1638,6 +1638,26 @@ def test_get_config_requires_admin_role(
     response = client.get("/api/internal/config")
 
     assert response.status_code == 401
+
+
+def test_get_config_returns_403_for_non_admin_role(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Authenticated but non-ADMIN role must be rejected with 403."""
+    keys_path = tmp_path / "api_keys.json"
+    monkeypatch.setattr(cfg, "API_KEYS_PATH", str(keys_path))
+    api_key = ApiKey.generate_new(
+        comment="test-reader",
+        valid_until=datetime(2030, 12, 31, tzinfo=_UTC),
+        role=AccessRole.READER,
+    )
+    assert EphemeralAPIKeyStore.append(api_key)
+
+    response = client.get("/api/internal/config", headers={"api_key": api_key.key})
+
+    assert response.status_code == 403
 
 
 # ---------------------------------------------------------------------------
