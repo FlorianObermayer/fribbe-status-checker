@@ -704,7 +704,7 @@ wheels = [
 
 [[package]]
 name = "fribbe-status-checker"
-version = "0.5.6"
+version = "0.5.7"
 source = { editable = "." }
 dependencies = [
     { name = "beautifulsoup4" },
