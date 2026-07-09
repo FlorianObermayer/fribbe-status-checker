@@ -1,0 +1,15 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=827846 for extension identifiers.
+    "recommendations": [
+        "ms-python.vscode-pylance",
+        "ms-python.python",
+        "ms-python.debugpy",
+        "charliermarsh.ruff",
+        "streetsidesoftware.code-spell-checker",
+        "streetsidesoftware.code-spell-checker-german",
+        "GitHub.vscode-github-actions",
+        "DavidAnson.vscode-markdownlint",
+        "GitHub.vscode-pull-request-github",
+        "vitest.explorer"
+    ]
+}
