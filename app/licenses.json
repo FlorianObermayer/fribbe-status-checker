@@ -6,7 +6,7 @@
   },
   {
     "name": "dateparser",
-    "license": "BSD License",
+    "license": "BSD-3-Clause",
     "url": "https://github.com/scrapinghub/dateparser"
   },
   {
