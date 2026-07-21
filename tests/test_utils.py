@@ -29,11 +29,33 @@ def read_testdata_from_fs(relative_path: str) -> str:
         return f.read()
 
 
-def get_weekly_mock_table() -> Tag:
-    soup = BeautifulSoup(read_testdata_from_fs("occupancy_weekly_test_data.html"), "html.parser")
+def get_latest_snapshot_from_fs(snapshot_path: str) -> str:
+    """Return the contents of the latest snapshot file in the given directory."""
+    snapshot_dir = Path(__file__).parent / snapshot_path
+    snapshot_files = sorted(snapshot_dir.glob("*.html"), reverse=True)
+    if not snapshot_files:
+        msg = f"No snapshot files found in {snapshot_dir}"
+        raise FileNotFoundError(msg)
+    latest_snapshot_file = snapshot_files[0]
+    with latest_snapshot_file.open(encoding="utf-8") as f:
+        return f.read()
+
+
+def get_weekly_mock_table(relative_snapshot_path: str = "") -> Tag:
+    snapshot_path = (
+        read_testdata_from_fs(relative_snapshot_path)
+        if relative_snapshot_path
+        else get_latest_snapshot_from_fs("data/snapshots/occupancy_weekly")
+    )
+    soup = BeautifulSoup(snapshot_path, "html.parser")
     return soup.find("table")  # pyright: ignore[reportReturnType]
 
 
-def get_calendar_mock_table() -> Tag:
-    soup = BeautifulSoup(read_testdata_from_fs("occupancy_calendar_test_data.html"), "html.parser")
+def get_calendar_mock_table(relative_snapshot_path: str = "") -> Tag:
+    snapshot_path = (
+        read_testdata_from_fs(relative_snapshot_path)
+        if relative_snapshot_path
+        else get_latest_snapshot_from_fs("data/snapshots/occupancy_calendar")
+    )
+    soup = BeautifulSoup(snapshot_path, "html.parser")
     return soup.find("table")  # pyright: ignore[reportReturnType]

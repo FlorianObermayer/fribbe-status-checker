@@ -68,7 +68,7 @@ def test_get_todays_calendar_occupancy_with_occupancy() -> None:
     assert len(daily.lines) > 0
     assert len(daily.events) > 0
     assert len(daily.lines) == len(daily.events)
-    assert daily.occupancy_type is OccupancyType.FULLY
+    assert daily.occupancy_type is OccupancyType.PARTIALLY
     assert daily.occupancy_source is OccupancySource.EVENT_CALENDAR
     assert isinstance(daily.last_updated, datetime)
     assert isinstance(daily.date, date)

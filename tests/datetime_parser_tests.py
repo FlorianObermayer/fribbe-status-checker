@@ -3,7 +3,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from app.services.datetime_parser import parse_event_times
+from app.services.datetime_parser import _sanitize_time_str, format_date_long, format_datetime, parse_event_times
 
 _TZ = ZoneInfo("Europe/Berlin")
 
@@ -200,8 +200,115 @@ _TZ = ZoneInfo("Europe/Berlin")
                 datetime(2024, 6, 28, 19, 0, tzinfo=_TZ),
             ),
         ),
+        # natürliche Sprache
+        (
+            date(2026, 7, 21),
+            "bis 16 Uhr",
+            (
+                datetime(2026, 7, 21, 0, 0, tzinfo=_TZ),
+                datetime(2026, 7, 21, 16, 0, tzinfo=_TZ),
+            ),
+        ),  # "ab X Uhr" with literal Uhr keyword
+        (
+            date(2024, 6, 27),
+            "ab 14 Uhr",
+            (
+                datetime(2024, 6, 27, 14, 0, tzinfo=_TZ),
+                datetime(2024, 6, 27, 23, 59, tzinfo=_TZ),
+            ),
+        ),
+        # range with "Uhr" on both sides
+        (
+            "2024-06-28",
+            "14 Uhr - 16 Uhr",
+            (
+                datetime(2024, 6, 28, 14, 0, tzinfo=_TZ),
+                datetime(2024, 6, 28, 16, 0, tzinfo=_TZ),
+            ),
+        ),
+        # single digit hours without minutes, both sides "Uhr"
+        (
+            date(2024, 6, 29),
+            "8 Uhr - 9 Uhr",
+            (
+                datetime(2024, 6, 29, 8, 0, tzinfo=_TZ),
+                datetime(2024, 6, 29, 9, 0, tzinfo=_TZ),
+            ),
+        ),
+        # irregular spacing / no space before Uhr
+        (
+            "2024-06-30",
+            "14Uhr-16Uhr",
+            (
+                datetime(2024, 6, 30, 14, 0, tzinfo=_TZ),
+                datetime(2024, 6, 30, 16, 0, tzinfo=_TZ),
+            ),
+        ),
+        # uppercase UHR
+        (
+            date(2024, 7, 1),
+            "10 UHR - 12 UHR",
+            (
+                datetime(2024, 7, 1, 10, 0, tzinfo=_TZ),
+                datetime(2024, 7, 1, 12, 0, tzinfo=_TZ),
+            ),
+        ),
+        # extra whitespace around dash
+        (
+            "2024-07-02",
+            "09:00   -   10:00",
+            (
+                datetime(2024, 7, 2, 9, 0, tzinfo=_TZ),
+                datetime(2024, 7, 2, 10, 0, tzinfo=_TZ),
+            ),
+        ),
+        # weekday name alone, natural language fallback
+        (
+            date(2024, 7, 3),  # a Wednesday
+            "Montag",
+            (
+                datetime(2024, 7, 8, 0, 0, tzinfo=_TZ),
+                datetime(2024, 7, 8, 2, 0, tzinfo=_TZ),
+            ),
+        ),
     ],
 )
 def test_parameterized(date_input: str | date, time_str: str, expected: tuple[datetime, datetime]) -> None:
     actual = parse_event_times(date_input, time_str)
     assert actual == expected
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("3:14", "03:14"),
+        ("3:14 Uhr", "03:14"),
+        ("3:14-4:15", "03:14-04:15"),
+        ("14 Uhr", "14:00"),
+        ("14 Uhr - 16 Uhr", "14:00 - 16:00"),
+        ("14UHR-16UHR", "14:00-16:00"),
+        ("  14:00   -   16:00  ", "14:00 - 16:00"),
+        ("", ""),
+        ("-", "-"),
+        ("ganztags", "ganztags"),
+    ],
+)
+def test_sanitize_time_str(raw: str, expected: str) -> None:
+    assert _sanitize_time_str(raw) == expected
+
+
+def test_format_datetime() -> None:
+    dt = datetime(2024, 4, 11, 12, 0, tzinfo=_TZ)
+    assert format_datetime(dt) == "11. Apr., 12:00"
+
+
+def test_format_date_long() -> None:
+    assert format_date_long("2024-04-12") == "Freitag, 12. Apr."
+
+
+def test_format_date_long_none() -> None:
+    assert format_date_long(None) == ""
+
+
+def test_format_date_long_empty_string() -> None:
+    assert format_date_long("") == ""
