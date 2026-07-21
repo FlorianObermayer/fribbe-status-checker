@@ -13,6 +13,8 @@ Weekday = Literal["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Sa
 _WEEKLY_PLAN_COLUMNS = 3
 _EVENT_CALENDAR_COLUMNS = 4
 
+_FULL_DAY_EVENT_END_TIME_THRESHOLD = 19  # 19:00 is considered the threshold for a full-day blocking event
+
 
 def _is_weekday(value: str) -> TypeGuard[Weekday]:
     return value in get_args(Weekday)
@@ -77,6 +79,8 @@ def _parse_weekly_plan_row(day: Weekday, time: str, event_name: str, location_fi
     days_ahead = (event_weekday - today_weekday) % 7
     event_date = today + timedelta(days=days_ahead)
     location_normalized = location_field.lower().strip()
+    start_time, end_time = parse_event_times(event_date, time)
+
     match location_normalized:
         case "":
             occupancy_type = OccupancyType.NONE
@@ -85,9 +89,11 @@ def _parse_weekly_plan_row(day: Weekday, time: str, event_name: str, location_fi
         case _ if location_normalized.startswith("tbd"):
             occupancy_type = OccupancyType.PARTIALLY
         case _:
-            occupancy_type = OccupancyType.FULLY
-
-    start_time, end_time = parse_event_times(event_date, time)
+            # only count it as fully if the end time is not set or later than _FULL_DAY_EVENT_END_TIME_THRESHOLD
+            if not end_time or end_time.hour >= _FULL_DAY_EVENT_END_TIME_THRESHOLD:
+                occupancy_type = OccupancyType.FULLY
+            else:
+                occupancy_type = OccupancyType.PARTIALLY
 
     return Occupancy(
         start_time,
@@ -129,17 +135,22 @@ def parse_event_calendar(event_calendar_table: Tag) -> list[Occupancy]:
 
 
 def _parse_event_calendar_row(event_date: str, event_name: str, time_str: str, location_field: str) -> Occupancy:
+
+    start_time, end_time = parse_event_times(event_date, time_str)
+
     location_lower = location_field.lower()
     if not location_field or location_field == "-":
         occupancy_type = OccupancyType.NONE
     elif location_lower.startswith(("feld", "hütten")) or "feld" in location_lower:
         occupancy_type = OccupancyType.PARTIALLY
     elif location_lower == "komplett":
-        occupancy_type = OccupancyType.FULLY
+        # only count it as fully if the end time is not set or later than _FULL_DAY_EVENT_END_TIME_THRESHOLD
+        if not end_time or end_time.hour >= _FULL_DAY_EVENT_END_TIME_THRESHOLD:
+            occupancy_type = OccupancyType.FULLY
+        else:
+            occupancy_type = OccupancyType.PARTIALLY
     else:
         occupancy_type = OccupancyType.PARTIALLY
-
-    start_time, end_time = parse_event_times(event_date, time_str)
 
     return Occupancy(
         start_time,

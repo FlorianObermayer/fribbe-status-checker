@@ -1,13 +1,17 @@
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
+
 import pytest
 
 from app.services.occupancy.model import OccupancyType
 from app.services.occupancy.occupancy_parser import (
     Weekday,
     _parse_event_calendar_row,  # pyright: ignore[reportPrivateUsage]
-    _parse_weekly_plan_row,  # pyright: ignore[reportPrivateUsage]
+    _parse_weekly_plan_row,
+    parse_event_calendar,  # pyright: ignore[reportPrivateUsage]
     parse_weekly_plan,
 )
-from tests.test_utils import get_weekly_mock_table
+from tests.test_utils import get_calendar_mock_table, get_weekly_mock_table
 
 
 @pytest.mark.parametrize(
@@ -72,8 +76,9 @@ def test_parse_table_skips_empty_events() -> None:
         ("2026-05-01", "Turnier", "10:00 - 18:00", "Feld 4", OccupancyType.PARTIALLY),
         ("2026-05-01", "Turnier", "10:00 - 18:00", "Hauptfeld", OccupancyType.PARTIALLY),
         ("2026-05-01", "Turnier", "10:00 - 18:00", "Sonderfeld Mitte", OccupancyType.PARTIALLY),
-        ("2026-05-01", "Turnier", "10:00 - 18:00", "komplett", OccupancyType.FULLY),
-        ("2026-05-01", "Turnier", "10:00 - 18:00", "Komplett", OccupancyType.FULLY),
+        ("2026-05-01", "Turnier", "10:00 - 18:00", "komplett", OccupancyType.PARTIALLY),
+        ("2026-05-01", "Turnier", "10:00 - 20:00", "komplett", OccupancyType.FULLY),
+        ("2026-05-01", "Turnier", "10:00 - 18:00", "Komplett", OccupancyType.PARTIALLY),
         ("2026-05-01", "Turnier", "10:00 - 18:00", "hütten", OccupancyType.PARTIALLY),
         ("2026-05-01", "Turnier", "10:00 - 18:00", "Hütten Nord", OccupancyType.PARTIALLY),
         ("2026-05-01", "Turnier", "10:00 - 18:00", "-", OccupancyType.NONE),
@@ -97,3 +102,31 @@ def test_parse_event_calendar_row_propagates_fields() -> None:
     assert result.event_name == "Sommerfest"
     assert result.occupied_str == "Feld 1"
     assert result.time_str == "14:00 - 20:00"
+
+
+# <tr data-day="dienstag"><td>Externe Buchung</td><td>18:00 - 20:00</td><td>Feld 4</td></tr>
+def test_regression_parse_weekly_tuesday_external_booking_event() -> None:
+    table = get_weekly_mock_table("data/snapshots/occupancy_weekly/2026_07_21.html")
+    occupancies = parse_weekly_plan(table)
+    assert any(o.event_name == "Externe Buchung" and o.begin.weekday() == 1 for o in occupancies)
+    assert any(o.event_name == "Externe Buchung" and o.end and o.end.weekday() == 1 for o in occupancies)
+    assert any(o.event_name == "Externe Buchung" and o.occupied_str == "Feld 4" for o in occupancies)
+    assert any(o.event_name == "Externe Buchung" and o.occupancy_type == OccupancyType.PARTIALLY for o in occupancies)
+    assert any(o.event_name == "Externe Buchung" and o.time_str == "18:00 - 20:00" for o in occupancies)
+
+
+# <tr data-date="2026-07-21"><td>21.07.2026</td><td>Schulveranstaltung</td><td>bis 16 Uhr</td><td>komplett</td></tr>  <!-- Beachcamp MT -->
+def test_regression_parse_calendar_should_be_partially_blocking_event() -> None:
+    table = get_calendar_mock_table("data/snapshots/occupancy_calendar/2026_07_21.html")
+    occupancies = parse_event_calendar(table)
+    school_event = next(
+        (o for o in occupancies if o.event_name == "Schulveranstaltung" and o.begin.date() == date(2026, 7, 21)), None
+    )
+
+    assert school_event is not None
+    assert school_event.occupied_str == "komplett"
+    assert school_event.occupancy_type == OccupancyType.PARTIALLY
+    assert school_event.end is not None
+    assert (
+        school_event.end.time() == datetime.strptime("16:00", "%H:%M").replace(tzinfo=ZoneInfo("Europe/Berlin")).time()
+    )
