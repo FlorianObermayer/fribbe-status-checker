@@ -66,6 +66,8 @@ All environment variables are declared in [`app/config.py`](app/config.py). See 
 
 Each optional feature is silently disabled when its variables are absent.
 
+Set `IGNORED_MAC_ADDRESSES` to a comma-separated list of MAC addresses (e.g. `2C:CF:67:DD:46:23,54:60:09:EE:19:28`) to exclude infrastructure devices from presence detection. Matching is case-insensitive. Leave unset or empty to ignore no addresses.
+
 ### Generate VAPID keys
 
 ```sh
