@@ -2,76 +2,57 @@
 
 FastAPI beach volleyball status app: presence detection (router polling), occupancy scraping, push notifications, Jinja2-templated web frontend.
 
-## Build & Test
+## Commands
 
 ```sh
 uv run dev             # run app locally (http://localhost:8007)
-uv run test            # run all tests
-uv run test --cov      # run all tests with coverage
-uv run lint            # backend and frontend lint
-uv run lint --fix      # backend and frontend lint + auto-fix
+uv run test            # run all tests (--cov for coverage)
+uv run lint --fix      # ruff format + ruff check --fix + frontend lint
 ```
 
 Env files: create `.env.dev` and `.env.test` from `.env.template`. Required: `SESSION_SECRET_KEY`, `LOCAL_DATA_PATH`, `API_KEYS_PATH`.
 
-Test patterns: `*Test.py`, `*Tests.py`, `*_test.py`, `*_tests.py`.
-Integration tests (`tests/integration/`) are `@pytest.mark.skip` — do not remove the skip marker.
-
-## UI Validation
-
-For larger frontend changes, validate against `http://localhost:8007`.
-
-- Use VS Code Simple Browser or Copilot browser tools for quick visual/content checks.
-- Keep localhost access read-only for verification; do not rely on live/manual checks as the only test signal.
-
 ## File Structure
 
 ```text
-.github/
-  copilot-instructions.md  # Instructions for Copilot
-  workflows/
-    ci-cd.yml              # CI/CD pipeline (lint, test, build, deploy, coverage enforcement)
-    codeql.yml             # CodeQL security analysis
-  dependabot.yml           # Dependabot config for dependency updates
 app/
-  main.py                  # FastAPI app, routing, service wiring, lifespan handler
-  dependencies.py          # Service singletons & DI; startup()/shutdown() called at startup/shutdown
-  config.py                # ALL env vars declared here;
-  api/                     # Auth (HybridAuth, EphemeralAPIKeyStore), request/response schemas
-  services/                # Domain services (presence, occupancy, push, messages, weather)
-    internal/              # Internal device-count tracking (WardenStore)
-    occupancy/             # Web scraping for booking status
-  templates/               # Jinja2 HTML templates (index, auth, notification-create, api-keys, legal)
-  static/                  # Served CSS/JS/images frontend assets
-scripts/                   # uv entry points (dev, lint, watch, generate-vapid-keys, …)
-tests/                     # Unit tests; test-data/ holds fixture files
-README.md                  # Project overview, setup, conventions, instructions
+  main.py          # FastAPI app, routing, service wiring, lifespan handler
+  dependencies.py  # Service singletons & DI; startup()/shutdown() called at startup/shutdown
+  config.py        # ALL env vars declared here
+  api/             # Auth (HybridAuth, EphemeralAPIKeyStore), request/response schemas
+  services/        # Domain services (presence, occupancy, push, messages, weather)
+    internal/      # Internal device-count tracking (WardenStore)
+    occupancy/     # Web scraping for booking status
+  templates/       # Jinja2 HTML templates
+  static/          # CSS/JS/images
+scripts/           # uv entry points (dev, lint, watch, generate-vapid-keys, …)
+tests/             # Unit tests; test-data/ holds fixture files
 ```
 
 ## Architecture
 
-- **Lifecycle**: `app.dependencies.startup()` / `shutdown()` are called from the FastAPI lifespan in `main.py`. Service singletons and background pollers are created/stopped there - never at import time. This keeps module imports side-effect free so tests can import routers without spawning threads.
-- `PresenceLevelService` polls router → `PresenceLevel` (empty/few/many) → on first daily EMPTY→active transition fires push notification via `PushSubscriptionService`
-- `MessageService` provides German-language text; uses `Weather` from `WeatherService` (OWM, 30-min cache)
-- `HybridAuth` checks an opaque server-side session referenced by the session cookie first, then `api_key` header
-- **Access roles**: `AccessRole` (`READER < NOTIFICATION_OPERATOR < ADMIN`) in `app/api/access_role.py`. `HybridAuth(min_role=...)` enforces the minimum role; 403 when authenticated but insufficient. `ADMIN_TOKEN` always maps to `ADMIN`. API keys carry a `role` field; when the field is missing in stored keys, `ApiKey.from_dict()` falls back to `READER`. `PageAuth(min_role=...)` works the same way for HTML page routes.
+- **Lifecycle**: `startup()` / `shutdown()` in `app/dependencies.py` are called from the FastAPI lifespan. Service singletons and background pollers are created/stopped there — never at import time (keeps imports side-effect free for tests).
+- `PresenceLevelService` polls router → `PresenceLevel` (empty/few/many) → on first daily EMPTY→active transition fires push via `PushSubscriptionService`.
+- `MessageService` provides German-language text; uses `Weather` from `WeatherService` (OWM, 30-min cache).
+- `HybridAuth` checks session cookie first, then `api_key` header. `PageAuth` works the same way for HTML routes.
+- **Access roles**: `READER < NOTIFICATION_OPERATOR < ADMIN` (`app/api/access_role.py`). `ADMIN_TOKEN` always maps to `ADMIN`. Missing `role` in stored API keys falls back to `READER`.
 
 ## Conventions
 
-- **Env vars**: Declared as typed globals in `app/config.py`; `load()` populates from `os.environ`. Never read `os.environ` outside `config.py`. `.env.template` is the canonical var list.
-- **Token length**: `Config.MIN_TOKEN_LENGTH = 48` / `cfg.MIN_TOKEN_LENGTH` is character count (not bytes). Use with `Field(min_length=...)`. For generation: `secrets.token_urlsafe(cfg.MIN_TOKEN_LENGTH)` (byte param, yields ≥48 chars).
+- **Env vars**: Declare in `app/config.py` only — never read `os.environ` elsewhere. `.env.template` is the canonical var list. Tests use `monkeypatch.setattr(cfg, ...)` or `monkeypatch.setenv(...)` + `cfg.reload()`.
+- **Token length**: `cfg.MIN_TOKEN_LENGTH = 48` chars. Generation: `secrets.token_urlsafe(cfg.MIN_TOKEN_LENGTH)`.
+- **Threading**: `EphemeralAPIKeyStore` uses a module-level `_write_lock`. Use `append(key)` (not `save()`); returns `False` on failure.
+- **Weather types**: `WeatherService.get_condition()` → `Weather | None`; `temperature`: HOT/WARM/MILD/COLD, `state`: CLEAR/CLOUDY/MILD_RAIN/HEAVY_RAIN/THUNDERSTORM/SNOW. Precipitation takes priority over temperature in `MessageService`.
+- **Types**: PyRight strict. All public functions need return-type annotations. Avoid `# type: ignore`.
+- **Linting**: Line length 120. Ruff `ALL` rules (tests differ — see `pyproject.toml`). CI enforces `ruff format` and `ruff check` as separate gates; run `uv run lint --fix` before every commit.
+- **Markdown**: `markdownlint-cli2` in CI (warnings as errors). Config in `.markdownlint-cli2.yaml`. Run: `npx markdownlint-cli2`.
+- **Licenses**: After changing `pyproject.toml` deps, run `uv run generate-licenses` and commit `app/licenses.json`.
+- **Coverage**: Thresholds in `pyproject.toml` (`[tool.coverage.report] fail_under` global, `[tool.diff-cover] fail_under` per-PR diff).
 
-- **Threading**: `EphemeralAPIKeyStore` has module-level `_write_lock`. Use `append(key)` (not `save()`); returns `False` on failure.
-- **Weather types**: `WeatherService.get_condition()` → `Weather | None` with `temperature: Temperature` (HOT/WARM/MILD/COLD) and `state: WeatherState` (CLEAR/CLOUDY/MILD_RAIN/HEAVY_RAIN/THUNDERSTORM/SNOW). In `MessageService`, precipitation states take priority over temperature messages.
-- **Type checking**: PyRight strict. All public functions need return-type annotations. Avoid `# type: ignore`.
-- **Linting**: Line length 120. Ruff rules: `ALL`. Tests rules differ. See `pyproject.toml` for details.
-- **Markdown linting**: `markdownlint-cli2` enforced in CI (warnings as errors). Config in `.markdownlint-cli2.yaml`. Run locally with `npx markdownlint-cli2`.
-- **Licenses**: After adding or removing any dependency in `pyproject.toml`, run `uv run generate-licenses` and commit the updated `app/licenses.json`. The CI lint job fails if this file is out of date.
-- **Coverage**: Coverage limits are defined centrally in `pyproject.toml`: `[tool.coverage.report] fail_under` (global) and `[tool.diff-cover] fail_under` (PR diff). CI reads these values to enforce the global and diff coverage gates (see `pyproject.toml` for the current thresholds).
+## Workflow
 
-## Copilot Instructions
-
-- Always write tests for new features and bug fixes; update existing tests if the change affects their behavior.
-- When generating code, always include corresponding tests in the same change.
-- Update `README.md` on every UI feature update.
-- Update `.github/copilot-instructions.md` if needed.
+- Write tests for every feature and bug fix; update existing tests when behavior changes. Test patterns: `*Test.py`, `*Tests.py`, `*_test.py`, `*_tests.py`. Integration tests (`tests/integration/`) are `@pytest.mark.skip` — do not remove the marker.
+- Run `uv run lint --fix` before committing.
+- Update `README.md` on UI feature changes.
+- Update this file when conventions change.
+- For larger frontend changes validate visually at `http://localhost:8007` (read-only; not a substitute for automated tests).
