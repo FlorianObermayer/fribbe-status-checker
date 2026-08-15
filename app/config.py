@@ -124,6 +124,14 @@ class Config:
     INTERNAL_POLLING_DELAY_SECONDS: int = field(
         default_factory=lambda: int(os.environ.get("INTERNAL_POLLING_DELAY_SECONDS") or 30),
     )
+    # Comma-separated list of MAC addresses to ignore during presence detection
+    # (e.g. infrastructure devices like routers or media players).
+    # Comparison is case-insensitive. Empty or unset means no addresses are ignored.
+    IGNORED_MAC_ADDRESSES: frozenset[str] = field(
+        default_factory=lambda: frozenset(
+            mac.strip().lower() for mac in (os.environ.get("IGNORED_MAC_ADDRESSES") or "").split(",") if mac.strip()
+        ),
+    )
 
     # ── Occupancy scraping ────────────────────────────────────────────────────
 
