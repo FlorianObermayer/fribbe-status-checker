@@ -27,7 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.0
       - name: Detect and submit dependencies
-        uses: advanced-security/component-detection-dependency-submission-action@v0.1.1
+        uses: advanced-security/component-detection-dependency-submission-action@v0.1.4
         with:
           detectorArgs: UvLock=EnableIfDefaultOff
 
