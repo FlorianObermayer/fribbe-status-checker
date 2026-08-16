@@ -79,7 +79,7 @@ class PresenceLevelService(PollingService):
     async def _run_presence_detection(self, router_ip: str, username: str, password: str) -> None:
         try:
             logger.info("Refresh Presence Level...")
-            with Connection(f"http://{router_ip}", username, password, login_on_demand=True, timeout=10) as connection:
+            with Connection(f"http://{router_ip}", username, password, timeout=10) as connection:
                 client = Client(connection)
                 active_member_devices_ct = len(
                     [
