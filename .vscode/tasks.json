@@ -34,6 +34,20 @@
             "problemMatcher": [
                 "$python"
             ]
+        },
+        {
+            "label": "Update deps",
+            "type": "shell",
+            "command": "uv lock --upgrade && uv sync --upgrade && uv run generate-licenses && uv run security-check && uv run test",
+            "problemMatcher": [
+                "$python"
+            ],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "clear": true
+            },
+            "detail": "Refresh the uv lockfile, sync the environment, regenerate app/licenses.json, run the security-check, and run the full test suite."
         }
     ]
 }
