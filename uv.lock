@@ -856,7 +856,7 @@ dev = [
 requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.15.0" },
     { name = "dateparser", specifier = ">=1.4.1" },
-    { name = "fastapi", extras = ["standard"], specifier = ">=0.139.0" },
+    { name = "fastapi", extras = ["standard"], specifier = ">=0.141.1" },
     { name = "httpx2", specifier = ">=2.5.0" },
     { name = "huawei-lte-api", specifier = ">=1.11.0" },
     { name = "markdown", specifier = ">=3.10.2" },
