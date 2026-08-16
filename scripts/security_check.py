@@ -26,7 +26,7 @@ def main() -> None:
 
     results["uv lock --check"] = _run(["uv", "lock", "--check"], "uv lock --check")
     results["uv audit"] = _run(
-        ["uv", "audit", "--frozen", "--preview-features", "audit-command"],
+        ["uv", "audit", "--frozen", "--preview-features", "audit"],
         "uv audit (Python dependency vulnerabilities)",
     )
 
