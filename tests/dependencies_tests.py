@@ -25,7 +25,7 @@ def reset_singletons() -> None:
 @patch("app.dependencies.NotificationService", autospec=True)
 @patch("app.dependencies.PresenceLevelService", autospec=True)
 @patch("app.dependencies.cfg")
-def test_startup_creates_services_and_starts_pollers(  # noqa: PLR0913
+def test_startup_creates_services_and_starts_pollers(  # noqa: PLR0913, PLR0917
     mock_cfg: MagicMock,
     mock_presence_cls: MagicMock,
     mock_notification_cls: MagicMock,

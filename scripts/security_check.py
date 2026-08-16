@@ -15,6 +15,7 @@ from pathlib import Path
 
 PROJECT_ROOT = str(Path(__file__).resolve().parent.parent)
 
+
 def _run(args: list[str], summary: str) -> bool:
     print(f"\n>>> {summary}", flush=True)
     result = subprocess.run(args, cwd=PROJECT_ROOT, check=False)
