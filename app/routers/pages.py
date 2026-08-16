@@ -138,7 +138,7 @@ def _build_status_context(
     response_class=HTMLResponse,
     include_in_schema=False,
 )
-def get_status_content(  # noqa: PLR0913
+def get_status_content(  # noqa: PLR0913, PLR0917
     request: Request,
     occupancy_svc: OccupancyServiceDep,
     presence_svc: PresenceServiceDep,

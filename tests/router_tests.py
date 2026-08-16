@@ -457,7 +457,7 @@ def test_get_legal_page_shows_push_section_when_feature_enabled(
     ],
     ids=["all-disabled", "presence-only", "weather-only"],
 )
-def test_get_legal_page_feature_sections(  # noqa: PLR0913
+def test_get_legal_page_feature_sections(  # noqa: PLR0913, PLR0917
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
     push: bool,  # noqa: FBT001

@@ -147,7 +147,7 @@ def test_persistentdict_with_dataclass_omitting_protocol_expect_type_error() -> 
 
 # Nested DictSerializable class for testing
 class NestedClass(DictSerializable):
-    def __init__(self, name: str, values: list[int], child: "None | NestedClass" = None) -> None:
+    def __init__(self, name: str, values: list[int], child: "NestedClass | None" = None) -> None:
         self.name = name
         self.values = values
         self.child = child
