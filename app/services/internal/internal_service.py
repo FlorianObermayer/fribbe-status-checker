@@ -116,7 +116,7 @@ class InternalService(PollingService):
     async def _run_internal_query(self, router_ip: str, username: str, password: str) -> None:
         try:
             logger.info("Refresh Internal...")
-            with Connection(f"http://{router_ip}", username, password, login_on_demand=True) as connection:
+            with Connection(f"http://{router_ip}", username, password) as connection:
                 client = Client(connection)
                 active_member_devices = [
                     device
