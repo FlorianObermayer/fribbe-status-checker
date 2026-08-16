@@ -29,6 +29,7 @@ generate-vapid-keys = "scripts.generate_vapid_keys:main"
 test-push-notification = "scripts.test_push_notification:main"
 generate-licenses = "scripts.generate_licenses:main"
 release = "scripts.release:main"
+security-check = "scripts.security_check:main"
 
 
 [dependency-groups]
@@ -80,6 +81,7 @@ select = [
 ]
 ignore = [
     "COM812", # trailing comma missing — conflicts with formatter
+    "CPY001", # missing copyright notice — project has no copyright-header convention
     "D100", # missing docstring in public module
     "D104", # missing docstring in public package
     "D107", # missing docstring in __init__
