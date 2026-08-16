@@ -113,5 +113,6 @@
     "python.testing.pytestEnabled": true,
     "python.testing.unittestEnabled": false,
     "remote.autoForwardPortsFallback": 0,
+    "ruff.nativeServer": "on",
     "vitest.enable": true
 }
