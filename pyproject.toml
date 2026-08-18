@@ -55,8 +55,8 @@ filterwarnings = [
 ]
 
 [tool.coverage.run]
-source = ["app"]
-omit = ["tests/*", "scripts/*"]
+source = ["app", "scripts", ".github/scripts"]
+omit = ["tests/*"]
 
 [tool.coverage.report]
 fail_under = 73   # global coverage gate
