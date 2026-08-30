@@ -14,7 +14,8 @@
     },
     "postCreateCommand": {
         "uv-sync": "uv sync --all-groups",
-        "npm-ci": "npm ci"
+        "npm-ci": "npm ci",
+        "openspec-install": "npm install -g @fission-ai/openspec"
     },
     "customizations": {
         "vscode": {
