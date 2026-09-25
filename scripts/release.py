@@ -348,7 +348,8 @@ def main() -> None:
 
     if not dry_run:
         print("[branch] fetching latest refs from origin ...")
-        _run("git", "fetch", "origin", "--prune")
+        if _run("git", "fetch", "origin", "--prune", check=False).returncode != 0:
+            print("[branch] warning: could not fetch origin \u2014 using existing refs", file=sys.stderr)
     reuse = _select_release_branch(_open_release_branches(), project_version)
 
     if reuse is not None:
