@@ -1,6 +1,10 @@
-"""Create a release branch and open a pull request against main.
+"""Create or update a release branch and open a pull request against main.
 
-Refreshes the lock file and licenses, bumps the version, pushes the release branch and opens a PR.
+If an open release branch already exists (local or on origin, i.e. not yet merged into
+main), the script reuses it instead of creating a new one: it checks it out, merges the
+latest main, refreshes the lock file and licenses, and pushes. The branch keeps its
+current version. Otherwise it bumps the version, creates a new release branch, pushes it
+and opens a PR.
 
 Usage:
     uv run release                  # analyse commits, suggest bump, prompt to confirm
@@ -29,6 +33,7 @@ from scripts.generate_licenses import main as _generate_licenses
 ROOT = Path(__file__).resolve().parent.parent
 PYPROJECT = ROOT / "pyproject.toml"
 _VERSION_RE = re.compile(r'^(version\s*=\s*")(\d+)\.(\d+)\.(\d+)(")', re.MULTILINE)
+_RELEASE_BRANCH_RE = re.compile(r"^release/v(\d+)\.(\d+)\.(\d+)$")
 _REPO = "FlorianObermayer/fribbe-status-checker"
 
 
@@ -86,6 +91,77 @@ def _branch_exists_remote(branch: str) -> bool:
 def _dirty_files() -> list[str]:
     """Return relative paths of files with unstaged changes."""
     return _capture("git", "diff", "--name-only").splitlines()
+
+
+def _ref_exists(ref: str) -> bool:
+    result = subprocess.run(
+        ["git", "rev-parse", "--verify", "--quiet", ref],
+        check=False,
+        capture_output=True,
+        cwd=ROOT,
+        env=_ENV,
+    )
+    return result.returncode == 0
+
+
+def _parse_branch_version(branch: str) -> tuple[int, int, int] | None:
+    """Return the (major, minor, patch) version encoded in a release branch name."""
+    match = _RELEASE_BRANCH_RE.match(branch)
+    if not match:
+        return None
+    return int(match.group(1)), int(match.group(2)), int(match.group(3))
+
+
+def _release_branch_names() -> list[str]:
+    """Return unique release/* branch names known locally and on origin."""
+    local = _capture("git", "for-each-ref", "--format=%(refname:short)", "refs/heads/release/")
+    remote = _capture("git", "for-each-ref", "--format=%(refname:short)", "refs/remotes/origin/release/")
+    names = {name for name in local.splitlines() if name}
+    names |= {name.removeprefix("origin/") for name in remote.splitlines() if name}
+    return sorted(names)
+
+
+def _is_merged_into_main(branch: str) -> bool:
+    """Return True if the newest known tip of the branch is already contained in main."""
+    for ref in (f"origin/{branch}", branch):
+        if not _ref_exists(ref):
+            continue
+        result = subprocess.run(
+            ["git", "merge-base", "--is-ancestor", ref, "main"],
+            check=False,
+            capture_output=True,
+            cwd=ROOT,
+            env=_ENV,
+        )
+        return result.returncode == 0
+    return False
+
+
+def _open_release_branches() -> list[tuple[tuple[int, int, int], str]]:
+    """Return (version, branch) for every release branch not yet merged into main."""
+    branches: list[tuple[tuple[int, int, int], str]] = []
+    for name in _release_branch_names():
+        version = _parse_branch_version(name)
+        if version is None or _is_merged_into_main(name):
+            continue
+        branches.append((version, name))
+    return branches
+
+
+def _select_release_branch(
+    branches: list[tuple[tuple[int, int, int], str]],
+    project_version: tuple[int, int, int],
+) -> tuple[tuple[int, int, int], str] | None:
+    """Pick the open release branch with the smallest version jump above the project version."""
+    if not branches:
+        return None
+    ahead = sorted(branch for branch in branches if branch[0] > project_version)
+    if ahead:
+        return ahead[0]
+    return min(
+        branches,
+        key=lambda branch: tuple(abs(a - b) for a, b in zip(branch[0], project_version, strict=True)),
+    )
 
 
 def _github_api(method: str, path: str, token: str, body: dict[str, object] | None = None) -> Any:
@@ -159,8 +235,96 @@ def _prompt_bump_type(suggestion: str, commits: str) -> str:
 # ---------------------------------------------------------------------------
 
 
+def _checkout_release_branch(branch: str, *, dry_run: bool) -> None:
+    """Check out an existing release branch, creating a local tracking branch if needed."""
+    if _branch_exists_local(branch):
+        print(f"[branch] checking out existing local branch {branch}")
+        _run("git", "checkout", branch, dry_run=dry_run)
+        return
+    if _branch_exists_remote(branch):
+        print(f"[branch] checking out remote branch {branch}")
+        _run("git", "fetch", "origin", branch, dry_run=dry_run)
+        _run("git", "checkout", "-b", branch, f"origin/{branch}", dry_run=dry_run)
+        return
+    sys.exit(f"error: release branch {branch} does not exist")
+
+
+def _sync_branch_with_main(branch: str, *, dry_run: bool) -> None:
+    """Merge the latest main into the release branch so it ships the current changes."""
+    print("[branch] merging origin/main into release branch ...")
+    _run("git", "fetch", "origin", "main", dry_run=dry_run)
+    result = _run("git", "merge", "--no-edit", "origin/main", check=False, dry_run=dry_run)
+    if result.returncode != 0:
+        sys.exit(f"error: could not merge origin/main into {branch} \u2014 resolve conflicts and re-run")
+
+
+def _refresh_lock_and_licenses(version: str, *, dry_run: bool) -> None:
+    """Refresh the lock file and licenses, committing uv.lock / app/licenses.json if changed."""
+    print("[sync] uv sync --all-groups ...")
+    _run("uv", "sync", "--all-groups", dry_run=dry_run)
+
+    print("[licenses] generate-licenses ...")
+    if dry_run:
+        print("[dry-run] generate-licenses()")
+    else:
+        _generate_licenses()
+
+    support = [f for f in _dirty_files() if f in ("uv.lock", "app/licenses.json")]
+    if support:
+        print(f"[commit] {', '.join(support)}")
+        _run("git", "add", *support, dry_run=dry_run)
+        _run("git", "commit", "-m", f"chore: update lock file and licenses for v{version}", dry_run=dry_run)
+
+
+def _push_and_create_pr(branch: str, version: str, *, dry_run: bool) -> None:
+    """Push the release branch and open (or report) the pull request against main."""
+    _run("git", "push", "--set-upstream", "origin", branch, dry_run=dry_run)
+    print(f"[push] {branch} \u2192 origin")
+
+    token = os.environ.get("GITHUB_TOKEN")
+    if not token:
+        print("\n[pr] no GITHUB_TOKEN found \u2014 skipping PR creation")
+        print(f"     open manually: https://github.com/{_REPO}/compare/{branch}")
+        return
+
+    if dry_run:
+        print(f"[dry-run] would create PR: chore(release): v{version} ({branch} \u2192 main)")
+        return
+
+    existing = _find_open_pr(branch, token)
+    if existing:
+        print(f"\n[pr] already exists: {existing}")
+        return
+
+    commits = _commits_since_last_tag()
+    body = (
+        f"## Release v{version}\n\n"
+        "### Changes since last release\n\n"
+        f"```\n{commits}\n```\n\n"
+        f"Merging to `main` will trigger the CI/CD pipeline and create a stable GitHub release tagged `v{version}`.\n"
+    )
+
+    try:
+        pr = _github_api(
+            "POST",
+            f"/repos/{_REPO}/pulls",
+            token,
+            {
+                "title": f"chore(release): v{version}",
+                "head": branch,
+                "base": "main",
+                "body": body,
+            },
+        )
+        print(f"\n[pr] created: {pr['html_url']}")
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode()
+        print(f"\n[pr] warning: could not create PR ({e.code}): {detail}", file=sys.stderr)
+        print(f"     open manually: https://github.com/{_REPO}/compare/{branch}")
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(prog="uv run release", description="Create a release branch and PR.")
+    parser = argparse.ArgumentParser(prog="uv run release", description="Create or update a release branch and PR.")
     parser.add_argument("bump", nargs="?", choices=["patch", "minor", "major"], help="Version bump type")
     parser.add_argument("--dry-run", action="store_true", help="Show what would happen without making any changes")
     args = parser.parse_args()
@@ -175,18 +339,38 @@ def main() -> None:
     unstaged = subprocess.run(["git", "diff", "--quiet"], check=False, cwd=ROOT, env=_ENV)
     staged = subprocess.run(["git", "diff", "--cached", "--quiet"], check=False, cwd=ROOT, env=_ENV)
     if not dry_run and (unstaged.returncode != 0 or staged.returncode != 0):
-        sys.exit("error: working tree has uncommitted changes — commit or stash them first")
+        sys.exit("error: working tree has uncommitted changes \u2014 commit or stash them first")
 
-    # 2. Determine bump type — analyse commits and prompt if not passed as argument
+    # 2. Read the project version and look for an open release branch to update instead
+    text = PYPROJECT.read_text()
+    major, minor, patch = _current_version(text)
+    project_version = (major, minor, patch)
+
+    if not dry_run:
+        print("[branch] fetching latest refs from origin ...")
+        _run("git", "fetch", "origin", "--prune")
+    reuse = _select_release_branch(_open_release_branches(), project_version)
+
+    if reuse is not None:
+        (r_major, r_minor, r_patch), branch = reuse
+        reuse_ver = f"{r_major}.{r_minor}.{r_patch}"
+        print(f"[branch] reusing open release branch {branch} (v{reuse_ver})")
+        if args.bump:
+            print(f"[branch] ignoring requested '{args.bump}' bump \u2014 updating {branch} in place")
+        _checkout_release_branch(branch, dry_run=dry_run)
+        _sync_branch_with_main(branch, dry_run=dry_run)
+        _refresh_lock_and_licenses(reuse_ver, dry_run=dry_run)
+        _push_and_create_pr(branch, reuse_ver, dry_run=dry_run)
+        return
+
+    # 3. Determine bump type — analyse commits and prompt if not passed as argument
     if args.bump:
         part = args.bump
     else:
         suggestion, commits = _suggest_bump_type()
         part = _prompt_bump_type(suggestion, commits)
 
-    # 3. Compute new version
-    text = PYPROJECT.read_text()
-    major, minor, patch = _current_version(text)
+    # 4. Compute new version
     new_major, new_minor, new_patch = _bump(major, minor, patch, part)
     old_ver = f"{major}.{minor}.{patch}"
     new_ver = f"{new_major}.{new_minor}.{new_patch}"
@@ -194,7 +378,7 @@ def main() -> None:
     print(f"  version : {old_ver} \u2192 {new_ver}")
     print(f"  branch  : {branch}")
 
-    # 3. Create or check out release branch
+    # 5. Create or check out release branch
     if _branch_exists_local(branch):
         print(f"[branch] checking out existing local branch {branch}")
         _run("git", "checkout", branch, dry_run=dry_run)
@@ -209,81 +393,23 @@ def main() -> None:
         print(f"[branch] creating {branch}")
         _run("git", "checkout", "-b", branch, dry_run=dry_run)
 
-    # 4. Write new version to pyproject.toml (no commit yet)
+    # 6. Write new version to pyproject.toml (no commit yet)
     new_text = _VERSION_RE.sub(rf"\g<1>{new_major}.{new_minor}.{new_patch}\g<5>", text)
     if dry_run:
         print(f"[dry-run] write pyproject.toml: version {old_ver} \u2192 {new_ver}")
     else:
         PYPROJECT.write_text(new_text)
 
-    # 5. Refresh lock file
-    print("[sync] uv sync --all-groups ...")
-    _run("uv", "sync", "--all-groups", dry_run=dry_run)
-
-    # 6. Refresh licenses
-    print("[licenses] generate-licenses ...")
-    if not dry_run:
-        _generate_licenses()
-    else:
-        print("[dry-run] generate-licenses()")
-
-    # 7. Commit uv.lock / app/licenses.json if either changed
-    support = [f for f in _dirty_files() if f in ("uv.lock", "app/licenses.json")]
-    if support:
-        print(f"[commit] {', '.join(support)}")
-        _run("git", "add", *support, dry_run=dry_run)
-        _run("git", "commit", "-m", f"chore: update lock file and licenses for v{new_ver}", dry_run=dry_run)
+    # 7. Refresh lock file and licenses
+    _refresh_lock_and_licenses(new_ver, dry_run=dry_run)
 
     # 8. Commit version bump
     _run("git", "add", "pyproject.toml", dry_run=dry_run)
     _run("git", "commit", "-m", f"chore(release): v{new_ver}", dry_run=dry_run)
     print(f"[commit] chore(release): v{new_ver}")
 
-    # 9. Push branch
-    _run("git", "push", "--set-upstream", "origin", branch, dry_run=dry_run)
-    print(f"[push] {branch} \u2192 origin")
-
-    # 10. Create PR
-    token = os.environ.get("GITHUB_TOKEN")
-    if not token:
-        print("\n[pr] no GITHUB_TOKEN found \u2014 skipping PR creation")
-        print(f"     open manually: https://github.com/{_REPO}/compare/{branch}")
-        return
-
-    if dry_run:
-        print(f"[dry-run] would create PR: chore(release): v{new_ver} ({branch} \u2192 main)")
-        return
-
-    existing = _find_open_pr(branch, token)
-    if existing:
-        print(f"\n[pr] already exists: {existing}")
-        return
-
-    commits = _commits_since_last_tag()
-    body = (
-        f"## Release v{new_ver}\n\n"
-        "### Changes since last release\n\n"
-        f"```\n{commits}\n```\n\n"
-        f"Merging to `main` will trigger the CI/CD pipeline and create a stable GitHub release tagged `v{new_ver}`.\n"
-    )
-
-    try:
-        pr = _github_api(
-            "POST",
-            f"/repos/{_REPO}/pulls",
-            token,
-            {
-                "title": f"chore(release): v{new_ver}",
-                "head": branch,
-                "base": "main",
-                "body": body,
-            },
-        )
-        print(f"\n[pr] created: {pr['html_url']}")
-    except urllib.error.HTTPError as e:
-        detail = e.read().decode()
-        print(f"\n[pr] warning: could not create PR ({e.code}): {detail}", file=sys.stderr)
-        print(f"     open manually: https://github.com/{_REPO}/compare/{branch}")
+    # 9. Push branch and create PR
+    _push_and_create_pr(branch, new_ver, dry_run=dry_run)
 
 
 if __name__ == "__main__":
