@@ -928,6 +928,59 @@ def test_header_auth_regenerates_session_id(
     assert session_id_before != session_id_after
 
 
+def test_superseded_session_cookie_rejected_after_rotation(
+    client: TestClient,
+    test_app: FastAPI,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Re-authenticating must revoke the previously issued session cookie."""
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    test_app.dependency_overrides[get_internal_service] = mock_internal_svc
+
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+    first_cookie = _get_session_cookie_value(client)
+
+    # Re-authenticating now carries a session cookie, so CSRF must be satisfied.
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"}, headers=_get_csrf_headers(client))
+    second_cookie = _get_session_cookie_value(client)
+    assert first_cookie != second_cookie
+
+    # The cookie issued by the most recent sign-in still authenticates
+    assert client.get("/api/internal/details").status_code == 200
+
+    # The superseded cookie must no longer authenticate
+    client.cookies.clear()
+    client.cookies.set("session_cookie", first_cookie)
+    assert client.get("/api/internal/details").status_code == 401
+
+
+def test_signout_revokes_current_and_superseded_cookies(
+    client: TestClient,
+    test_app: FastAPI,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Signing out must terminate the current session and any superseded identifiers."""
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    test_app.dependency_overrides[get_internal_service] = mock_internal_svc
+
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"})
+    first_cookie = _get_session_cookie_value(client)
+
+    client.post("/auth", json={"token": TEST_ADMIN_TOKEN, "next": "/"}, headers=_get_csrf_headers(client))
+    second_cookie = _get_session_cookie_value(client)
+    assert first_cookie != second_cookie
+
+    client.post("/signout", headers=_get_csrf_headers(client))
+
+    client.cookies.clear()
+    client.cookies.set("session_cookie", first_cookie)
+    assert client.get("/api/internal/details").status_code == 401
+
+    client.cookies.clear()
+    client.cookies.set("session_cookie", second_cookie)
+    assert client.get("/api/internal/details").status_code == 401
+
+
 # ---------------------------------------------------------------------------
 # /api/notifications
 # ---------------------------------------------------------------------------
@@ -1017,6 +1070,61 @@ def test_notification_content_renders_markdown(client: TestClient, test_app: Fas
     assert response.status_code == 200
     assert 'data-notification-id="nid-abc123"' in response.text
     assert "<strong>world</strong>" in response.text
+
+
+# ---------------------------------------------------------------------------
+# /api/notifications + /notifications/content — only_active enforcement
+# ---------------------------------------------------------------------------
+
+
+def test_notifications_html_filters_to_active_for_anonymous(client: TestClient, test_app: FastAPI) -> None:
+    svc = _mock_notification_svc()
+    svc.get.return_value = []
+    test_app.dependency_overrides[get_notification_service] = lambda: svc
+
+    client.get("/api/notifications?n_ids=nid-abc123")
+
+    svc.get.assert_called_once_with(["nid-abc123"], only_active=True)
+
+
+def test_notifications_html_allows_inactive_for_authenticated(
+    client: TestClient,
+    test_app: FastAPI,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    svc = _mock_notification_svc()
+    svc.get.return_value = []
+    test_app.dependency_overrides[get_notification_service] = lambda: svc
+
+    client.get("/api/notifications?n_ids=nid-abc123", headers={"api_key": TEST_ADMIN_TOKEN})
+
+    svc.get.assert_called_once_with(["nid-abc123"], only_active=False)
+
+
+def test_notification_content_filters_to_active_for_anonymous(client: TestClient, test_app: FastAPI) -> None:
+    svc = _mock_notification_svc()
+    svc.get.return_value = []
+    test_app.dependency_overrides[get_notification_service] = lambda: svc
+
+    client.get("/notifications/content?n_ids=nid-abc123")
+
+    svc.get.assert_called_once_with(["nid-abc123"], only_active=True)
+
+
+def test_notification_content_allows_inactive_for_authenticated(
+    client: TestClient,
+    test_app: FastAPI,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(cfg, "ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    svc = _mock_notification_svc()
+    svc.get.return_value = []
+    test_app.dependency_overrides[get_notification_service] = lambda: svc
+
+    client.get("/notifications/content?n_ids=nid-abc123", headers={"api_key": TEST_ADMIN_TOKEN})
+
+    svc.get.assert_called_once_with(["nid-abc123"], only_active=False)
 
 
 def test_notifications_post_returns_401_without_auth(client: TestClient, test_app: FastAPI) -> None:
@@ -1759,6 +1867,63 @@ def test_push_subscribe_returns_201_for_valid_subscription(
 
     assert response.status_code == 201
     push_svc.add.assert_called_once()
+
+
+def test_push_subscribe_rejects_internal_endpoint(
+    client: TestClient,
+    test_app: FastAPI,
+) -> None:
+    """A loopback destination must be rejected at registration (SSRF control)."""
+    push_svc = MagicMock()
+    test_app.dependency_overrides[get_push_subscription_service] = lambda: push_svc
+
+    response = client.post(
+        "/api/push/subscribe",
+        json={"endpoint": "https://127.0.0.1:8443/x", "p256dh": "a" * 20, "auth": "b" * 20},
+    )
+
+    assert response.status_code == 422
+    push_svc.add.assert_not_called()
+
+
+def test_push_subscribe_rejects_userinfo_endpoint(
+    client: TestClient,
+    test_app: FastAPI,
+) -> None:
+    push_svc = MagicMock()
+    test_app.dependency_overrides[get_push_subscription_service] = lambda: push_svc
+
+    response = client.post(
+        "/api/push/subscribe",
+        json={"endpoint": "https://user:pass@127.0.0.1:8443/x", "p256dh": "a" * 20, "auth": "b" * 20},
+    )
+
+    assert response.status_code == 422
+    push_svc.add.assert_not_called()
+
+
+def test_push_subscribe_surfaces_capacity_rejection(
+    client: TestClient,
+    test_app: FastAPI,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A full store must surface as a client error, not a 500."""
+    push_svc = MagicMock()
+    push_svc.add.side_effect = ValueError("subscription limit reached")
+    test_app.dependency_overrides[get_push_subscription_service] = lambda: push_svc
+    monkeypatch.setattr(
+        PushSubscriptionService,
+        "validate_subscription",
+        staticmethod(lambda *_a: None),  # type: ignore[reportUnknownLambdaType]
+    )
+
+    response = client.post(
+        "/api/push/subscribe",
+        json={"endpoint": "https://push.example.com", "p256dh": "key", "auth": "auth"},
+    )
+
+    assert response.status_code == 422
+    assert "limit" in response.json()["detail"]
 
 
 def test_push_topics_returns_422_for_invalid_auth(client: TestClient, test_app: FastAPI) -> None:

@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 
 import markdown
 import nh3
+from starlette.concurrency import run_in_threadpool
 
 from app.api.requests import NotificationFilterId
 from app.config import cfg
@@ -124,7 +125,12 @@ class NotificationService(PollingService):
                 self._known_active_nids = {*known_active_nids, nid}
         return nid
 
-    def get(self, notification_ids: list[NotificationFilterId | str] | None = None) -> list[Notification]:
+    def get(
+        self,
+        notification_ids: list[NotificationFilterId | str] | None = None,
+        *,
+        only_active: bool = False,
+    ) -> list[Notification]:
         """Return notifications matching the given filter IDs."""
         if notification_ids is None:
             notification_ids = [NotificationFilterId.ALL_ACTIVE]
@@ -143,7 +149,7 @@ class NotificationService(PollingService):
             result = [n for n in self._store.values() if not n.is_active()]
         else:
             requested_ids = {nid for nid in notification_ids if nid.startswith("nid-")}
-            result = [n for n in self._store.values() if n.id in requested_ids]
+            result = [n for n in self._store.values() if n.id in requested_ids and (not only_active or n.is_active())]
 
         result.sort(
             key=lambda n: n.created.replace(tzinfo=UTC) if n.created.tzinfo is None else n.created.astimezone(UTC),
@@ -241,8 +247,11 @@ class NotificationService(PollingService):
             notification = self._store.get(nid)
             if notification is not None:
                 logger.info("Notification %s became active - sending push", nid)
-                self._push_sender.send_to_topic_sync(
-                    PushTopic.NOTIFICATIONS, _PUSH_TITLE, _push_message(notification.message)
+                await run_in_threadpool(
+                    self._push_sender.send_to_topic_sync,
+                    PushTopic.NOTIFICATIONS,
+                    _PUSH_TITLE,
+                    _push_message(notification.message),
                 )
 
     async def _run_clean_old_notifications(self) -> None:

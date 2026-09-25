@@ -12,3 +12,11 @@ ignores:
   - ".venv/**"
   - "node_modules/**"
   - "fribbe_status_checker.egg-info/**"
+  # OpenSpec artifacts deliberately start with "## " (schema-defined), so MD041 does not apply.
+  - "openspec/**"
+  # Vendor-generated security assessment reports are linted by their own tooling.
+  - "strix-reports/**"
+  # OpenSpec CLI-generated agent/prompt/skill docs follow their own formatting conventions.
+  - ".github/agents/**"
+  - ".github/prompts/**"
+  - ".github/skills/**"

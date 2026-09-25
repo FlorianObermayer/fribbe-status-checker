@@ -4,6 +4,7 @@ import markdown
 import nh3
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import HTMLResponse
+from starlette.concurrency import run_in_threadpool
 
 from app.api.access_role import AccessRole
 from app.api.hybrid_auth import HybridAuth
@@ -46,7 +47,7 @@ async def get_notifications_as_html(
     # Without an API Key, only allow "public" queries
     n_ids = request.filter_unprotected_n_ids() if api_key is None else request.n_ids
 
-    notifications = svc.get(n_ids)
+    notifications = svc.get(n_ids, only_active=api_key is None)
 
     if len(notifications) == 0:
         return HTMLResponse("")
@@ -68,7 +69,9 @@ async def post_notification(
     _: Annotated[str, Depends(HybridAuth(min_role=AccessRole.NOTIFICATION_OPERATOR))],
 ) -> PostNotificationResponse:
     """Create a new notification."""
-    notification_id = svc.add(request.message, request.valid_from, request.valid_until, enabled=request.enabled)
+    notification_id = await run_in_threadpool(
+        svc.add, request.message, request.valid_from, request.valid_until, enabled=request.enabled
+    )
     return PostNotificationResponse(notification_id=notification_id)
 
 
@@ -83,7 +86,8 @@ async def update_notification(
     _: Annotated[str, Depends(HybridAuth(min_role=AccessRole.NOTIFICATION_OPERATOR))],
 ) -> None:
     """Update an existing notification."""
-    if not svc.update(
+    if not await run_in_threadpool(
+        svc.update,
         notification_id,
         enabled=request.enabled,
         valid_from=request.valid_from,

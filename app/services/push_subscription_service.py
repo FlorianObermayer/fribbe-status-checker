@@ -1,6 +1,8 @@
+import ipaddress
 import json
 import logging
 import re
+import socket
 from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -10,6 +12,7 @@ from typing import Any, Self
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
 
+import requests
 from pywebpush import WebPushException, webpush  # type: ignore[import-untyped]
 
 from app.config import cfg
@@ -23,6 +26,50 @@ _B64URL_RE = re.compile(r"^[A-Za-z0-9\-_]+=*$")
 # Real values are longer (p256dh ≈ 87 chars, auth ≈ 22 chars); this is a
 # conservative lower bound to reject obviously invalid input.
 _MIN_PUSH_KEY_LENGTH = 10
+
+# Maximum number of stored push subscriptions. The store is unauthenticated and
+# every subscribe rewrites the whole JSON file, so an unbounded store lets an
+# anonymous caller consume disk space and grow the per-request rewrite cost
+# without limit.
+_MAX_SUBSCRIPTIONS = 1000
+
+# Maximum time (seconds) to wait for a single push service request before abandoning it.
+_PUSH_REQUEST_TIMEOUT_SECONDS = 10
+
+
+# Push requests must never be redirected: a public endpoint could otherwise
+# bounce the server to an internal address after validation has passed.
+_PUSH_SESSION = requests.Session()
+_PUSH_SESSION.max_redirects = 0
+
+
+def _resolve_push_host(host: str) -> list[ipaddress.IPv4Address | ipaddress.IPv6Address]:
+    """Resolve *host* to every IPv4/IPv6 address it maps to."""
+    infos = socket.getaddrinfo(host, None, proto=socket.IPPROTO_TCP)
+    return [ipaddress.ip_address(info[4][0]) for info in infos]
+
+
+def _validate_endpoint(endpoint: str) -> None:
+    """Reject endpoints that are not https URLs pointing at a public host."""
+    parsed = urlparse(endpoint)
+    if parsed.scheme != "https" or not parsed.netloc:
+        msg = "endpoint must be a valid https URL"
+        raise ValueError(msg)
+    if parsed.username or parsed.password:
+        msg = "endpoint must not contain userinfo"
+        raise ValueError(msg)
+    host = parsed.hostname
+    if not host:
+        msg = "endpoint must be a valid https URL"
+        raise ValueError(msg)
+    try:
+        addresses = _resolve_push_host(host)
+    except OSError as e:
+        msg = "endpoint host could not be resolved"
+        raise ValueError(msg) from e
+    if not addresses or not all(address.is_global for address in addresses):
+        msg = "endpoint must resolve to a public address"
+        raise ValueError(msg)
 
 
 class PushTopic(StrEnum):
@@ -85,10 +132,7 @@ class PushSubscriptionService:
     @staticmethod
     def validate_subscription(endpoint: str, p256dh: str, auth: str) -> None:
         """Validate subscription fields. Raise ValueError on invalid input."""
-        parsed = urlparse(endpoint)
-        if parsed.scheme != "https" or not parsed.netloc:
-            msg = "endpoint must be a valid https URL"
-            raise ValueError(msg)
+        _validate_endpoint(endpoint)
         if not _B64URL_RE.match(p256dh) or len(p256dh) < _MIN_PUSH_KEY_LENGTH:
             msg = "invalid p256dh"
             raise ValueError(msg)
@@ -102,7 +146,13 @@ class PushSubscriptionService:
             raise ValueError(msg)
 
     def add(self, endpoint: str, p256dh: str, auth: str, topics: list[PushTopic] | None = None) -> None:
-        """Register or replace a push subscription."""
+        """Register or replace a push subscription.
+
+        Raise ValueError when the store is full and *auth* is a new subscription.
+        """
+        if auth not in self._store and len(self._store) >= _MAX_SUBSCRIPTIONS:
+            msg = "subscription limit reached"
+            raise ValueError(msg)
         sub = PushSubscription(
             endpoint=endpoint,
             p256dh=p256dh,
@@ -153,6 +203,8 @@ class PushSubscriptionService:
                     data=payload,
                     vapid_private_key=self._vapid_private_key,
                     vapid_claims=dict(self._vapid_claims),
+                    requests_session=_PUSH_SESSION,
+                    timeout=_PUSH_REQUEST_TIMEOUT_SECONDS,
                 )
                 logger.info("Push sent to subscription %s...", auth[:8])
             except WebPushException as e:

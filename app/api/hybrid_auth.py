@@ -3,7 +3,7 @@ import logging
 import secrets
 
 from fastapi import HTTPException, Request
-from starsessions import regenerate_session_id
+from starsessions import get_session_handler, regenerate_session_id
 
 from app.api.access_role import AccessRole
 from app.api.ephemeral_api_key_header import EphemeralAPIKeyHeader
@@ -79,6 +79,20 @@ def create_session(request: Request, token: str) -> bool:
     return True
 
 
+async def rotate_session_id(request: Request) -> None:
+    """Rotate the session id and destroy the previous session record.
+
+    ``starsessions.regenerate_session_id`` only replaces the id held in memory;
+    without removing the old store entry the previous session cookie would stay
+    a valid credential until that entry expires, including after sign-out.
+    """
+    handler = get_session_handler(request)
+    previous_session_id = handler.session_id
+    regenerate_session_id(request)
+    if previous_session_id:
+        await handler.store.remove(previous_session_id)
+
+
 def _resolve_header_role(api_key: str) -> AccessRole:
     """Determine the role for a credential supplied via the API key header."""
     admin_token = cfg.ADMIN_TOKEN
@@ -132,7 +146,7 @@ class HybridAuth:
             request.state.auth_via_session = False
             request.state.auth_role = role
             create_session(request, api_key)
-            regenerate_session_id(request)
+            await rotate_session_id(request)
             if role < self._min_role:
                 raise HTTPException(status_code=403, detail="Insufficient permissions")
             return api_key

@@ -3,7 +3,7 @@ import logging
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager, suppress
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import urlencode
 
 from fastapi import FastAPI, Request, Response
 from fastapi.openapi.docs import get_swagger_ui_html
@@ -107,7 +107,9 @@ app.add_middleware(
 async def auth_redirect_handler(_request: Request, exc: AuthRedirectError) -> RedirectResponse:
     """Redirect unauthenticated page requests to /auth."""
     safe_next = AuthRedirectQuery.sanitize_url(exc.next_url) or "/"
-    return RedirectResponse(url=f"/auth?next={quote(safe_next, safe='/:?=&')}", status_code=302)
+    # Fully encode the value: leaving "&" or "=" unencoded would let a crafted
+    # query string inject additional parameters into the generated redirect.
+    return RedirectResponse(url=f"/auth?{urlencode({'next': safe_next})}", status_code=302)
 
 
 @app.middleware("http")

@@ -37,9 +37,9 @@ async def push_subscribe(
     """Register a new push subscription."""
     try:
         PushSubscriptionService.validate_subscription(request.endpoint, request.p256dh, request.auth)
+        svc.add(request.endpoint, request.p256dh, request.auth, request.topics)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
-    svc.add(request.endpoint, request.p256dh, request.auth, request.topics)
 
 
 @router.delete("/unsubscribe")

@@ -8,7 +8,7 @@ individual tests can inject mocks cleanly via ``app.dependency_overrides``.
 from collections.abc import Generator
 from datetime import datetime
 from unittest.mock import MagicMock
-from urllib.parse import quote
+from urllib.parse import urlencode
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -77,7 +77,7 @@ def test_app() -> FastAPI:
 
     async def _handle_auth_redirect(_request: Request, exc: AuthRedirectError) -> RedirectResponse:
         safe_next = AuthRedirectQuery.sanitize_url(exc.next_url) or "/"
-        return RedirectResponse(url=f"/auth?next={quote(safe_next, safe='/:?=&')}", status_code=302)
+        return RedirectResponse(url=f"/auth?{urlencode({'next': safe_next})}", status_code=302)
 
     test_app.add_exception_handler(AuthRedirectError, _handle_auth_redirect)  # type: ignore[arg-type]
 
