@@ -1,10 +1,13 @@
 """Create or update a release branch and open a pull request against main.
 
-If an open release branch already exists (local or on origin, i.e. not yet merged into
-main), the script reuses it instead of creating a new one: it checks it out, merges the
-latest main, refreshes the lock file and licenses, and pushes. The branch keeps its
-current version. Otherwise it bumps the version, creates a new release branch, pushes it
-and opens a PR.
+If you are already checked out on a release branch, that branch is updated in place:
+the script stays on it, merges the latest main, refreshes the lock file and licenses,
+pushes and opens (or reports) the PR. The branch keeps its current version.
+
+Otherwise, if another release branch is still open (local or on origin, i.e. not yet
+merged into main), that branch is reused: the smallest version jump above the project
+version wins. With none available the script bumps the version, creates a new release
+branch, pushes it and opens a PR.
 
 Usage:
     uv run release                  # analyse commits, suggest bump, prompt to confirm
@@ -112,6 +115,12 @@ def _parse_branch_version(branch: str) -> tuple[int, int, int] | None:
     return int(match.group(1)), int(match.group(2)), int(match.group(3))
 
 
+def _current_branch() -> str:
+    """Return the checked-out branch name, or an empty string when HEAD is detached."""
+    name = _capture("git", "rev-parse", "--abbrev-ref", "HEAD", check=False)
+    return "" if name == "HEAD" else name
+
+
 def _release_branch_names() -> list[str]:
     """Return unique release/* branch names known locally and on origin."""
     local = _capture("git", "for-each-ref", "--format=%(refname:short)", "refs/heads/release/")
@@ -162,6 +171,22 @@ def _select_release_branch(
         branches,
         key=lambda branch: tuple(abs(a - b) for a, b in zip(branch[0], project_version, strict=True)),
     )
+
+
+def _resolve_reuse_target(project_version: tuple[int, int, int]) -> tuple[tuple[int, int, int], str] | None:
+    """Return the release branch to update, or None when a new branch should be created.
+
+    Being checked out on a release branch is an explicit signal and always wins over the
+    version heuristic. Without this, running the task from ``release/v0.5.9`` while a newer
+    ``release/v0.5.10`` was still open moved the user to that branch instead of updating the
+    one they were on. Detecting the current branch also does not depend on ``main`` ancestry,
+    which is unreliable for squash-merged branches.
+    """
+    current = _current_branch()
+    current_version = _parse_branch_version(current)
+    if current_version is not None:
+        return current_version, current
+    return _select_release_branch(_open_release_branches(), project_version)
 
 
 def _github_api(method: str, path: str, token: str, body: dict[str, object] | None = None) -> Any:
@@ -350,15 +375,19 @@ def main() -> None:
         print("[branch] fetching latest refs from origin ...")
         if _run("git", "fetch", "origin", "--prune", check=False).returncode != 0:
             print("[branch] warning: could not fetch origin \u2014 using existing refs", file=sys.stderr)
-    reuse = _select_release_branch(_open_release_branches(), project_version)
+    reuse = _resolve_reuse_target(project_version)
 
     if reuse is not None:
         (r_major, r_minor, r_patch), branch = reuse
         reuse_ver = f"{r_major}.{r_minor}.{r_patch}"
-        print(f"[branch] reusing open release branch {branch} (v{reuse_ver})")
+        already_checked_out = _current_branch() == branch
+        print(f"[branch] {'updating' if already_checked_out else 'reusing'} release branch {branch} (v{reuse_ver})")
         if args.bump:
             print(f"[branch] ignoring requested '{args.bump}' bump \u2014 updating {branch} in place")
-        _checkout_release_branch(branch, dry_run=dry_run)
+        if already_checked_out:
+            print(f"[branch] already on {branch}")
+        else:
+            _checkout_release_branch(branch, dry_run=dry_run)
         _sync_branch_with_main(branch, dry_run=dry_run)
         _refresh_lock_and_licenses(reuse_ver, dry_run=dry_run)
         _push_and_create_pr(branch, reuse_ver, dry_run=dry_run)
