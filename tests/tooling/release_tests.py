@@ -59,3 +59,59 @@ def test_open_release_branches_excludes_merged_and_unnamed(monkeypatch: pytest.M
     monkeypatch.setattr(release, "_release_branch_names", fake_names)
     monkeypatch.setattr(release, "_is_merged_into_main", fake_merged)
     assert release._open_release_branches() == [((0, 5, 9), "release/v0.5.9")]
+
+
+# ---------------------------------------------------------------------------
+# Reuse target resolution
+# ---------------------------------------------------------------------------
+
+
+def test_current_branch_returns_name(monkeypatch: pytest.MonkeyPatch) -> None:
+    def _fake_capture(*_args: str, **_kwargs: str) -> str:
+        return "release/v1.2.3"
+
+    monkeypatch.setattr(release, "_capture", _fake_capture)
+    assert release._current_branch() == "release/v1.2.3"
+
+
+def test_current_branch_returns_empty_string_when_detached(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A detached HEAD reports the literal 'HEAD', which is not a usable branch name."""
+
+    def _fake_capture(*_args: str, **_kwargs: str) -> str:
+        return "HEAD"
+
+    monkeypatch.setattr(release, "_capture", _fake_capture)
+    assert release._current_branch() == ""
+
+
+def test_resolve_reuse_target_prefers_the_checked_out_release_branch(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Regression: on release/v0.5.9 the script must not jump to an open release/v0.5.10."""
+    monkeypatch.setattr(release, "_current_branch", lambda: "release/v0.5.9")
+    open_branches = [((0, 5, 10), "release/v0.5.10"), ((0, 5, 9), "release/v0.5.9")]
+    monkeypatch.setattr(release, "_open_release_branches", lambda: open_branches)
+    assert release._resolve_reuse_target((0, 5, 9)) == ((0, 5, 9), "release/v0.5.9")
+
+
+def test_resolve_reuse_target_uses_current_branch_even_when_not_detected_as_open(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The current branch wins regardless of the (squash-merge-unreliable) ancestry check."""
+    monkeypatch.setattr(release, "_current_branch", lambda: "release/v0.5.9")
+    monkeypatch.setattr(release, "_open_release_branches", list)
+    assert release._resolve_reuse_target((0, 5, 9)) == ((0, 5, 9), "release/v0.5.9")
+
+
+def test_resolve_reuse_target_falls_back_to_heuristic_off_a_release_branch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(release, "_current_branch", lambda: "main")
+    monkeypatch.setattr(release, "_open_release_branches", lambda: [((0, 5, 10), "release/v0.5.10")])
+    assert release._resolve_reuse_target((0, 5, 9)) == ((0, 5, 10), "release/v0.5.10")
+
+
+def test_resolve_reuse_target_returns_none_for_non_release_branch_without_candidates(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(release, "_current_branch", lambda: "feat/something")
+    monkeypatch.setattr(release, "_open_release_branches", list)
+    assert release._resolve_reuse_target((0, 5, 9)) is None
