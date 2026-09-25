@@ -149,7 +149,9 @@ The CI/CD pipeline ([`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml)
 - **Stable release** — Created automatically (with changelog) when the version in `pyproject.toml` is bumped and pushed to `main`.
 - **Nightly pre-release** — Updated on every subsequent push to `main` under the same version. Tagged `nightly`.
 
-Run `uv run release [patch|minor|major]` to bump the version, refresh the lock file and licenses, push a `release/vX.Y.Z` branch and open a PR against `main`. If an open release branch already exists (local or on `origin`, i.e. not yet merged into `main`), the script reuses it — picking the branch with the smallest version jump above the current project version, merging the latest `main` into it and refreshing the lock file and licenses — instead of creating a new one. Pass `--dry-run` to preview the steps without changing anything.
+Run `uv run release [patch|minor|major]` to bump the version, refresh the lock file and licenses, push a `release/vX.Y.Z` branch and open a PR against `main`.
+
+If you are already on a release branch, that branch is updated in place — the script stays on it, merges the latest `main`, refreshes the lock file and licenses, then pushes. Otherwise, if another release branch is still open (local or on `origin`, i.e. not yet merged into `main`), it reuses the one with the smallest version jump above the current project version instead of creating a new branch. Pass `--dry-run` to preview the steps without changing anything.
 
 The pipeline can also be triggered manually via `workflow_dispatch`.
 
