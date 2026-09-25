@@ -191,7 +191,11 @@ jobs:
         continue-on-error: true
         run: |
           FAIL_UNDER=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['tool']['coverage']['report']['fail_under'])")
-          uv run pytest tests/ --ignore=tests/js --junitxml=junit/test-results.xml --cov=app --cov-report=xml --cov-report=html --cov-fail-under=$FAIL_UNDER
+          uv run pytest tests/ --ignore=tests/js --ignore=tests/tooling --junitxml=junit/test-results.xml --cov=app --cov-report=xml --cov-report=html --cov-fail-under=$FAIL_UNDER
+      - name: Test scripts with pytest
+        id: script_tests
+        continue-on-error: true
+        run: uv run pytest tests/tooling/ --junitxml=junit/script-test-results.xml
       - name: Test JavaScript
         id: js_test
         continue-on-error: true
@@ -243,6 +247,7 @@ jobs:
         if: always()
         run: |
           if [[ "${{ steps.pytest.outcome }}" == "failure" || \
+               "${{ steps.script_tests.outcome }}" == "failure" || \
                "${{ steps.js_test.outcome }}" == "failure" || \
                "${{ steps.diff_cover.outcome }}" == "failure" ]]; then
             exit 1
