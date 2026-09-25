@@ -27,7 +27,7 @@ app/
   static/          # CSS/JS/images
 scripts/           # uv entry points (dev, lint, watch, generate-vapid-keys, …)
 tests/             # Unit tests; test-data/ holds fixture files
-  scripts/         # Script/tooling tests (no `app` imports) — separate pytest suite
+  tooling/         # Script/tooling tests (no `app` imports) — separate pytest suite
 ```
 
 ## Architecture
@@ -45,16 +45,25 @@ tests/             # Unit tests; test-data/ holds fixture files
 - **Threading**: `EphemeralAPIKeyStore` uses a module-level `_write_lock`. Use `append(key)` (not `save()`); returns `False` on failure.
 - **Weather types**: `WeatherService.get_condition()` → `Weather | None`; `temperature`: HOT/WARM/MILD/COLD, `state`: CLEAR/CLOUDY/MILD_RAIN/HEAVY_RAIN/THUNDERSTORM/SNOW. Precipitation takes priority over temperature in `MessageService`.
 - **Types**: PyRight strict. All public functions need return-type annotations. Avoid `# type: ignore`.
-- **Linting**: Line length 120. Ruff `ALL` rules (tests differ — see `pyproject.toml`). CI enforces `ruff format` and `ruff check` as separate gates; run `uv run lint --fix` before every commit.
+- **Linting**: Line length 120. Ruff `ALL` rules (tests differ — see `pyproject.toml`). CI enforces `ruff format` and `ruff check` as separate gates; run `uv run lint --fix` before staging changes.
 - **Markdown**: `markdownlint-cli2` in CI (warnings as errors). Config in `.markdownlint-cli2.yaml`. Run: `npx markdownlint-cli2`.
-- **Licenses**: After changing `pyproject.toml` deps, run `uv run generate-licenses` and commit `app/licenses.json`.
+- **Licenses**: After changing `pyproject.toml` deps, run `uv run generate-licenses` and stage `app/licenses.json`.
 - **Coverage**: Thresholds in `pyproject.toml` (`[tool.coverage.report] fail_under` global, `[tool.diff-cover] fail_under` per-PR diff).
+
+## Git — never commit
+
+- **Never create a commit.** Do not run `git commit`, `git commit --amend`, `git merge` that produces a commit, `git rebase`, or any other command that writes to history — even when a task looks completely finished. The user always reviews and commits.
+- This also bans commands that commit on the user's behalf, e.g. the `create release` task / `uv run release`. Use `uv run release --dry-run` to inspect what it would do, then hand off the real run to the user.
+- Staging is expected and allowed: `git add <paths>`, `git restore --staged <paths>`.
+- Finish by leaving the changes **staged** and proposing a commit message for the user to run. Use Conventional Commits — `<type>[optional scope]: <description>`, lowercase imperative subject under 72 characters. Allowed types: `feat`, `fix`, `refactor`, `perf`, `docs`, `style`, `test`, `chore`. Never use `chore(release)`; that prefix is reserved for the automated version-bump script.
+- Creating a branch, pushing it, and creating/updating a PR are still fine unless the user says otherwise — the restriction is on commits only.
 
 ## Workflow
 
 - Write tests for every feature and bug fix; update existing tests when behavior changes. Test patterns: `*Test.py`, `*Tests.py`, `*_test.py`, `*_tests.py`. Integration tests (`tests/integration/`) are `@pytest.mark.skip` — do not remove the marker.
 - Tests that don't touch `app` (release/tooling scripts, `cliff.toml`) belong in `tests/tooling/` — its own pytest suite and JUnit report, excluded from the app coverage run. Never import `app` from there.
-- Run `uv run lint --fix` before committing.
+- Run `uv run lint --fix` before staging changes.
 - Update `README.md` on UI feature changes.
 - Update this file when conventions change.
 - For larger frontend changes validate visually at `http://localhost:8007` (read-only; not a substitute for automated tests).
+- Never commit — see **Git — never commit** above. Stage the work and propose a commit message.
