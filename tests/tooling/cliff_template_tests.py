@@ -3,13 +3,16 @@
 Runs git-cliff as a subprocess (same as CI) against the real cliff.toml
 and verifies that the compare link is generated correctly in each scenario.
 Requires git-cliff to be available via ``npx git-cliff``.
+
+Part of the script/tooling suite (``tests/tooling/``) — these tests cover release
+tooling rather than the application, and run as a separate pytest invocation.
 """
 
 import os
 import subprocess
 from pathlib import Path
 
-ROOT = Path(__file__).parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 CLIFF_TOML = ROOT / "cliff.toml"
 _ENV_BASE = {**os.environ, "NODE_OPTIONS": ""}
 
