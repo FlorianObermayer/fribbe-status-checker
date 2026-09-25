@@ -58,6 +58,23 @@ uv run test          # run tests (--cov for coverage)
 uv run lint --fix      # backend and frontend lint + auto-fix
 ```
 
+`uv run test` runs three separate suites and fails if any of them fails:
+
+| Suite | Location | Report |
+| --- | --- | --- |
+| Application (pytest) | `tests/` | `junit/test-results.xml` |
+| Script & tooling (pytest) | `tests/tooling/` | `junit/script-test-results.xml` |
+| Frontend (vitest) | `tests/js/`, `.github/tests/js/` | `junit/js-test-results.xml` |
+
+Tests that cover tooling rather than the app (release/changelog scripts, `cliff.toml`) live in
+`tests/tooling/`, which is excluded from the application suite and its coverage. Run just that
+suite with `uv run pytest tests/tooling`. A plain `uv run pytest` still collects everything.
+
+The VS Code Test Explorer discovers both pytest suites: `.vscode/settings.json` sets
+`python.testing.pytestArgs` to `tests` and `tests/tooling` (pytest dedupes the nested path, so
+each test is collected once). To run only the tooling suite from the Test Explorer, run the
+`tooling` folder node.
+
 ## Configuration
 
 All environment variables are declared in [`app/config.py`](app/config.py). See [`.env.template`](.env.template) for the full list with defaults.
@@ -131,6 +148,8 @@ The CI/CD pipeline ([`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml)
 
 - **Stable release** — Created automatically (with changelog) when the version in `pyproject.toml` is bumped and pushed to `main`.
 - **Nightly pre-release** — Updated on every subsequent push to `main` under the same version. Tagged `nightly`.
+
+Run `uv run release [patch|minor|major]` to bump the version, refresh the lock file and licenses, push a `release/vX.Y.Z` branch and open a PR against `main`. If an open release branch already exists (local or on `origin`, i.e. not yet merged into `main`), the script reuses it — picking the branch with the smallest version jump above the current project version, merging the latest `main` into it and refreshing the lock file and licenses — instead of creating a new one. Pass `--dry-run` to preview the steps without changing anything.
 
 The pipeline can also be triggered manually via `workflow_dispatch`.
 

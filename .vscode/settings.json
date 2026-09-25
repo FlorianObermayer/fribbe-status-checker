@@ -110,6 +110,14 @@
     "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
     "python.envFile": "${workspaceFolder}/.env.dev",
     "python.terminal.useEnvFile": true,
+    // Both suites are listed so the Test Explorer always discovers them, independent of
+    // `testpaths` in pyproject.toml. pytest dedupes the nested `tests/tooling` path, so this
+    // collects each test once. Positional paths only affect discovery — VS Code strips them
+    // for runs and passes test IDs separately, so running a single test still works.
+    "python.testing.pytestArgs": [
+        "tests",
+        "tests/tooling"
+    ],
     "python.testing.pytestEnabled": true,
     "python.testing.unittestEnabled": false,
     "remote.autoForwardPortsFallback": 0,

@@ -27,6 +27,7 @@ app/
   static/          # CSS/JS/images
 scripts/           # uv entry points (dev, lint, watch, generate-vapid-keys, …)
 tests/             # Unit tests; test-data/ holds fixture files
+  scripts/         # Script/tooling tests (no `app` imports) — separate pytest suite
 ```
 
 ## Architecture
@@ -52,6 +53,7 @@ tests/             # Unit tests; test-data/ holds fixture files
 ## Workflow
 
 - Write tests for every feature and bug fix; update existing tests when behavior changes. Test patterns: `*Test.py`, `*Tests.py`, `*_test.py`, `*_tests.py`. Integration tests (`tests/integration/`) are `@pytest.mark.skip` — do not remove the marker.
+- Tests that don't touch `app` (release/tooling scripts, `cliff.toml`) belong in `tests/tooling/` — its own pytest suite and JUnit report, excluded from the app coverage run. Never import `app` from there.
 - Run `uv run lint --fix` before committing.
 - Update `README.md` on UI feature changes.
 - Update this file when conventions change.
