@@ -70,6 +70,11 @@ Tests that cover tooling rather than the app (release/changelog scripts, `cliff.
 `tests/tooling/`, which is excluded from the application suite and its coverage. Run just that
 suite with `uv run pytest tests/tooling`. A plain `uv run pytest` still collects everything.
 
+The VS Code Test Explorer discovers both pytest suites: `.vscode/settings.json` sets
+`python.testing.pytestArgs` to `tests` and `tests/tooling` (pytest dedupes the nested path, so
+each test is collected once). To run only the tooling suite from the Test Explorer, run the
+`tooling` folder node.
+
 ## Configuration
 
 All environment variables are declared in [`app/config.py`](app/config.py). See [`.env.template`](.env.template) for the full list with defaults.
