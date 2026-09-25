@@ -1,4 +1,8 @@
-"""Tests for the release script's open-release-branch detection and selection."""
+"""Tests for the release script's open-release-branch detection and selection.
+
+Part of the script/tooling suite (``tests/tooling/``) — these tests cover release
+tooling rather than the application, and run as a separate pytest invocation.
+"""
 
 import pytest
 

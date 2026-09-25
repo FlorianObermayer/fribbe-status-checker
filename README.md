@@ -58,6 +58,18 @@ uv run test          # run tests (--cov for coverage)
 uv run lint --fix      # backend and frontend lint + auto-fix
 ```
 
+`uv run test` runs three separate suites and fails if any of them fails:
+
+| Suite | Location | Report |
+| --- | --- | --- |
+| Application (pytest) | `tests/` | `junit/test-results.xml` |
+| Script & tooling (pytest) | `tests/tooling/` | `junit/script-test-results.xml` |
+| Frontend (vitest) | `tests/js/`, `.github/tests/js/` | `junit/js-test-results.xml` |
+
+Tests that cover tooling rather than the app (release/changelog scripts, `cliff.toml`) live in
+`tests/tooling/`, which is excluded from the application suite and its coverage. Run just that
+suite with `uv run pytest tests/tooling`. A plain `uv run pytest` still collects everything.
+
 ## Configuration
 
 All environment variables are declared in [`app/config.py`](app/config.py). See [`.env.template`](.env.template) for the full list with defaults.
