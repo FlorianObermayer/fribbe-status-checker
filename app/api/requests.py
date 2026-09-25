@@ -1,5 +1,7 @@
+import re
 from datetime import datetime
 from enum import StrEnum
+from urllib.parse import urljoin, urlsplit
 
 from fastapi import Query
 from pydantic import BaseModel, Field, field_validator
@@ -57,9 +59,16 @@ class AuthRedirectQuery(BaseModel):
         """Ensure the URLs are safe relative paths."""
         if value is None:
             return value
-        if not value.startswith("/") or value.startswith("//"):
+        # Browsers strip ASCII tab/newline characters and treat "\\" as a path
+        # separator for special schemes, so normalise the value the way a
+        # browser would before validating where it actually resolves.
+        candidate = re.sub(r"[\t\n\r]", "", value).replace("\\", "/")
+        if not candidate.startswith("/") or candidate.startswith("//"):
             return "/"
-        return value
+        resolved = urlsplit(urljoin("http://localhost", candidate))
+        if resolved.scheme != "http" or resolved.netloc != "localhost":
+            return "/"
+        return candidate
 
 
 class NotificationQuery(BaseModel):

@@ -45,8 +45,7 @@ class EphemeralAPIKeyStore:
     def save(keys: list[ApiKey]) -> None:
         """Overwrite the key store with the given list."""
         persistent_list = PersistentList(EphemeralAPIKeyStore._get_path(), ApiKey)
-        persistent_list.clear()
-        persistent_list.extend(keys)
+        persistent_list.replace(keys)
 
     @staticmethod
     def is_empty() -> bool:

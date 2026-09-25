@@ -402,6 +402,10 @@ class PersistentList[V]:
         """Remove all items and persist."""
         self._set_items([])
 
+    def replace(self, values: list[V]) -> None:
+        """Replace all items with *values* in a single persisted write."""
+        self._set_items(list(values))
+
     def to_list(self) -> list[V]:
         """Return a shallow copy of all items."""
         return self._get_items()

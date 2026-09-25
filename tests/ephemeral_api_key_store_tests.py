@@ -200,3 +200,24 @@ def test_has_valid_admin_key_valid_admin() -> None:
     )
     EphemeralAPIKeyStore.save([key])
     assert EphemeralAPIKeyStore.has_valid_admin_key() is True
+
+
+def test_save_replaces_store_in_a_single_write(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Whole-store replacement must use one atomic write, never clear-then-extend."""
+    from app.services.persistent_collections import PersistentList  # noqa: PLC0415
+
+    calls: list[tuple[str, list[object]]] = []
+
+    def _record(name: str) -> object:
+        def _spy(_self: object, values: list[object] | None = None) -> None:
+            calls.append((name, list(values) if values else []))
+
+        return _spy
+
+    monkeypatch.setattr(PersistentList, "replace", _record("replace"))
+    monkeypatch.setattr(PersistentList, "clear", _record("clear"))
+    monkeypatch.setattr(PersistentList, "extend", _record("extend"))
+
+    EphemeralAPIKeyStore.save([])
+
+    assert calls == [("replace", [])]

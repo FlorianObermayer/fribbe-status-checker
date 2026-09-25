@@ -21,6 +21,11 @@ logger = logging.getLogger(__name__)
 
 _MIN_WEEKLY_EVENTS = 7
 
+# Upper bound for the free-form ``for_date`` input. ``dateparser.parse`` cost grows
+# linearly with input length and is executed on the event loop, so an unbounded value
+# can stall the whole application.
+_MAX_FOR_DATE_LENGTH = 64
+
 
 class OccupancyService(PollingService):
     """Poll fribbebeach.de for weekly and event occupancy data."""
@@ -50,6 +55,9 @@ class OccupancyService(PollingService):
             - The method does not currently check for overlapping events that might result in a fully blocked scenario.
 
         """
+        if len(for_date_str) > _MAX_FOR_DATE_LENGTH:
+            # Fall back to the default instead of parsing an unbounded string.
+            for_date_str = "today"
         with self._rwlock.gen_rlock():
             for_date = (
                 dateparser.parse(

@@ -4,6 +4,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
+from app.config import cfg
 from app.services.occupancy.model import OccupancySource, OccupancyType
 from app.services.occupancy.occupancy_parser import (
     parse_event_calendar,
@@ -73,3 +74,19 @@ def test_get_todays_calendar_occupancy_with_occupancy() -> None:
     assert isinstance(daily.last_updated, datetime)
     assert isinstance(daily.date, date)
     assert daily.error is None
+
+
+def test_get_occupancy_normal_date_is_used() -> None:
+    s = service()
+    daily = s.get_occupancy("2025-06-01")
+    assert daily.date == date(2025, 6, 1)
+
+
+def test_get_occupancy_clamps_oversized_for_date() -> None:
+    """An over-long value must fall back to the current date instead of being parsed."""
+    s = service()
+    oversized = "2025-06-01" + " " * 500
+
+    daily = s.get_occupancy(oversized)
+
+    assert daily.date == datetime.now(tz=ZoneInfo(cfg.TZ)).date()

@@ -265,3 +265,28 @@ async def test_run_clean_old_notifications_keeps_active(tmp_path: Path, monkeypa
     await svc._run_clean_old_notifications()
 
     assert len(svc.list_all()) == 1
+
+
+# ---------------------------------------------------------------------------
+# get() — only_active (public read restriction)
+# ---------------------------------------------------------------------------
+
+
+def test_get_only_active_filters_explicit_inactive_id(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    svc = _make_service(tmp_path, monkeypatch)
+    active_nid = svc.add("active", None, None, enabled=True)
+    inactive_nid = svc.add("inactive", None, None, enabled=False)
+
+    # Default behaviour (authenticated callers) still returns inactive items.
+    assert {n.id for n in svc.get([inactive_nid])} == {inactive_nid}
+
+    # only_active=True must hide the inactive item but keep the active one.
+    assert svc.get([inactive_nid], only_active=True) == []
+    assert {n.id for n in svc.get([active_nid], only_active=True)} == {active_nid}
+
+
+def test_get_only_active_filters_future_notification(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    svc = _make_service(tmp_path, monkeypatch)
+    future_nid = svc.add("scheduled", _FUTURE, None, enabled=True)
+
+    assert svc.get([future_nid], only_active=True) == []

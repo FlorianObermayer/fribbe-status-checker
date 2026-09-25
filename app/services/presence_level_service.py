@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 from huawei_lte_api.Client import Client
 from huawei_lte_api.Connection import Connection
 from readerwriterlock import rwlock
+from starlette.concurrency import run_in_threadpool
 
 from app.config import cfg
 from app.services.mac_address_helper import should_ignore_device
@@ -97,14 +98,18 @@ class PresenceLevelService(PollingService):
                     self._last_error = None
             logger.info("Refresh Presence Level... DONE (%s)", self._presence_level)
             try:
-                self._try_send_first_active_push(prev_level, new_level)
+                await run_in_threadpool(self._try_send_first_active_push, prev_level, new_level)
             except Exception:
                 logger.exception("Error sending first active push")
-        except Exception as e:
+        except Exception:
             logger.exception("Error during presence detection")
             with self._rwlock.gen_wlock():
                 self._presence_level = PresenceLevel.EMPTY
-                self._last_error = e
+                # The router client's exception text embeds the internal host and port,
+                # and this value is served on the unauthenticated /api/status response.
+                # Keep the full detail in the log entry above; expose only a generic
+                # message to API callers.
+                self._last_error = RuntimeError("presence detection failed")
 
     def _try_send_first_active_push(self, prev_level: PresenceLevel, new_level: PresenceLevel) -> bool:
         """Fire a push notification the first time per day the level goes from empty to non-empty."""

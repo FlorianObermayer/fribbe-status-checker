@@ -2,6 +2,7 @@
 """Tests for PresenceLevelService._try_send_first_active_push."""
 
 from datetime import datetime, timedelta
+from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -166,3 +167,27 @@ def test_start_polling_does_not_start_when_password_missing() -> None:
     svc.start_polling(router_ip="192.168.1.1", username="admin", password=None)
 
     assert not svc.is_polling
+
+
+# ---------------------------------------------------------------------------
+# Failure error message must not disclose the internal address
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_failed_poll_stores_generic_error_without_address() -> None:
+    svc = _make_service()
+
+    with patch(
+        "app.services.presence_level_service.Connection",
+        side_effect=OSError("Failed to connect to host='192.168.8.1', port=80"),
+    ):
+        await svc._run_presence_detection("192.168.8.1", "admin", "pass")
+
+    error = svc.get_last_error()
+    assert error is not None
+    message = str(error)
+    assert message == "presence detection failed"
+    assert "192.168.8.1" not in message
+    assert "port" not in message
+    assert svc.get_level() == PresenceLevel.EMPTY

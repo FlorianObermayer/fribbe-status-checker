@@ -194,7 +194,7 @@ def get_notification_content(
 ) -> HTMLResponse:
     """Return a server-rendered HTML fragment of active notifications for the main page."""
     n_ids = query.filter_unprotected_n_ids() if api_key is None else query.n_ids
-    notifications = svc.get(n_ids)
+    notifications = svc.get(n_ids, only_active=api_key is None)
     if not notifications:
         return HTMLResponse("")
     items = [(n, nh3.clean(markdown.markdown(n.message))) for n in notifications]

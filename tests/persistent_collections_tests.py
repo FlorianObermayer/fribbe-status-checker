@@ -792,6 +792,28 @@ def test_persistentlist_to_list() -> None:
         assert lst.to_list() == ["a", "b"]
 
 
+def test_persistentlist_replace_sets_items_in_single_write() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = str(Path(tmpdir) / "replace.json")
+        lst = PersistentList(path, int)
+        lst.append(1)
+
+        writes: list[list[int]] = []
+        original = lst._set_items
+
+        def spy(values: list[int]) -> None:
+            writes.append(list(values))
+            original(values)
+
+        lst._set_items = spy  # type: ignore[method-assign]
+        lst.replace([4, 5, 6])
+
+        # A single write carrying the full new contents — never an empty intermediate.
+        assert writes == [[4, 5, 6]]
+        assert lst.to_list() == [4, 5, 6]
+        assert PersistentList(path, int).to_list() == [4, 5, 6]
+
+
 # --- PersistentDescriptor gap coverage ---
 
 

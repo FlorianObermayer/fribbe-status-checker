@@ -2,9 +2,8 @@ import logging
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse
-from starsessions import regenerate_session_id
 
-from app.api.hybrid_auth import create_session
+from app.api.hybrid_auth import create_session, rotate_session_id
 from app.api.requests import AuthBody
 from app.config import cfg
 from app.routers.nav_context import Route
@@ -21,7 +20,7 @@ async def post_auth(
     """Authenticate with a token and create a session."""
     if not create_session(request, body.token):
         raise HTTPException(status_code=401, detail="Invalid token")
-    regenerate_session_id(request)
+    await rotate_session_id(request)
     return JSONResponse({"redirect": body.next})
 
 

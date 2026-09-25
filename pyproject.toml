@@ -18,7 +18,7 @@ dependencies = [
     "starlette-csrf>=3.0.0",
     "secure>=2.0.1",
     "pywebpush>=2.3.0",
-    "httpx2>=2.5.0",
+    "requests>=2.32.0",
 ]
 
 [project.scripts]
@@ -43,6 +43,10 @@ dev = [
     "pip-licenses>=5.5.5",
     "python-dotenv>=1.0.0",
     "diff-cover>=10.3.0",
+    # Required by starlette's TestClient. Test-only: the production image is built
+    # with `uv sync --no-dev`, so this package is not shipped. Keep it at a version
+    # above the published advisories (CVE-2026-84379/84380/84382).
+    "httpx2>=2.12.0",
 ]
 
 [tool.pytest.ini_options]
