@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "fribbe-status-checker"
-version = "0.5.8"
+version = "0.5.10"
 requires-python = ">=3.12"
 dependencies = [
     "huawei-lte-api>=1.11.0",
@@ -41,7 +41,7 @@ dev = [
     "pyright>=1.1.411",
     "pytest-dotenv>=0.5.2",
     "pip-licenses>=5.5.5",
-    "python-dotenv>=1.2.3",
+    "python-dotenv>=1.0.0",
     "diff-cover>=10.3.0",
     # Required by starlette's TestClient. Test-only: the production image is built
     # with `uv sync --no-dev`, so this package is not shipped. Keep it at a version
