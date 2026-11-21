@@ -1,0 +1,45 @@
+[Unit]
+Description=fribbe-status-checker: forward tailnet TCP 8080 to the LTE router web UI
+Documentation=https://github.com/FlorianObermayer/fribbe-status-checker/blob/main/examples/tailscale-site-network.md
+After=network-online.target tailscaled.service
+Wants=network-online.target
+Requires=tailscaled.service
+
+[Service]
+Type=simple
+
+# Listen address MUST be the node's Tailscale IPv4 address (tailscale ip -4).
+# Binding to the tailnet address only means nothing else on the site LAN, and no
+# other interface of this host, can use the forwarder as a proxy.
+Environment=FORWARD_LISTEN_ADDR=100.101.185.7
+Environment=FORWARD_LISTEN_PORT=8080
+Environment=ROUTER_ADDR=192.168.8.1:80
+
+ExecStart=/usr/bin/socat -d TCP4-LISTEN:${FORWARD_LISTEN_PORT},bind=${FORWARD_LISTEN_ADDR},reuseaddr,fork TCP4:${ROUTER_ADDR}
+
+Restart=always
+RestartSec=5
+
+# Hardening: the forwarder needs no privileges, no writable paths, no home.
+DynamicUser=yes
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ProtectProc=invisible
+RestrictAddressFamilies=AF_INET AF_INET6
+RestrictNamespaces=yes
+RestrictRealtime=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+[Install]
+WantedBy=multi-user.target

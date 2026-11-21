@@ -156,3 +156,11 @@ If you are already on a release branch, that branch is updated in place — the 
 The pipeline can also be triggered manually via `workflow_dispatch`.
 
 See [`Dockerfile`](Dockerfile) and [`examples/docker-compose.yml`](examples/docker-compose.yml) for container and setup details.
+
+### Running outside the router's LAN
+
+If the app cannot sit on the router's network — e.g. the router is behind carrier-grade NAT and
+accepts no inbound connections — the router can be reached over Tailscale instead. See
+[`examples/tailscale-site-network.md`](examples/tailscale-site-network.md) for the full setup:
+subnet routing on the site anchor, a single-port forwarder for the app host, ACLs, reverse-proxy
+forwarded headers, and the migration checklist.
