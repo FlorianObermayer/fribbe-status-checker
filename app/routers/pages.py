@@ -106,6 +106,7 @@ def _build_status_context(
     return {
         "presence": {
             "level": presence_level.value,
+            "stale": presence_svc.is_stale(),
             "message": presence_message,
         },
         "occupancy": {

@@ -29,6 +29,7 @@ class PresenceResponse(BaseResponse):
     """Presence detection status."""
 
     level: PresenceLevel
+    stale: bool
     message: str
     thresholds: dict[PresenceLevel, int]
 

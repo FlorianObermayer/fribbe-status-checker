@@ -116,6 +116,19 @@ class Config:
     PRESENCE_POLLING_DELAY_SECONDS: int = field(
         default_factory=lambda: int(os.environ.get("PRESENCE_POLLING_DELAY_SECONDS") or 0),
     )
+    # Timeout for a single router connection attempt, in seconds. A remote (e.g. relayed)
+    # link can stall, and without a bound the polling thread would block indefinitely.
+    ROUTER_CONNECTION_TIMEOUT_SECONDS: int = field(
+        default_factory=lambda: int(os.environ.get("ROUTER_CONNECTION_TIMEOUT_SECONDS") or 10),
+    )
+    # Age in seconds after which the last successful presence observation is considered stale.
+    # Defaults to three polling intervals so operators only need to change one variable.
+    PRESENCE_STALE_AFTER_SECONDS: int = field(
+        default_factory=lambda: int(
+            os.environ.get("PRESENCE_STALE_AFTER_SECONDS")
+            or 3 * int(os.environ.get("PRESENCE_POLLING_INTERVAL_SECONDS") or 60),
+        ),
+    )
     # How often to refresh internal device counts, in seconds.
     INTERNAL_POLLING_INTERVAL_SECONDS: int = field(
         default_factory=lambda: int(os.environ.get("INTERNAL_POLLING_INTERVAL_SECONDS") or 60),

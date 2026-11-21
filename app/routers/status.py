@@ -37,6 +37,7 @@ async def get_status(
 
     presence_response = PresenceResponse(
         level=presence_level,
+        stale=presence_svc.is_stale(),
         last_updated=presence_last_updated,
         message=presence_message,
         last_error=presence_last_error and str(presence_last_error),

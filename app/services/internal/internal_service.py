@@ -116,7 +116,12 @@ class InternalService(PollingService):
     async def _run_internal_query(self, router_ip: str, username: str, password: str) -> None:
         try:
             logger.info("Refresh Internal...")
-            with Connection(f"http://{router_ip}", username, password) as connection:
+            with Connection(
+                f"http://{router_ip}",
+                username,
+                password,
+                timeout=cfg.ROUTER_CONNECTION_TIMEOUT_SECONDS,
+            ) as connection:
                 client = Client(connection)
                 active_member_devices = [
                     device
@@ -145,10 +150,13 @@ class InternalService(PollingService):
                     self._last_updated = datetime.now(tz=ZoneInfo(cfg.TZ))
                     self._last_error = None
             logger.info("Refresh Internal... DONE)")
-        except Exception as e:
+        except Exception:
             logger.exception("Error during Internal refresh")
             with self._rwlock.gen_wlock():
-                self._last_error = e
+                # The router client's exception text embeds the internal host and port, and this
+                # value is served on the authenticated /api/internal/details response. Keep the full
+                # detail in the log entry above; expose only a generic message to API callers.
+                self._last_error = RuntimeError("internal refresh failed")
 
     def start_polling(  # type: ignore[override]
         self,

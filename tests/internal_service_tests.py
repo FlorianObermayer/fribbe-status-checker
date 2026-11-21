@@ -4,6 +4,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
+from app.config import cfg
 from app.services.internal.internal_service import InternalService
 
 
@@ -74,3 +75,41 @@ def test_no_reset_if_same_virtual_day(service: InternalService) -> None:
         service._update_device_statistics(0, 0)
     assert service._internal_data.first_device_on_site == now
     assert service._internal_data.last_device_on_site == now
+
+
+# ---------------------------------------------------------------------------
+# Bounded connection and sanitized error reporting
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_internal_query_uses_configured_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cfg, "ROUTER_CONNECTION_TIMEOUT_SECONDS", 42)
+    svc = InternalService()
+
+    with (
+        patch("app.services.internal.internal_service.Connection") as conn,
+        patch("app.services.internal.internal_service.Client") as client_cls,
+    ):
+        client_cls.return_value.wlan.host_list.return_value = {"Hosts": {"Host": []}}
+        await svc._run_internal_query("192.168.8.1", "admin", "pass")
+
+    assert conn.call_args.kwargs["timeout"] == 42
+
+
+@pytest.mark.asyncio
+async def test_internal_error_is_sanitized() -> None:
+    svc = InternalService()
+
+    with patch(
+        "app.services.internal.internal_service.Connection",
+        side_effect=OSError("Failed to connect to host='192.168.8.1', port=80"),
+    ):
+        await svc._run_internal_query("192.168.8.1", "admin", "pass")
+
+    error = svc.get_last_error()
+    assert error is not None
+    message = str(error)
+    assert message == "internal refresh failed"
+    assert "192.168.8.1" not in message
+    assert "port" not in message
