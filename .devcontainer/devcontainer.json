@@ -10,7 +10,7 @@
     ],
     "features": {
         "ghcr.io/devcontainers-extra/features/uv:1": {},
-        "ghcr.io/devcontainers/features/node:1": {}
+        "ghcr.io/devcontainers/features/node:2.1.2": {}
     },
     "postCreateCommand": {
         "uv-sync": "uv sync --all-groups",
