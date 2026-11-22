@@ -1,8 +1,8 @@
 import logging
 import secrets
 
-from fastapi import Request
 from fastapi.security import APIKeyHeader
+from starlette.requests import HTTPConnection
 
 from app.api.ephemeral_api_key_store import EphemeralAPIKeyStore
 from app.config import cfg
@@ -21,7 +21,7 @@ class EphemeralAPIKeyHeader(APIKeyHeader):
     ) -> None:
         super().__init__(name=name, auto_error=auto_error)
 
-    async def __call__(self, request: Request) -> str | None:
+    async def __call__(self, request: HTTPConnection) -> str | None:
         """Validate the API key from the request header."""
         api_key = await super().__call__(request)
         if api_key and cfg.ADMIN_TOKEN and secrets.compare_digest(api_key, cfg.ADMIN_TOKEN):
