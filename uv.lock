@@ -973,7 +973,7 @@ requires-dist = [
     { name = "markdown", specifier = ">=3.10.2" },
     { name = "nh3", specifier = ">=0.3.6" },
     { name = "pywebpush", specifier = ">=2.3.0" },
-    { name = "readerwriterlock", specifier = ">=1.0.9" },
+    { name = "readerwriterlock", specifier = ">=1.0.10" },
     { name = "requests", specifier = ">=2.32.0" },
     { name = "secure", specifier = ">=2.0.1" },
     { name = "starlette-csrf", specifier = ">=3.0.0" },
