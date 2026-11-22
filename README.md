@@ -85,6 +85,8 @@ Each optional feature is silently disabled when its variables are absent.
 
 Set `IGNORED_MAC_ADDRESSES` to a comma-separated list of MAC addresses (e.g. `2C:CF:67:DD:46:23,54:60:09:EE:19:28`) to exclude infrastructure devices from presence detection. Matching is case-insensitive. Leave unset or empty to ignore no addresses.
 
+`ROUTER_CONNECTION_TIMEOUT_SECONDS` bounds every router connection attempt (default `10`); raise it when the router is reached over a slow or relayed link. `PRESENCE_STALE_AFTER_SECONDS` sets how long a successful observation stays valid (default: three polling intervals). A failed poll no longer resets the presence level to `empty` — the last known level is kept and `/api/status` reports `presence.stale: true`, so "nobody is here" is distinguishable from "we do not currently know". Arrival push notifications are only sent when the previous observation was fresh.
+
 ### Generate VAPID keys
 
 ```sh
@@ -156,3 +158,11 @@ If you are already on a release branch, that branch is updated in place — the 
 The pipeline can also be triggered manually via `workflow_dispatch`.
 
 See [`Dockerfile`](Dockerfile) and [`examples/docker-compose.yml`](examples/docker-compose.yml) for container and setup details.
+
+### Running outside the router's LAN
+
+If the app cannot sit on the router's network — e.g. the router is behind carrier-grade NAT and
+accepts no inbound connections — the router can be reached over Tailscale instead. See
+[`examples/tailscale-site-network.md`](examples/tailscale-site-network.md) for the full setup:
+subnet routing on the site anchor, a single-port forwarder for the app host, ACLs, reverse-proxy
+forwarded headers, and the migration checklist.

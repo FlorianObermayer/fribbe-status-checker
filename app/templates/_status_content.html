@@ -5,6 +5,11 @@
     data-threshold-few="{{ thresholds.few }}"
     data-threshold-many="{{ thresholds.many }}">
     <div id="status-message" class="status-message">{{ presence.message }}</div>
+    {% if presence.stale %}
+    <div id="status-stale" class="status-stale">
+        Die Anwesenheit konnte zuletzt nicht aktualisiert werden. Die Anzeige kann veraltet sein.
+    </div>
+    {% endif %}
     <div id="occupancy-card" class="occupancy-card{{ ' occupancy-fully' if occupancy.type == 'fully' else '' }}">
         <div class="occupancy-header-row">
             <h2 id="occupancy-header">{{ occupancy_header }}</h2>

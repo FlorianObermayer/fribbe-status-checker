@@ -74,13 +74,34 @@ class PresenceLevelService(PollingService):
         with self._rwlock.gen_rlock():
             return self._last_error
 
+    def is_stale(self) -> bool:
+        """Return True when the level is not backed by a recent successful observation.
+
+        Freshness is derived from the last successful poll rather than flagged on failure, so a
+        poller that stops making progress without raising is also reported as stale.
+        """
+        with self._rwlock.gen_rlock():
+            return self._is_stale_for(self._last_updated)
+
+    def _is_stale_for(self, last_updated: datetime | None) -> bool:
+        """Return True when the given observation timestamp is absent or older than the window."""
+        if last_updated is None:
+            return True
+        age = (datetime.now(tz=ZoneInfo(cfg.TZ)) - last_updated).total_seconds()
+        return age > cfg.PRESENCE_STALE_AFTER_SECONDS
+
     async def _run_poll(self) -> None:
         await self._run_presence_detection(self._router_ip, self._username, self._password)
 
     async def _run_presence_detection(self, router_ip: str, username: str, password: str) -> None:
         try:
             logger.info("Refresh Presence Level...")
-            with Connection(f"http://{router_ip}", username, password, timeout=10) as connection:
+            with Connection(
+                f"http://{router_ip}",
+                username,
+                password,
+                timeout=cfg.ROUTER_CONNECTION_TIMEOUT_SECONDS,
+            ) as connection:
                 client = Client(connection)
                 active_member_devices_ct = len(
                     [
@@ -93,26 +114,43 @@ class PresenceLevelService(PollingService):
                 new_level = self._thresholds.get_presence_level(active_member_devices_ct)
                 with self._rwlock.gen_wlock():
                     prev_level = self._presence_level
+                    prev_was_fresh = not self._is_stale_for(self._last_updated)
                     self._presence_level = new_level
                     self._last_updated = datetime.now(tz=ZoneInfo(cfg.TZ))
                     self._last_error = None
             logger.info("Refresh Presence Level... DONE (%s)", self._presence_level)
             try:
-                await run_in_threadpool(self._try_send_first_active_push, prev_level, new_level)
+                await run_in_threadpool(
+                    self._try_send_first_active_push,
+                    prev_level,
+                    new_level,
+                    prev_was_fresh=prev_was_fresh,
+                )
             except Exception:
                 logger.exception("Error sending first active push")
         except Exception:
             logger.exception("Error during presence detection")
             with self._rwlock.gen_wlock():
-                self._presence_level = PresenceLevel.EMPTY
-                # The router client's exception text embeds the internal host and port,
-                # and this value is served on the unauthenticated /api/status response.
-                # Keep the full detail in the log entry above; expose only a generic
-                # message to API callers.
+                # Keep the last successfully observed level: a failed poll says nothing about who is
+                # present. Staleness is derived from the last successful timestamp instead, so API
+                # callers can tell "nobody here" from "we currently do not know".
+                # The router client's exception text embeds the internal host and port, and this
+                # value is served on the unauthenticated /api/status response. Keep the full detail
+                # in the log entry above; expose only a generic message to API callers.
                 self._last_error = RuntimeError("presence detection failed")
 
-    def _try_send_first_active_push(self, prev_level: PresenceLevel, new_level: PresenceLevel) -> bool:
-        """Fire a push notification the first time per day the level goes from empty to non-empty."""
+    def _try_send_first_active_push(
+        self,
+        prev_level: PresenceLevel,
+        new_level: PresenceLevel,
+        *,
+        prev_was_fresh: bool = True,
+    ) -> bool:
+        """Fire a push notification the first time per day the level goes from empty to non-empty.
+
+        The previous observation must be fresh: after an outage the first successful poll is evidence
+        that we can see again, not that somebody just arrived.
+        """
         if not self._push_sender:
             return False
         if not self._push_initialized:
@@ -123,7 +161,9 @@ class PresenceLevelService(PollingService):
         if new_level == PresenceLevel.EMPTY:
             return False
 
-        if prev_level != PresenceLevel.EMPTY:
+        # Also require a fresh previous observation: a non-empty result after a stale or unknown
+        # period is the first successful poll after an outage, not evidence of an arrival.
+        if prev_level != PresenceLevel.EMPTY or not prev_was_fresh:
             return False
 
         now = datetime.now(tz=ZoneInfo(cfg.TZ))

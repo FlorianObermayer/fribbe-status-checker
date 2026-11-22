@@ -72,6 +72,7 @@ def _mock_presence_svc(level: PresenceLevel = PresenceLevel.EMPTY) -> MagicMock:
     svc.get_level.return_value = level
     svc.get_last_updated.return_value = _NOW
     svc.get_last_error.return_value = None
+    svc.is_stale.return_value = False
     return svc
 
 
@@ -676,6 +677,31 @@ def test_status_includes_last_error_when_present(client: TestClient, test_app: F
     assert body["presence"]["last_error"] == "router unreachable"
 
 
+def test_status_reports_fresh_presence(client: TestClient, test_app: FastAPI) -> None:
+    test_app.dependency_overrides[get_occupancy_service] = _mock_occupancy_svc
+    test_app.dependency_overrides[get_presence_service] = _mock_presence_svc
+    test_app.dependency_overrides[get_message_service] = _mock_message_svc
+    test_app.dependency_overrides[get_weather_service] = lambda: None
+
+    body = client.get("/api/status").json()
+
+    assert body["presence"]["stale"] is False
+
+
+def test_status_reports_stale_presence(client: TestClient, test_app: FastAPI) -> None:
+    presence_svc = _mock_presence_svc(PresenceLevel.FEW)
+    presence_svc.is_stale.return_value = True
+    test_app.dependency_overrides[get_occupancy_service] = _mock_occupancy_svc
+    test_app.dependency_overrides[get_presence_service] = lambda: presence_svc
+    test_app.dependency_overrides[get_message_service] = _mock_message_svc
+    test_app.dependency_overrides[get_weather_service] = lambda: None
+
+    body = client.get("/api/status").json()
+
+    assert body["presence"]["stale"] is True
+    assert body["presence"]["level"] == PresenceLevel.FEW
+
+
 # ---------------------------------------------------------------------------
 # /status/content
 # ---------------------------------------------------------------------------
@@ -729,6 +755,30 @@ def test_status_content_renders_occupancy_fully(client: TestClient, test_app: Fa
 
     assert response.status_code == 200
     assert "occupancy-fully" in response.text
+
+
+def test_status_content_omits_stale_notice_when_fresh(client: TestClient, test_app: FastAPI) -> None:
+    test_app.dependency_overrides[get_occupancy_service] = _mock_occupancy_svc
+    test_app.dependency_overrides[get_presence_service] = _mock_presence_svc
+    test_app.dependency_overrides[get_message_service] = _mock_message_svc
+    test_app.dependency_overrides[get_weather_service] = lambda: None
+
+    response = client.get("/status/content")
+
+    assert 'id="status-stale"' not in response.text
+
+
+def test_status_content_renders_stale_notice_when_stale(client: TestClient, test_app: FastAPI) -> None:
+    presence_svc = _mock_presence_svc(PresenceLevel.FEW)
+    presence_svc.is_stale.return_value = True
+    test_app.dependency_overrides[get_occupancy_service] = _mock_occupancy_svc
+    test_app.dependency_overrides[get_presence_service] = lambda: presence_svc
+    test_app.dependency_overrides[get_message_service] = _mock_message_svc
+    test_app.dependency_overrides[get_weather_service] = lambda: None
+
+    response = client.get("/status/content")
+
+    assert 'id="status-stale"' in response.text
 
 
 # ---------------------------------------------------------------------------

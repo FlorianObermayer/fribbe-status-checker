@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
+from app.config import cfg
 from app.services.message_service import MessageService
 from app.services.occupancy.occupancy_service import OccupancyService
 from app.services.presence_level import PresenceLevel
@@ -190,4 +191,112 @@ async def test_failed_poll_stores_generic_error_without_address() -> None:
     assert message == "presence detection failed"
     assert "192.168.8.1" not in message
     assert "port" not in message
+
+
+# ---------------------------------------------------------------------------
+# Failure handling: the last successful observation is retained
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_failed_poll_retains_last_known_level(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cfg, "PRESENCE_STALE_AFTER_SECONDS", 180)
+    svc = _make_service()
+    svc._presence_level = PresenceLevel.FEW
+    svc._last_updated = datetime.now(tz=ZoneInfo(cfg.TZ))
+
+    with patch(
+        "app.services.presence_level_service.Connection",
+        side_effect=OSError("Failed to connect to host='192.168.8.1', port=80"),
+    ):
+        await svc._run_presence_detection("192.168.8.1", "admin", "pass")
+
+    assert svc.get_level() == PresenceLevel.FEW
+    assert svc.is_stale() is False
+    assert svc.get_last_error() is not None
+
+
+# ---------------------------------------------------------------------------
+# Derived freshness
+# ---------------------------------------------------------------------------
+
+
+def test_level_is_stale_before_first_successful_observation(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cfg, "PRESENCE_STALE_AFTER_SECONDS", 180)
+    svc = _make_service()
+
+    assert svc.get_last_updated() is None
+    assert svc.is_stale() is True
+
+
+def test_recent_observation_is_fresh(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cfg, "PRESENCE_STALE_AFTER_SECONDS", 180)
+    svc = _make_service()
+    svc._last_updated = datetime.now(tz=ZoneInfo(cfg.TZ)) - timedelta(seconds=10)
+
+    assert svc.is_stale() is False
+
+
+def test_aged_observation_is_stale_without_an_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cfg, "PRESENCE_STALE_AFTER_SECONDS", 180)
+    svc = _make_service()
+    svc._last_updated = datetime.now(tz=ZoneInfo(cfg.TZ)) - timedelta(seconds=181)
+
+    assert svc.is_stale() is True
+    assert svc.get_last_error() is None
+
+
+@pytest.mark.asyncio
+async def test_successful_poll_restores_freshness(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cfg, "PRESENCE_STALE_AFTER_SECONDS", 180)
+    svc = _make_service()
+    svc._last_updated = datetime.now(tz=ZoneInfo(cfg.TZ)) - timedelta(seconds=600)
+
+    with (
+        patch("app.services.presence_level_service.Connection"),
+        patch("app.services.presence_level_service.Client") as client_cls,
+    ):
+        client_cls.return_value.wlan.host_list.return_value = {"Hosts": {"Host": []}}
+        await svc._run_presence_detection("192.168.8.1", "admin", "pass")
+
+    assert svc.is_stale() is False
     assert svc.get_level() == PresenceLevel.EMPTY
+    assert svc.get_last_error() is None
+
+
+# ---------------------------------------------------------------------------
+# Bounded connection
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_connection_uses_configured_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cfg, "ROUTER_CONNECTION_TIMEOUT_SECONDS", 42)
+    svc = _make_service()
+
+    with (
+        patch("app.services.presence_level_service.Connection") as conn,
+        patch("app.services.presence_level_service.Client") as client_cls,
+    ):
+        client_cls.return_value.wlan.host_list.return_value = {"Hosts": {"Host": []}}
+        await svc._run_presence_detection("192.168.8.1", "admin", "pass")
+
+    assert conn.call_args.kwargs["timeout"] == 42
+
+
+# ---------------------------------------------------------------------------
+# Arrival pushes require a fresh consecutive pair of observations
+# ---------------------------------------------------------------------------
+
+
+def test_arrival_after_stale_period_does_not_notify() -> None:
+    push = FakePushSender()
+    svc = _make_service(push)
+
+    # Arm the cold-start guard
+    svc._try_send_first_active_push(PresenceLevel.EMPTY, PresenceLevel.FEW)
+    # Previous observation was stale/unknown — not evidence of an arrival
+    sent = svc._try_send_first_active_push(PresenceLevel.EMPTY, PresenceLevel.FEW, prev_was_fresh=False)
+
+    assert sent is False
+    assert push.calls == []
